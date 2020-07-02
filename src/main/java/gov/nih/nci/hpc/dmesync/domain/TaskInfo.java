@@ -1,0 +1,43 @@
+package gov.nih.nci.hpc.dmesync.domain;
+
+import javax.persistence.*;
+
+@Entity
+public class TaskInfo {
+  @Id @GeneratedValue private Long id;
+  private Long objectId; //StatusInfo.id
+  private String taskName;
+  private boolean completed;
+
+  public Long getId() {
+    return id;
+  }
+
+  public void setId(Long id) {
+    this.id = id;
+  }
+
+  public Long getObjectId() {
+    return objectId;
+  }
+
+  public void setObjectId(Long objectId) {
+    this.objectId = objectId;
+  }
+
+  public String getTaskName() {
+    return taskName;
+  }
+
+  public void setTaskName(String taskName) {
+    this.taskName = taskName;
+  }
+
+  public boolean isCompleted() {
+    return completed;
+  }
+
+  public void setCompleted(boolean completed) {
+    this.completed = completed;
+  }
+}
