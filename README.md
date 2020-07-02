@@ -27,6 +27,7 @@ This will tell you how to get a development env running
 To check out the project from git, do:
 
 ```
+$ git clone https://github.com/CBIIT/HPC_DME_APIs
 $ git clone https://github.com/CBIIT/dme-archival-workflow
 ```
 
@@ -35,6 +36,8 @@ $ git clone https://github.com/CBIIT/dme-archival-workflow
 Navigate to the project and build:
 
 ```
+$ cd HPC_DME_APIs/src
+$ mvn -pl "hpc-server/hpc-domain-types,hpc-server/hpc-common,hpc-server/hpc-dto" clean install
 $ cd dme-archival-workflow
 $ mvn clean install -DskipTests
 ```
