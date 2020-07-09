@@ -119,6 +119,7 @@ public class DbGapMetadataMapper {
   public static final String RG_PLATFORM_UNIT_RUN_ATTRIBUTE = "rg_platform_unit (run)";
   public static final String RG_PLATFORM_UNIT_LIB_RUN_ATTRIBUTE = "rg_platform_unit_lib (run)";
   public static final String SECONDARY_ACCESSIONS_EXP_ATTRIBUTE = "secondary_accessions (exp)";
+  public static final String ALIGNMENT_SOFTWARE_EXP_ATTRIBUTE = "alignment_software (exp)";
 
   //---------------------------------------------------------------------//
   // Instance members
@@ -236,7 +237,8 @@ public class DbGapMetadataMapper {
             MOLECULAR_DATA_TYPE_ATTRIBUTE,
             RG_PLATFORM_UNIT_RUN_ATTRIBUTE,
             RG_PLATFORM_UNIT_LIB_RUN_ATTRIBUTE,
-            SECONDARY_ACCESSIONS_EXP_ATTRIBUTE);
+            SECONDARY_ACCESSIONS_EXP_ATTRIBUTE,
+            ALIGNMENT_SOFTWARE_EXP_ATTRIBUTE);
 
     projectMetadataAttributeNames.addAll(attributes);
     datasetMetadataAttributeNames.addAll(datasetAttributes);
