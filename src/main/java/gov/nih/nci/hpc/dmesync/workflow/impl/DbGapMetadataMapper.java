@@ -107,6 +107,7 @@ public class DbGapMetadataMapper {
   public static final String ROOT_SAMPLE_ID_RUN_ATTRIBUTE = "root_sample_id (run)";
   public static final String SAMPLE_ID_EXP_ATTRIBUTE = "sample_id (exp)";
   public static final String SAMPLE_ID_RUN_ATTRIBUTE = "Sample_ID (run)";
+  public static final String SAMPLE_ID_RUN_ATTRIBUTE_LC = "sample_id (run)";
   public static final String SAMPLE_TYPE_EXP_ATTRIBUTE = "sample_type (exp)";
   public static final String WORK_REQUEST_EXP_ATTRIBUTE = "work_request (exp)";
   public static final String WORK_REQUEST_RUN_ATTRIBUTE = "work_request (run)";
