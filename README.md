@@ -203,6 +203,20 @@ These can be set in `application.properties` file:
 * `dmesync.admin.emails=<comma separated email addrresses>`
   * Once a run completes, the run result will be emailed to this address.
   
+* `dmesync.admin.emails=<comma separated email addrresses>`
+  * Once a run completes, the run result will be emailed to this address.
+  
+Optionally, override system defaults for concurrent file processing with the following parameters.
+
+* Number of threads to process the files concurrently
+    ```
+    spring.jms.listener.concurrency=<min number of threads>
+    spring.jms.listener.max-concurrency=<max number of threads>
+    ```
+* Number of threads to upload multi-part upload file parts concurrently
+    ```
+    dmesync.multipart.threadpoolsize=<number of threads>
+    ```
 ### Static metadata entries and collection name mapping
 
 The DOC specific metadata entries and collection name mapping can be loaded with `data.sql` file:
