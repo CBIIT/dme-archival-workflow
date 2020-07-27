@@ -184,6 +184,31 @@ public class ExcelUtil {
     }
     return metadataMap;
   }
+  
+  public static Map<String, Map<String, String>> parseBulkMatadataEntries(
+      String metadataFile, String key1, String key2) throws DmeSyncMappingException {
+    if (StringUtils.isEmpty(metadataFile)) return null;
+
+    Map<String, Map<String, String>> metadataMap = null;
+    Workbook workbook = null;
+
+    try (FileInputStream fis = new FileInputStream(metadataFile)) {
+      workbook = WorkbookFactory.create(fis);
+      Sheet metadataSheet = workbook.getSheetAt(0);
+      metadataMap = getMetadataMap(metadataSheet, key1, key2);
+    } catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+      logger.error("Error reading metadata from excel file {}", metadataFile);
+      throw new DmeSyncMappingException("Error reading metadata from excel file", e);
+    } finally {
+      if (workbook != null)
+        try {
+          workbook.close();
+        } catch (IOException e) {
+          logger.error("Error closing metadata from excel file {}", metadataFile);
+        }
+    }
+    return metadataMap;
+  }
 
   private static List<String> getHeader(Sheet metadataSheet, String key)
       throws DmeSyncMappingException {
@@ -200,6 +225,24 @@ public class ExcelUtil {
     }
     if (!header.contains(key))
       throw new DmeSyncMappingException("Key: " + key + " header column is missing");
+    return header;
+  }
+  
+  private static List<String> getHeader(Sheet metadataSheet, String key1, String key2)
+      throws DmeSyncMappingException {
+    List<String> header = new ArrayList<>();
+    Row firstRow = metadataSheet.getRow(metadataSheet.getFirstRowNum());
+    Iterator<Cell> cellIterator = firstRow.iterator();
+    while (cellIterator.hasNext()) {
+      Cell currentCell = cellIterator.next();
+      String cellValue = currentCell.getStringCellValue();
+      if (cellValue == null || cellValue.isEmpty())
+        throw new DmeSyncMappingException(
+            "Empty header column value in column " + currentCell.getColumnIndex());
+      header.add(cellValue);
+    }
+    if (!header.contains(key1) || !header.contains(key2))
+      throw new DmeSyncMappingException("Key: " + key1 + " or Key: " + key2 + " header column is missing");
     return header;
   }
 
@@ -234,19 +277,79 @@ public class ExcelUtil {
             Date date = HSSFDateUtil.getJavaDate(dv);
             String df = currentCell.getCellStyle().getDataFormatString();
             String strValue = new CellDateFormatter(df).format(date);
-            rowMetadata.put(attrName, strValue);
+            rowMetadata.put(attrName.trim(), strValue);
           } else {
-            rowMetadata.put(attrName, (new Double(dv).toString()));
+            rowMetadata.put(attrName.trim(), (new Double(dv).toString()));
           }
 
         } else {
           if (currentCell.getStringCellValue() != null
               && !currentCell.getStringCellValue().isEmpty())
-            rowMetadata.put(attrName, currentCell.getStringCellValue());
+            rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
         }
       }
 
       metdataSheetMap.put(attrKey, rowMetadata);
+    }
+
+    return metdataSheetMap;
+  }
+  
+  private static Map<String, Map<String, String>> getMetadataMap(Sheet metadataSheet, String key1, String key2)
+      throws DmeSyncMappingException {
+    Map<String, Map<String, String>> metdataSheetMap = new HashMap<String, Map<String, String>>();
+    Iterator<Row> iterator = metadataSheet.iterator();
+
+    // Read 1st row which is header row with attribute names
+    List<String> attrNames = getHeader(metadataSheet, key1, key2);
+    // Read all rows (skip 1st) and construct metadata map
+    // Skip cells exceeding header size
+    while (iterator.hasNext()) {
+      String attrKey1 = null, attrKey2 = null;
+      Row currentRow = iterator.next();
+      if (currentRow.getRowNum() == 0) continue;
+      // Skip header row
+      int counter = 0;
+      Map<String, String> rowMetadata = new HashMap<String, String>();
+
+      for (String attrName : attrNames) {
+        Cell currentCell = currentRow.getCell(counter);
+        counter++;
+        if (currentCell == null) continue;
+        if (attrName.equalsIgnoreCase(key1)) {
+          if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+            double dv = currentCell.getNumericCellValue();
+            attrKey1 = String.format ("%.0f", dv);
+          } else
+            attrKey1 = currentCell.getStringCellValue();
+          continue;
+        } else if (attrName.equalsIgnoreCase(key2)) {
+          if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+            double dv = currentCell.getNumericCellValue();
+            attrKey2 = String.format ("%.0f", dv);
+          } else
+            attrKey2 = currentCell.getStringCellValue();
+          continue;
+        }
+        if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+          double dv = currentCell.getNumericCellValue();
+          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
+            Date date = HSSFDateUtil.getJavaDate(dv);
+            String df = currentCell.getCellStyle().getDataFormatString();
+            String strValue = new CellDateFormatter(df).format(date);
+            rowMetadata.put(attrName.trim(), strValue);
+          } else {
+            rowMetadata.put(attrName.trim(), String.format ("%.0f", dv));
+          }
+
+        } else {
+          if (currentCell.getStringCellValue() != null
+              && !currentCell.getStringCellValue().isEmpty())
+            rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
+        }
+      }
+
+      metdataSheetMap.put(attrKey1 + "_" + attrKey2, rowMetadata);
     }
 
     return metdataSheetMap;

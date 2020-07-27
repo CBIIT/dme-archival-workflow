@@ -121,9 +121,6 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
   public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-    // load the user metadata from the externally placed excel
-    if(StringUtils.isNotBlank(metadataFile))
-      threadLocalMap.set(loadMetadataFile(metadataFile, "patient_id"));
     
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -181,8 +178,6 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
         String doneFileName = getDoneFileName(object);
         pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getPatientId(sampleId)));
-        if (StringUtils.isNotBlank(metadataFile) && getAttrValueWithKey(getPatientId(sampleId), "pi_collaborator") != null)
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", getAttrValueWithKey(getPatientId(sampleId), "pi_collaborator")));
         pathEntriesSample
 	        .getPathMetadataEntries()
 	        .add(createPathEntry("sample_type", getSampleType(doneFileName)));
@@ -193,12 +188,22 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	        .getPathMetadataEntries()
 	        .add(createPathEntry("run_date", getRunDate(doneFileName)));
         pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_name", sampleId));
+        // load the user metadata from the externally placed excel
+        if(StringUtils.isNotBlank(metadataFile)){
+          threadLocalMap.set(loadMetadataFile(metadataFile, "Accession ID_CP #"));
+          String surgicalCase = getAttrValueWithKey(sampleId, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Specimen ID (surgical pathology case#_block ID)");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Surgical_Case", surgicalCase));
+          String dnaRnaId = getAttrValueWithKey(sampleId, "Accesson ID_(DNA#)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Accesson ID_(DNA#)");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("DNA_RNA_ID", dnaRnaId));
+          String diagnosis = getAttrValueWithKey(sampleId, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Diagnosis (Cancer Type)");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Diagnosis", diagnosis));
+          String piCollaborator = getAttrValueWithKey(sampleId, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Pi_Collaborator");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("PI_Collaborator", piCollaborator));
+        }
     } else if(projectCollectionName.equals("ExomeRNA")) {
     	String sampleId = getSampleId(object);
         sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
         pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", sampleId));
-        if (StringUtils.isNotBlank(metadataFile) && getAttrValueWithKey(sampleId, "pi_collaborator") != null)
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", getAttrValueWithKey(sampleId, "pi_collaborator")));
     } else if(projectCollectionName.equals("Methylation")) {
     	String sentrixId = getMethylationSentrixId(object);
     	sampleCollectionPath = projectCollectionPath + "/Sentrix_" + sentrixId;
@@ -230,6 +235,22 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("collection_type", "Folder"));
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("patient_id", sampleId));
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("library_name", sampleId));
+        // load the user metadata from the externally placed excel
+        if(StringUtils.isNotBlank(metadataFile)){
+          String sentrixId = getMethylationSentrixId(object);
+          String key = sentrixId + "_" + sampleId;
+          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
+          String gender = getAttrValueWithKey(key, "Gender") == null ? "Unspecified": getAttrValueWithKey(key, "Gender");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Gender", gender));
+          String surgicalCase = getAttrValueWithKey(key, "Surgical_Case") == null ? "Unspecified": getAttrValueWithKey(key, "Surgical_Case");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Surgical_Case", surgicalCase));
+          String diagnosis = getAttrValueWithKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithKey(key, "Diagnosis");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Diagnosis", diagnosis));
+          String age = getAttrValueWithKey(key, "Age") == null ? "Unspecified": getAttrValueWithKey(key, "Age");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Age", age));
+          String piCollaborator = getAttrValueWithKey(key, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(key, "Pi_Collaborator");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("PI_Collaborator", piCollaborator));
+        }
         pathEntriesMethylationSample.setPath(methylationSampleCollectionPath);
         hpcBulkMetadataEntries
             .getPathsMetadataEntries()
@@ -265,6 +286,22 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		if(StringUtils.isNotBlank(libraryName)) {
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", getExomeRNASampleType(libraryName)));
+			// load the user metadata from the externally placed excel
+	        if(StringUtils.isNotBlank(metadataFile)){
+	          threadLocalMap.set(loadMetadataFile(metadataFile, "Library ID"));
+	          String surgicalCase = getAttrValueWithKey(libraryName, "surgical specimen ID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "surgical specimen ID");
+	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Surgical_Case", surgicalCase));
+	          String dnaRnaId = getAttrValueWithKey(libraryName, "LP/Source #") == null ? "Unspecified": getAttrValueWithKey(libraryName, "LP/Source #");
+	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("DNA_RNA_ID", dnaRnaId));
+	          String materialType = getAttrValueWithKey(libraryName, "Sample Source") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Source");
+              pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Material_Type", materialType));
+              String captureKit = getAttrValueWithKey(libraryName, "Test") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Test");
+              pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Capture_Kit", captureKit));
+              String diagnosis = getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)");
+	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("Diagnosis", diagnosis));
+	          String piCollaborator = getAttrValueWithKey(libraryName, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithKey(libraryName, "PI_Collaborator");
+	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("PI_Collaborator", piCollaborator));
+	        }
 		}
 	}
     logger.info(
