@@ -241,15 +241,15 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
           String key = sentrixId + "_" + sampleId;
           threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
           String materialType = getAttrValueWithKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithKey(key, "Material_Type");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
           String gender = getAttrValueWithKey(key, "Gender") == null ? "Unspecified": getAttrValueWithKey(key, "Gender");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", gender));
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("gender", gender));
           String surgicalCase = getAttrValueWithKey(key, "Surgical_Case") == null ? "Unspecified": getAttrValueWithKey(key, "Surgical_Case");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
           String diagnosis = getAttrValueWithKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithKey(key, "Diagnosis");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
           String piCollaborator = getAttrValueWithKey(key, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(key, "Pi_Collaborator");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
         }
         pathEntriesMethylationSample.setPath(methylationSampleCollectionPath);
         hpcBulkMetadataEntries
@@ -290,15 +290,15 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	        if(StringUtils.isNotBlank(metadataFile)){
 	          threadLocalMap.set(loadMetadataFile(metadataFile, "Library ID"));
 	          String surgicalCase = getAttrValueWithKey(libraryName, "surgical specimen ID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "surgical specimen ID");
-	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
 	          String dnaRnaId = getAttrValueWithKey(libraryName, "LP/Source #") == null ? "Unspecified": getAttrValueWithKey(libraryName, "LP/Source #");
-	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
 	          String materialType = getAttrValueWithKey(libraryName, "Sample Source") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Source");
-              pathEntriesSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("material_type", materialType));
               String captureKit = getAttrValueWithKey(libraryName, "Test") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Test");
-              pathEntriesSample.getPathMetadataEntries().add(createPathEntry("capture_kit", captureKit));
+              dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("capture_kit", captureKit));
               String diagnosis = getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)");
-	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
+              dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
 	          String piCollaborator = getAttrValueWithKey(libraryName, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithKey(libraryName, "PI_Collaborator");
 	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
 	        }
