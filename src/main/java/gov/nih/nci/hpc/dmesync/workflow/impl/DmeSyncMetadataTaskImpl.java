@@ -1,6 +1,10 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import javax.annotation.PostConstruct;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -29,6 +33,12 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   @Value("${dmesync.doc.name:default}")
   private String doc;
 
+  @Value("${dmesync.extract.metadata:false}")
+  private boolean extractMetadata;
+  
+  @Value("${dmesync.extract.metadata.ext:}")
+  private String extractMetadatafileTypes;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -51,6 +61,19 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
           metadataTask.getMetaDataJson(object);
       object.setDataObjectRegistrationRequestDTO(dataObjectRegistrationRequestDTO);
 
+      //If automated metadata extraction is turned on, extractMetadata
+      String fileType = object.getOriginalFilePath().substring(object.getOriginalFilePath().lastIndexOf('.') + 1);
+      boolean extractMetadataFromFile = extractMetadata;
+      if(StringUtils.isNotBlank(fileType) && StringUtils.isNotBlank(extractMetadatafileTypes)) {
+        List<String> extractMetadataFileTypeList = Arrays.asList(extractMetadatafileTypes.toLowerCase().split("\\s*,\\s*"));
+        if(!extractMetadataFileTypeList.contains(fileType.toLowerCase()))
+            extractMetadataFromFile=false;
+      }
+      if(extractMetadataFromFile) {
+        //Extract metadata from file
+        List<HpcMetadataEntry> extractedMetadataEntries = metadataTask.extractMetadataFromFile(new File(object.getOriginalFilePath()));
+        dataObjectRegistrationRequestDTO.getExtractedMetadataEntries().addAll(extractedMetadataEntries);
+      }
       //Save Metadata Info in DB
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
@@ -73,6 +96,14 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   public void saveMetaDataInfo(StatusInfo object, HpcDataObjectRegistrationRequestDTO requestDto) {
     //Save Metadata entries
     for(HpcMetadataEntry entry: requestDto.getMetadataEntries()) {
+      MetadataInfo metadataInfo = new MetadataInfo();
+      metadataInfo.setObjectId(object.getId());
+      metadataInfo.setMetaDataKey(entry.getAttribute());
+      metadataInfo.setMetaDataValue(entry.getValue());
+      dmeSyncWorkflowService.saveMetadataInfo(metadataInfo);
+    }
+    //Save Extracted Metadata entries
+    for(HpcMetadataEntry entry: requestDto.getExtractedMetadataEntries()) {
       MetadataInfo metadataInfo = new MetadataInfo();
       metadataInfo.setObjectId(object.getId());
       metadataInfo.setMetaDataKey(entry.getAttribute());

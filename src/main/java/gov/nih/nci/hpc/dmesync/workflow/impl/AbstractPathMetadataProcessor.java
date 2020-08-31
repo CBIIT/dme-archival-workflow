@@ -1,14 +1,26 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.Parser;
+import org.apache.tika.sax.BodyContentHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.xml.sax.SAXException;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -113,4 +125,28 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     return ExcelUtil.parseBulkMatadataEntries(metadataFile, key1, key2);
   }
 
+  public List<HpcMetadataEntry> extractMetadataFromFile(File dataObjectFile) throws DmeSyncMappingException {
+      Parser parser = new AutoDetectParser();
+      Metadata extractedMetadata = new Metadata();
+
+      try (InputStream dataObjectInputStream = new FileInputStream(dataObjectFile)) {
+          // Extract metadata from the file.
+          parser.parse(dataObjectInputStream, new BodyContentHandler(), extractedMetadata, new ParseContext());
+
+          // Map the Tika extracted metadata to HPC metadata entry list.
+          List<HpcMetadataEntry> metadataEntries = new ArrayList<>();
+          for (String name : extractedMetadata.names()) {
+              HpcMetadataEntry metadataEntry = new HpcMetadataEntry();
+              metadataEntry.setAttribute(name);
+              metadataEntry.setValue(extractedMetadata.get(name));
+              metadataEntries.add(metadataEntry);
+          }
+
+          return metadataEntries;
+
+      } catch (IOException | SAXException | TikaException e) {
+          throw new DmeSyncMappingException("Failed to extract metadata from file");
+
+      }
+  }
 }
