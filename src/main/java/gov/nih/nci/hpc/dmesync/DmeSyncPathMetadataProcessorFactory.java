@@ -24,6 +24,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor ncefProcessor;
   
   @Autowired
+  @Qualifier("ncep")
+  private DmeSyncPathMetadataProcessor ncepProcessor;
+  
+  @Autowired
   @Qualifier("seer")
   private DmeSyncPathMetadataProcessor seerProcessor;
   
@@ -67,6 +71,8 @@ public class DmeSyncPathMetadataProcessorFactory {
       return cmmProcessor;
     } else if("ncef".equals(doc)) {
     	return ncefProcessor;
+    }  else if("ncep".equals(doc)) {
+        return ncepProcessor;
     } else if ("seer".equals(doc)){
     	return seerProcessor;
     } else if ("sb".equals(doc)){
