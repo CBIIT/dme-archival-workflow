@@ -92,19 +92,17 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
-    pathEntriesProject
-        .getPathMetadataEntries()
-        .add(createPathEntry("project_title", projectCollectionName));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEP"));
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
 
     //Add path metadata entries for "Run_XXX" collection
-    //Example row: collectionType - Run, collectionName - 20200107_1_Glacios (derived)
+    //Example row: collectionType - Run, collectionName - 20200107 (derived)
     String runCollectionName = getRunCollectionName(object);
     String runCollectionPath = projectCollectionPath + "/Run_" + runCollectionName;
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_number", projectCollectionName+"_"+runCollectionName));
     pathEntriesRun.setPath(runCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
@@ -160,9 +158,13 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
 
   private String getRunCollectionName(StatusInfo object) throws DmeSyncMappingException {
+    String runCollectionName = null;
     //Example: If originalFilePath is /mnt/NCEP-CryoEM/active/Data/Archive/20200107_1_Glacios
-    //then the runCollectionName will be 20200107_1_Glacios
-    String runCollectionName = getCollectionNameFromParent(object, "Archive");
+    //then the runCollectionName will be 20200107
+    String runDirName = getCollectionNameFromParent(object, "Archive");
+    if (runDirName != null) {
+      runCollectionName = runDirName.substring(0, runDirName.indexOf('_'));
+    }
     if (runCollectionName == null)
       throw new DmeSyncMappingException(
           "Run collection name can't be derived for " + object.getOriginalFilePath());
