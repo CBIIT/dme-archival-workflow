@@ -500,7 +500,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // /data/Compass/Analysis/ProcessedResults_NexSeq\ExomeRNA_Results\NA12878\Mix50\NA18740_N1D_E
     // then the library id will be NA18487_N1D_E6
     if (isProcessedResults(object)) {
-    	String regex = "_[TN][1-9][DR]";
+    	String regex = "_[TN][1-9I][DR]";
         Pattern pattern = Pattern.compile(regex);
         Path fullFilePath = Paths.get(object.getOriginalFilePath());
         int count = fullFilePath.getNameCount();
@@ -534,7 +534,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
   private String getExomeRNASampleType(String libraryName) {
     // Example: If library name is NA18487_N1D_E
     // then D is for DNA, R is for RNA
-	String regex = "_[TN][1-9][DR]";
+	String regex = "_[TN][1-9I][DR]";
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(libraryName);
     matcher.find();
