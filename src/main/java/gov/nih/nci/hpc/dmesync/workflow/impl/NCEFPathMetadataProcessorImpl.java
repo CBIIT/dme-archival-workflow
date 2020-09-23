@@ -111,7 +111,13 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", "CryoEM"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("start_date", getAttrValueWithKey(path, "start_date")));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
+	      String projectDescription = getAttrValueWithKey(path, "project_description");
+	      if(projectDescription != null && projectDescription.length() > 2500) {
+	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", projectDescription.substring(0, 2500)));
+	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("additional_project_description", projectDescription.substring(2500)));
+	      }
+	      else
+	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEF"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("summary_of_datasets", getAttrValueWithKey(path, "summary_of_datasets")));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithKey(path, "organism")));
