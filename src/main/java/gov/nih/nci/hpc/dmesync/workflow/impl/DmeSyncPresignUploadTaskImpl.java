@@ -46,6 +46,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.datatransfer.HpcMultipartUpload;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartETag;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartURL;
+import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.HpcCompleteMultipartUploadRequestDTO;
 import gov.nih.nci.hpc.dto.datamanagement.HpcCompleteMultipartUploadResponseDTO;
 import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectRegistrationResponseDTO;
@@ -140,8 +141,13 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
       //Include checksum in DataObjectRegistrationRequestDTO
-      if(checksum)
+      if(checksum) {
+    	  HpcMetadataEntry objectEntry = new HpcMetadataEntry();
+    	  objectEntry.setAttribute("source_checksum");
+    	  objectEntry.setValue(object.getChecksum());
+    	  object.getDataObjectRegistrationRequestDTO().getMetadataEntries().add(objectEntry);
     	  object.getDataObjectRegistrationRequestDTO().setChecksum(object.getChecksum());
+      }
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(true);
       if(multipartUpload) {
     	  object.getDataObjectRegistrationRequestDTO().setUploadParts(parts);

@@ -118,7 +118,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       //Add object metadata
       dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("experiment_name", object.getOrginalFileName()));
       dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("source_path", object.getOriginalFilePath()));
-      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("source_checksum", object.getChecksum()));
+      //dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("source_checksum", object.getChecksum()));
       
       
       logger.info(
