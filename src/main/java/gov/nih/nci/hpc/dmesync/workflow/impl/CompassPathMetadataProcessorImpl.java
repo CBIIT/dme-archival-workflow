@@ -239,7 +239,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         if(StringUtils.isNotBlank(metadataFile)){
           String sentrixId = getMethylationSentrixId(object);
           String key = sentrixId + "_" + sampleId;
-          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
+          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample-Name"));
           String materialType = getAttrValueWithKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithKey(key, "Material_Type");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
           String gender = getAttrValueWithKey(key, "Gender") == null ? "Unspecified": getAttrValueWithKey(key, "Gender");
@@ -248,7 +248,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
           String diagnosis = getAttrValueWithKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithKey(key, "Diagnosis");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
-          String piCollaborator = getAttrValueWithKey(key, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(key, "Pi_Collaborator");
+          String piCollaborator = getAttrValueWithKey(key, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithKey(key, "PI_Collaborator");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
         }
         pathEntriesMethylationSample.setPath(methylationSampleCollectionPath);
