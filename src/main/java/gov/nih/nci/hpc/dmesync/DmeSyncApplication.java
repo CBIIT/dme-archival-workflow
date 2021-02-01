@@ -132,9 +132,9 @@ public class DmeSyncApplication {
       serverUrl = "https://localhost:7738/hpc-server";
 
     } else if ("dev".equals(env)) {
-      serverUrl = "https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server";
+      serverUrl = "https://fsdmel-dsapi01d.ncifcrf.gov:7738/hpc-server";
     } else if ("uat".equals(env)) {
-      serverUrl = "https://fr-s-hpcdm-uat-p.ncifcrf.gov:7738/hpc-server";
+      serverUrl = "https://fsdmel-dsapi01t.ncifcrf.gov:7738/hpc-server";
     } else if ("prod".equals(env)) {
       serverUrl = "https://hpcdmeapi.nci.nih.gov:8080";
     } else {

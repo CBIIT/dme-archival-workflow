@@ -5,12 +5,15 @@ read -s -p "password: " pswd
 echo
 read -p "environment: " env
 
-if [ "$env" == "dev" ]
+if [ "$env" == "local" ]
     then
-        server="https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server"
+        server="https://localhost:7738/hpc-server"
+    elif [ "$env" == "dev" ]
+    then
+        server="https://fsdmel-dsapi01d.ncifcrf.gov:7738/hpc-server"
     elif [ "$env" == "uat" ]
     then
-        server="https://fr-s-hpcdm-uat-p.ncifcrf.gov:7738/hpc-server"
+        server="https://fsdmel-dsapi01t.ncifcrf.gov:7738/hpc-server"
 	elif [ "$env" == "prod" ]
     then
         server="https://hpcdmeapi.nci.nih.gov:8080"
