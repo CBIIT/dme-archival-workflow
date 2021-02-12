@@ -129,11 +129,6 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     	  setupMetadataForCryoEM(object, hpcBulkMetadataEntries, variantCollectionPath);
       }
       
-      //Add path metadata entries for 'Raw_Data' collection.
-      HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
-      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry("collection_type", "Raw_Data"));
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
-	  
       //Set it to dataObjectRegistrationRequestDTO
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
       dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
