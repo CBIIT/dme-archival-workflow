@@ -29,6 +29,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   private List<DmeSyncTask> tasks;
 
   @Autowired private DmeSyncPresignUploadTaskImpl presignUploadTask;
+  @Autowired private DmeSyncFileSystemUploadTaskImpl fileSystemUploadTask;
   @Autowired private DmeSyncMetadataTaskImpl metadataTask;
   @Autowired private DmeSyncTarTaskImpl tarTask;
   @Autowired private DmeSyncCompressTaskImpl compressTask;
@@ -54,6 +55,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.filesystem.upload:false}")
+  private boolean fileSystemUpload;
+  
   @PostConstruct
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
@@ -67,7 +71,10 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     if (!dryRun) {
       if(checksum)
         tasks.add(createChecksumTask);
-      tasks.add(presignUploadTask);
+      if(fileSystemUpload)
+    	  tasks.add(fileSystemUploadTask);
+      else
+    	  tasks.add(presignUploadTask);
       tasks.add(verifyTask);
       tasks.add(permissionBookmarkTask);
       if (tar || untar || compress) tasks.add(cleanupTask);
