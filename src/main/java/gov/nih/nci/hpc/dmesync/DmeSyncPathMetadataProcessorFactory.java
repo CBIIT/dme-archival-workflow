@@ -67,6 +67,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("biobank")
   private DmeSyncPathMetadataProcessor biobankProcessor;
   
+  @Autowired
+  @Qualifier("dceg")
+  private DmeSyncPathMetadataProcessor dcegProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -96,7 +100,9 @@ public class DmeSyncPathMetadataProcessorFactory {
       return egaProcessor;
     } else if ("biobank".equals(doc)){
         return biobankProcessor;
-     } else {
+    } else if ("dceg".equals(doc)){
+        return dcegProcessor;
+    } else {
         return defaultProcessor;
     }
   }
