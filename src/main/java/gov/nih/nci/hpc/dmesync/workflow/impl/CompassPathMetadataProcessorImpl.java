@@ -239,7 +239,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         if(StringUtils.isNotBlank(metadataFile)){
           String sentrixId = getMethylationSentrixId(object);
           String key = sentrixId + "_" + sampleId;
-          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample-Name"));
+          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
           String materialType = getAttrValueWithKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithKey(key, "Material_Type");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
           String gender = getAttrValueWithKey(key, "Gender") == null ? "Unspecified": getAttrValueWithKey(key, "Gender");

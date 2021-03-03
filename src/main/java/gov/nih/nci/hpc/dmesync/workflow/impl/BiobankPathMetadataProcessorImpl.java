@@ -130,7 +130,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	threadLocalMap.remove();
   }
       logger.info(
-        "NICE custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
+        "Biobank custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
       return dataObjectRegistrationRequestDTO;
   }
 
