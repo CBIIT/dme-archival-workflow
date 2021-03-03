@@ -19,6 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.BaseEncoding;
+
 import gov.nih.nci.hpc.dmesync.CustomLowerCamelCase;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
@@ -146,7 +150,10 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	  objectEntry.setAttribute("source_checksum");
     	  objectEntry.setValue(object.getChecksum());
     	  object.getDataObjectRegistrationRequestDTO().getMetadataEntries().add(objectEntry);
-    	  object.getDataObjectRegistrationRequestDTO().setChecksum(object.getChecksum());
+    	  if(!multipartUpload) {
+    		  String md5Checksum = BaseEncoding.base64().encode(Hex.decodeHex(object.getChecksum()));
+    		  object.getDataObjectRegistrationRequestDTO().setChecksum(md5Checksum);
+    	  }
       }
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(true);
       if(multipartUpload) {
@@ -203,7 +210,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
           uploadToUrl(
               serviceResponse.getUploadRequestURL(),
               file,
-              object.getChecksum());
+              object.getDataObjectRegistrationRequestDTO().getChecksum());
       }
 
       if (responseCode == 200) {
@@ -256,7 +263,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       httpConnection.setConnectTimeout(99999999);
       httpConnection.setReadTimeout(99999999);
       
-      if (!StringUtils.isEmpty(checksum)) httpConnection.addRequestProperty("md5chksum", checksum);
+      if (!StringUtils.isEmpty(checksum)) httpConnection.addRequestProperty("content-md5", checksum);
       
       // Copy data from source to destination.
       IOUtils.copyLarge(
