@@ -123,6 +123,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  StringBuilder collectionPathBuilder = new StringBuilder();
 	  collectionPathBuilder.append(destinationBaseDir);
 	  boolean skipped = false;
+	  int skipCount = 0;
 	  String collectionName = null;
       for (String collectionType: collectionTypesList) {
     	  if(!skipped)
@@ -130,8 +131,9 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     	  //Check if this is the last token which is the file name
     	  if(!tokenizer.hasMoreTokens())
     		  break;
-    	  if(platformName.equals("Illumina_HiSeq") && collectionType.equals("Manifest") && !collectionName.contains("manifest")) {
+    	  if(platformName.equals("Illumina_HiSeq") && collectionType.equals("Manifest") && !collectionName.toLowerCase().contains("manifest")) {
     		  skipped = true;
+    		  skipCount++;
     		  continue;
     	  }
     	  skipped = false;
@@ -142,7 +144,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
           pathEntry.setPath(collectionPathBuilder.toString());
           hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntry);
       }
-      if(collectionTypesList.size() == hpcBulkMetadataEntries.getPathsMetadataEntries().size())
+      if(collectionTypesList.size() - skipCount == hpcBulkMetadataEntries.getPathsMetadataEntries().size())
     	  tokenizer.nextToken();
       if(tokenizer.hasMoreTokens()) {
     	  throw new DmeSyncMappingException("There are extra sub-folders under path: " + object.getSourceFilePath());
