@@ -84,7 +84,8 @@ public class LRBGEPathMetadataProcessorImplTest {
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<String, String>();
-    dataMap.put("pi_name", "GordonHager");
+    dataMap.put("data_curator", "Tatiana Karpova");
+    dataMap.put("data_owner", "GordonHager");
     dataMap.put("affiliation", "CCR/LRBGE/HAO");
     dataMap.put("user_name", "Diana Stavreva");
     dataMap.put("user_affiliation", "LRBGE");

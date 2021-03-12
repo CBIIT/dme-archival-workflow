@@ -69,7 +69,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   @Test
   public void testGetArchivePath() throws DmeSyncMappingException {
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/SChakrapani-NCEF-010-019-10025.tar", 
+	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/SChakrapani-NCEF-010-019-10025.tar", 
 	  		 "/mnt/IRODsScratch/work/SChakrapani-NCEF-010-019-10025.tar");
 	  
 	  //Determine the expected and actual archive path
@@ -89,7 +89,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   @Test
   public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/SChakrapani-NCEF-010-019-10025.tar", 
+	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/SChakrapani-NCEF-010-019-10025.tar", 
 			  "/mnt/IRODsScratch/work/SChakrapani-NCEF-010-019-10025.tar");
 	  
 	  setupDataForMetadataJsonTest("SChakrapani", "Sudha Chakrapani", "CWRU", "NCEF-010-019", "6/1/2018");
@@ -101,7 +101,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  //Validate collection metadata results
 	//Validate collection metadata results
 	  Map dataMap = new HashMap();
-	  dataMap.put("pi_name", "Sudha Chakrapani");
+	  dataMap.put("data_owner", "Sudha Chakrapani");
 	  dataMap.put("affiliation", "CWRU");
 	  dataMap.put("start_date", "4/1/18");
 	  dataMap.put("project_title", "NCEF-010-019");
@@ -129,7 +129,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   @Test
   public void testGetArchivePathforWithRunFolder() throws DmeSyncMappingException {
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
+	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
 			  "/mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar");
 	  
 	  //Determine the expected and actual archive path
@@ -140,7 +140,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  //Confirm they are same
 	  assertEquals(expectedArchivePath, computedArchivePath);
 	  
-	  statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10032.tar",
+	  statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10032.tar",
 			  "/mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10032.tar");
 	  
 	  //Determine the expected and actual archive path
@@ -157,7 +157,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   @Test
   public void testGetMetadataJsonForWithRunFolder() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
+	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
 			  "/mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar");
 	  
 	  setupDataForMetadataJsonTest("RMarmorstein", "Ronen Marmorstein", "UPENN", "NCEF-033-007", "4/1/2018");
@@ -168,7 +168,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  
 	  //Validate collection metadata results
 	  Map dataMap = new HashMap();
-	  dataMap.put("pi_name", "Ronen Marmorstein");
+	  dataMap.put("data_owner", "Ronen Marmorstein");
 	  dataMap.put("affiliation", "UPENN");
 	  dataMap.put("start_date", "4/1/18");
 	  dataMap.put("project_title", "NCEF-033-007");
@@ -187,7 +187,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  assertEquals("object_name", entries.get(0).getAttribute());
 	  assertEquals("RMarmorstein-NCEF-033-007-10031-A.tar", entries.get(0).getValue());
 	  assertEquals("source_path", entries.get(1).getAttribute());
-	  assertEquals("/mnt/NCEF-CryoEM/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar", entries.get(1).getValue());
+	  assertEquals("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar", entries.get(1).getValue());
   }
   
   
@@ -200,7 +200,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName(piCollectionName);
 	  nameMapping.setCollectionType("PI");
-	  nameMapping.setMetaDataKey("pi_name");
+	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue(pi_name);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
@@ -273,8 +273,8 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  assertEquals("collection_type", entry.getAttribute());
 	  assertEquals("PI_Lab", entry.getValue());
 	  entry = metadataEntries.get(1);
-	  assertEquals("pi_name", entry.getAttribute());
-	  assertEquals(dataMap.get("pi_name"), entry.getValue());
+	  assertEquals("data_owner", entry.getAttribute());
+	  assertEquals(dataMap.get("data_owner"), entry.getValue());
 	  entry = metadataEntries.get(2);
 	  assertEquals("affiliation", entry.getAttribute());
 	  assertEquals(dataMap.get("affiliation"), entry.getValue());

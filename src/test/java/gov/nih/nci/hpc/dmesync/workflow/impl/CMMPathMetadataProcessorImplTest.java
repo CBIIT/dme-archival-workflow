@@ -82,12 +82,12 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName("0022");
-	  nameMapping.setCollectionType("PI");
-	  nameMapping.setMetaDataKey("pi_name");
+	  nameMapping.setCollectionType("PI_Lab");
+	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Richard Wyatt");
 	  piNameMetaMappings.add(nameMapping);	 
 	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI", "0022")).thenReturn(piNameMetaMappings);
+			  "PI_Lab", "0022")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
 	  MetadataMapping projectNameMapping = new MetadataMapping();
@@ -111,14 +111,14 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  assertEquals(true, requestDto.getGenerateUploadRequestURL());
 	  assertEquals(true, requestDto.getCreateParentCollections());
 	  List<HpcBulkMetadataEntry> bulkMetadataEntries = requestDto.getParentCollectionsBulkMetadataEntries().getPathsMetadataEntries();
-	  assertEquals(6, bulkMetadataEntries.size());
+	  assertEquals(5, bulkMetadataEntries.size());
 	  
 	  HpcBulkMetadataEntry bulkEntry  = bulkMetadataEntries.get(0);
 	  assertEquals("/CCR_CMM_Archive/PI_0022", bulkEntry.getPath());
 	  List<HpcMetadataEntry> metadataEntries = bulkEntry.getPathMetadataEntries();
 	  assertEquals(1, metadataEntries.size());
 	  HpcMetadataEntry entry = metadataEntries.get(0);
-	  assertEquals("pi_name", entry.getAttribute());
+	  assertEquals("data_owner", entry.getAttribute());
 	  assertEquals("Richard Wyatt", entry.getValue());
 	  
 	  bulkEntry  = bulkMetadataEntries.get(1);
@@ -183,12 +183,12 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName("0010");
-	  nameMapping.setCollectionType("PI");
-	  nameMapping.setMetaDataKey("pi_name");
+	  nameMapping.setCollectionType("PI_Lab");
+	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Wei Yang");
 	  piNameMetaMappings.add(nameMapping);	 
 	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI", "0010")).thenReturn(piNameMetaMappings);
+			  "PI_Lab", "0010")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
 	  MetadataMapping projectNameMapping = new MetadataMapping();
@@ -212,14 +212,14 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  assertEquals(true, requestDto.getGenerateUploadRequestURL());
 	  assertEquals(true, requestDto.getCreateParentCollections());
 	  List<HpcBulkMetadataEntry> bulkMetadataEntries = requestDto.getParentCollectionsBulkMetadataEntries().getPathsMetadataEntries();
-	  assertEquals(7, bulkMetadataEntries.size());
+	  assertEquals(6, bulkMetadataEntries.size());
 	  
 	  HpcBulkMetadataEntry bulkEntry  = bulkMetadataEntries.get(0);
 	  assertEquals("/CCR_CMM_Archive/PI_0010", bulkEntry.getPath());
 	  List<HpcMetadataEntry> metadataEntries = bulkEntry.getPathMetadataEntries();
 	  assertEquals(1, metadataEntries.size());
 	  HpcMetadataEntry entry = metadataEntries.get(0);
-	  assertEquals("pi_name", entry.getAttribute());
+	  assertEquals("data_owner", entry.getAttribute());
 	  assertEquals("Wei Yang", entry.getValue());
 	  
 	  bulkEntry  = bulkMetadataEntries.get(1);

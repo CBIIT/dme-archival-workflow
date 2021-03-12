@@ -101,7 +101,7 @@ public class SBPathMetadataProcessorImplTest {
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<String, String>();
-    dataMap.put("pi_name", "Steven A. Rosenberg");
+    dataMap.put("data_owner", "Steven A. Rosenberg");
     dataMap.put("pi_lab", "NCI, CCR");
     dataMap.put("project_name", "Surgery_Branch_NGS");
     dataMap.put("project_title", "Surgery Branch Patient Sequencing");
@@ -170,7 +170,7 @@ public class SBPathMetadataProcessorImplTest {
       String piCollectionName, String projectCollectionName, String patientCollectionName) {
 
     List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
-    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_name", "Steven A. Rosenberg"));
+    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Steven A. Rosenberg"));
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_lab", "NCI, CCR"));
 
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService

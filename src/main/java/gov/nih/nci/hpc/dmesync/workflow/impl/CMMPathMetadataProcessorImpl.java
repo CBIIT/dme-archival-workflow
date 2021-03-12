@@ -93,7 +93,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.setPath(piCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
-  		  populateStoredMetadataEntries(pathEntriesPI, "PI", piCollectionName));
+  		  populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
     
     
       //Add path metadata entries for "Project_XXX" collection

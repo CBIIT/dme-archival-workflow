@@ -104,7 +104,7 @@ public class CompassPathMetadataProcessorImplTest {
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<String, String>();
-    dataMap.put("pi_name", "Compass PI name");
+    dataMap.put("data_owner", "Compass PI name");
     dataMap.put("affiliation", "Compass PI_Lab affiliation");
     dataMap.put("piArchivePath", "/Compass_Test_Archive/PI_Compass");
     dataMap.put("origin", "Placeholder for origin");
@@ -147,7 +147,7 @@ public class CompassPathMetadataProcessorImplTest {
       String piCollectionName) {
 
     List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
-    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_name", "Compass PI name"));
+    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Compass PI name"));
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "affiliation", "Compass PI_Lab affiliation"));
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
             .findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", piCollectionName))

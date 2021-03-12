@@ -93,7 +93,7 @@ public class LCBPathMetadataProcessorImplTest {
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<String, String>();
-    dataMap.put("pi_name", "Sriram Subramaniam");
+    dataMap.put("data_owner", "Sriram Subramaniam");
     dataMap.put("piArchivePath", "/CCR_LCB_SubramaniamLab_Archive/PI_Subramaniam");
     validateCollectionMetadataResults(requestDto, dataMap);
 
@@ -105,7 +105,7 @@ public class LCBPathMetadataProcessorImplTest {
     assertEquals("source_path", entries.get(1).getAttribute());
     assertEquals("/data/Livlab/projects/GluK2", entries.get(1).getValue());
     assertEquals("modified_date", entries.get(2).getAttribute());
-    assertEquals("12-31-1969 19:00:00", entries.get(2).getValue());
+    assertEquals("09-18-2020 09:12:11", entries.get(2).getValue());
   }
 
   private MetadataMapping populateMetadataMapping(
@@ -122,7 +122,7 @@ public class LCBPathMetadataProcessorImplTest {
       String piCollectionName) {
 
     List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
-    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_name", "Sriram Subramaniam"));
+    piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Sriram Subramaniam"));
 
     when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService
             .findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", piCollectionName))

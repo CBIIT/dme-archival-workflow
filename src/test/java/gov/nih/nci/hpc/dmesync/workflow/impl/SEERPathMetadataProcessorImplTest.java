@@ -103,7 +103,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  
 	//Validate collection metadata results
 	  Map dataMap = new HashMap();
-	  dataMap.put("pi_name", "Alison Van Dyke");
+	  dataMap.put("data_owner", "Alison Van Dyke");
 	  dataMap.put("affiliation", "NCI, DCCP, SRP");
 	  dataMap.put("project_title", "SEER VTR BCT Pilot");
 	  dataMap.put("access", "Closed Access");
@@ -158,7 +158,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName(piCollectionName);
 	  nameMapping.setCollectionType("PI_Lab");
-	  nameMapping.setMetaDataKey("pi_name");
+	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue(pi_name);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
@@ -259,8 +259,8 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  assertEquals("collection_type", entry.getAttribute());
 	  assertEquals("PI_Lab", entry.getValue());
 	  entry = metadataEntries.get(1);
-	  assertEquals("pi_name", entry.getAttribute());
-	  assertEquals(dataMap.get("pi_name"), entry.getValue());
+	  assertEquals("data_owner", entry.getAttribute());
+	  assertEquals(dataMap.get("data_owner"), entry.getValue());
 	  entry = metadataEntries.get(2);
 	  assertEquals("affiliation", entry.getAttribute());
 	  assertEquals(dataMap.get("affiliation"), entry.getValue());

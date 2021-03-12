@@ -55,7 +55,7 @@ StatusInfo statusInfo = null;
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
 	 piMapping.setMapValue("Tom_Misteli");
-	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("Ziad", "PI")).thenReturn(piMapping);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("Ziad", "PI_Lab")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping userMapping = new CollectionNameMapping();
 	 userMapping.setMapValue("Ziad_Jowhar");
@@ -85,11 +85,11 @@ StatusInfo statusInfo = null;
 	  List<MetadataMapping> nameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName("Tom_Misteli");
-	  nameMapping.setCollectionType("PI");
-	  nameMapping.setMetaDataKey("pi_name");
+	  nameMapping.setCollectionType("PI_Lab");
+	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Tom Misteli");
 	  nameMetaMappings.add(nameMapping);	 
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName("PI", "Tom_Misteli")).thenReturn(nameMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", "Tom_Misteli")).thenReturn(nameMetaMappings);
 	  
 	  List<MetadataMapping> userNameMetaMappings = new ArrayList<>();
 	  MetadataMapping userNameMapping = new MetadataMapping();
@@ -127,7 +127,7 @@ StatusInfo statusInfo = null;
 	  List<HpcMetadataEntry> metadataEntries = bulkEntry.getPathMetadataEntries();
 	  assertEquals(1, metadataEntries.size());
 	  HpcMetadataEntry entry = metadataEntries.get(0);
-	  assertEquals("pi_name", entry.getAttribute());
+	  assertEquals("data_owner", entry.getAttribute());
 	  assertEquals("Tom Misteli", entry.getValue());
 	  
 	  bulkEntry  = bulkMetadataEntries.get(1);

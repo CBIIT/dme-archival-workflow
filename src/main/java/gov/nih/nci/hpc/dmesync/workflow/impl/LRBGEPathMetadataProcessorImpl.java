@@ -109,8 +109,9 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String piCollectionName = getPiCollectionName(fileName);
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI"));
-      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("pi_name", getAttrValueWithKey(fileName, "pi_name")));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(fileName, "pi_name")));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_curator", "Tatiana Karpova"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation", getAttrValueWithKey(fileName, "affiliation")));
       pathEntriesPI.setPath(piCollectionPath);
       hpcBulkMetadataEntries
