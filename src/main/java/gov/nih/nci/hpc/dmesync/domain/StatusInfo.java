@@ -2,6 +2,8 @@ package gov.nih.nci.hpc.dmesync.domain;
 
 import java.util.Date;
 import javax.persistence.*;
+
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 @Entity
@@ -25,6 +27,7 @@ public class StatusInfo {
   private Long retryCount = 0L;
   private String error;
   @Transient private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
+  @Transient private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
 
   public Long getId() {
     return id;
@@ -175,7 +178,15 @@ public class StatusInfo {
     this.dataObjectRegistrationRequestDTO = dataObjectRegistrationRequestDTO;
   }
 
-  @Override
+  public HpcArchivePermissionsRequestDTO getArchivePermissionsRequestDTO() {
+	return archivePermissionsRequestDTO;
+}
+
+public void setArchivePermissionsRequestDTO(HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO) {
+	this.archivePermissionsRequestDTO = archivePermissionsRequestDTO;
+}
+
+@Override
   public String toString() {
     return "StatusInfo [id="
         + id

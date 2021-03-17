@@ -3,6 +3,8 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 import java.net.URI;
 import java.util.Date;
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -48,6 +50,12 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
 
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
+
+  @Value("${dmesync.filesystem.upload.user.search.base:}")
+  private String userSearchBase;
+  
+  @Value("${dmesync.filesystem.upload.group.search.base:}")
+  private String groupSearchBase;
   
   @PostConstruct
   public boolean init() {
@@ -90,6 +98,10 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
       uploadSource.setSourceLocation(fileLocation);
       object.getDataObjectRegistrationRequestDTO().setFileSystemUploadSource(uploadSource);
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(false);
+      if(StringUtils.isNotBlank(userSearchBase) && StringUtils.isNotBlank(groupSearchBase)) {
+    	  object.getDataObjectRegistrationRequestDTO().setUserSearchBase(userSearchBase);
+    	  object.getDataObjectRegistrationRequestDTO().setGroupSearchBase(groupSearchBase);
+      }
       
       HttpHeaders jsonHeader = new HttpHeaders();
       jsonHeader.setContentType(MediaType.APPLICATION_JSON);

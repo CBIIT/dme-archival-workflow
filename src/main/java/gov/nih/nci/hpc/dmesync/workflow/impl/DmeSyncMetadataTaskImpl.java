@@ -18,6 +18,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 /**
@@ -38,6 +39,9 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   
   @Value("${dmesync.extract.metadata.ext:}")
   private String extractMetadatafileTypes;
+  
+  @Value("${dmesync.filesystem.upload:false}")
+  private boolean fileSystemUpload;
   
   @PostConstruct
   public boolean init() {
@@ -77,6 +81,13 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       //Save Metadata Info in DB
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
+      //If file system upload, get the archive permission
+      if (fileSystemUpload) {
+        HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO =
+              metadataTask.getArchivePermission(object);
+        object.setArchivePermissionsRequestDTO(archivePermissionsRequestDTO);
+      }
+          
     } catch (DmeSyncMappingException e) {
       throw e;
     } catch (Exception e) {

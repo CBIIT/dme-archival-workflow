@@ -39,6 +39,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncCleanupTaskImpl cleanupTask;
   @Autowired private DmeSyncCreateChecksumTaskImpl createChecksumTask;
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
 
   @Value("${dmesync.tar:false}")
   private boolean tar;
@@ -77,6 +78,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     	  tasks.add(presignUploadTask);
       tasks.add(verifyTask);
       tasks.add(permissionBookmarkTask);
+      if(fileSystemUpload)
+    	  tasks.add(permissionArchiveTask);
       if (tar || untar || compress) tasks.add(cleanupTask);
     }
     

@@ -7,6 +7,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 /**
@@ -45,4 +46,17 @@ public interface DmeSyncPathMetadataProcessor {
    */
   List<HpcMetadataEntry> extractMetadataFromFile(File dataObjectFile)
       throws DmeSyncMappingException;
+  
+  /**
+   * Gets the archive permission object
+   * @param object
+   * @return
+   * @throws DmeSyncMappingException
+   * @throws DmeSyncWorkflowException
+   * @throws IOException
+   */
+  default HpcArchivePermissionsRequestDTO getArchivePermission(StatusInfo object)
+	      throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	    return null;
+  }
 }
