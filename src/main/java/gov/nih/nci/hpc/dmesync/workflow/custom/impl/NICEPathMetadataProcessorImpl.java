@@ -1,4 +1,4 @@
-package gov.nih.nci.hpc.dmesync.workflow.impl;
+package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

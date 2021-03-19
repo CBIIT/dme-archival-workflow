@@ -1,4 +1,4 @@
-package gov.nih.nci.hpc.dmesync.workflow.impl;
+package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,6 +14,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
+import gov.nih.nci.hpc.dmesync.workflow.impl.HpcEncryptor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;

@@ -1,4 +1,4 @@
-package gov.nih.nci.hpc.dmesync.workflow.impl;
+package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
