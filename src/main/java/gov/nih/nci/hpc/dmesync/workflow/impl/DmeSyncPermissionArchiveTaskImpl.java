@@ -17,7 +17,9 @@ import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionResponseDTO;
 import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsResponseDTO;
 import gov.nih.nci.hpc.dto.error.HpcExceptionDTO;
 
 /**
@@ -47,7 +49,7 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 
 	@Override
 	public StatusInfo process(StatusInfo object) {
-
+		String message = null;
 		if (object.getArchivePermissionsRequestDTO() != null) {
 			try {
 				// Add a delay for this task since File System Upload is async.
@@ -55,15 +57,16 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 
 				// Get owner, group and permissions from the
 				// ArchivePermissionsRequestDTO
-				setPermissions(object);
+				message = setPermissions(object);
 			} catch (Exception e) {
-				logger.error("[{}] Error occured during set archive permission task", super.getTaskName(), e);
+				logger.error("[{}] Error occured during set archive permission task {}", super.getTaskName(), e.getMessage(), e);
 			}
 		}
+		object.setError(message);
 		return object;
 	}
 
-	private boolean setPermissions(StatusInfo object) {
+	private String setPermissions(StatusInfo object) {
 		// Call set archive permission API
 		HpcArchivePermissionsRequestDTO dto = object.getArchivePermissionsRequestDTO();
 		dto.setSetArchivePermissionsFromSource(false);
@@ -81,7 +84,17 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 
 		if (HttpStatus.OK.equals(response.getStatusCode())) {
 			logger.debug("Received 200 response");
-
+			String json = null;
+			try {
+				json = objectMapper.writeValueAsString(response.getBody());
+				if (permissionReponseHasFailures(objectMapper.readValue(json, HpcArchivePermissionsResponseDTO.class))) {
+					return json;
+				}
+			} catch (IOException e) {
+				logger.error(
+						"[PermissionArchiveTask] Failed to set archive permission, responseCode {}, can't parse message",
+						response.getStatusCode());
+			}
 		} else {
 			String json = null;
 			HpcExceptionDTO exception = null;
@@ -95,9 +108,32 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 			}
 			logger.error("[PermissionArchiveTask] Failed to set archive permission, responseCode {}, message {}",
 					response.getStatusCode(), exception == null ? "" : exception.getMessage());
+			return "Failed to set archive permission " + exception.getMessage();
+		}
+		return null;
+	}
+
+	private boolean permissionReponseHasFailures(HpcArchivePermissionsResponseDTO responseDTO) {
+		if(responseDTO.getDataObjectPermissionsStatus() != null && !getPermissionReponseStatus(responseDTO.getDataObjectPermissionsStatus()))
 			return false;
+		for (HpcArchivePermissionResponseDTO directoryResponse: responseDTO.getDirectoryPermissionsStatus()) {
+			if(!getPermissionReponseStatus(directoryResponse))
+				return false;
 		}
 		return true;
 	}
+	
+	private boolean getPermissionReponseStatus(HpcArchivePermissionResponseDTO response) {
+		if (response.getArchivePermissionResult() != null && !response.getArchivePermissionResult().getResult()
+			|| response.getDataManagementArchivePermissionResult() != null
+				&& response.getDataManagementArchivePermissionResult().getUserPermissionResult() != null
+				&& !response.getDataManagementArchivePermissionResult().getUserPermissionResult().getResult()
+			|| response.getDataManagementArchivePermissionResult() != null
+				&& response.getDataManagementArchivePermissionResult().getGroupPermissionResult() != null
+				&& !response.getDataManagementArchivePermissionResult().getGroupPermissionResult().getResult())
+			return false;
+		else
+			return true;
+	}	
 
 }

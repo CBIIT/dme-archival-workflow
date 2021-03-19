@@ -3,8 +3,6 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +22,6 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
-import gov.nih.nci.hpc.dmesync.workflow.custom.impl.SEERPathMetadataProcessorImpl;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 
@@ -88,7 +85,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
   
  
   @Test
-  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException {
 	  
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/seer-VTR/BCT/VTRBCT_BC7001_BL3_XX.svs", 
@@ -103,7 +100,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  
 	  
 	//Validate collection metadata results
-	  Map dataMap = new HashMap();
+	  Map<String, String> dataMap = new HashMap<>();
 	  dataMap.put("data_owner", "Alison Van Dyke");
 	  dataMap.put("affiliation", "NCI, DCCP, SRP");
 	  dataMap.put("project_title", "SEER VTR BCT Pilot");
@@ -150,8 +147,8 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
   
   
   
-  private void setupDataForMetadataJsonTest(String piCollectionName, String pi_name, String affiliation, 
-		  String projectCollectionName, String project_title, String method, String startDate) {
+  private void setupDataForMetadataJsonTest(String piCollectionName, String piName, String affiliation, 
+		  String projectCollectionName, String projectTitle, String method, String startDate) {
       
 	  
 	  //Database entries for PI Collection metadata
@@ -160,7 +157,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  nameMapping.setCollectionName(piCollectionName);
 	  nameMapping.setCollectionType("PI_Lab");
 	  nameMapping.setMetaDataKey("data_owner");
-	  nameMapping.setMetaDataValue(pi_name);
+	  nameMapping.setMetaDataValue(piName);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
 	  nameMapping = new MetadataMapping();
@@ -180,7 +177,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  projectNameMapping.setCollectionName(projectCollectionName);
 	  projectNameMapping.setCollectionType("Project");
 	  projectNameMapping.setMetaDataKey("project_title");
-	  projectNameMapping.setMetaDataValue(project_title);
+	  projectNameMapping.setMetaDataValue(projectTitle);
 	  projectNameMetaMappings.add(projectNameMapping); 
 	  
 	  projectNameMapping = new MetadataMapping();
@@ -244,7 +241,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  
   }
   
-  private void validateCollectionMetadataResults(HpcDataObjectRegistrationRequestDTO requestDto, Map dataMap) {
+  private void validateCollectionMetadataResults(HpcDataObjectRegistrationRequestDTO requestDto, Map<String, String> dataMap) {
 			  
 	  assertNotNull(requestDto);
 	  assertEquals(true, requestDto.getGenerateUploadRequestURL());

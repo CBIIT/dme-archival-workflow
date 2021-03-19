@@ -74,7 +74,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 
 		// replace spaces with underscore
-		archivePath = archivePath.replaceAll(" ", "_");
+		archivePath = archivePath.replace(" ", "_");
 
 		if (platformName.equalsIgnoreCase("PacBio")) {
 			// Repeat run folder name for both project and run collection
@@ -146,7 +146,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			collectionPathBuilder.append("/");
 			collectionPathBuilder.append(collectionName);
 			HpcBulkMetadataEntry pathEntry = new HpcBulkMetadataEntry();
-			pathEntry.getPathMetadataEntries().add(createPathEntry("collection_type", collectionType));
+			pathEntry.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, collectionType));
 			pathEntry.setPath(collectionPathBuilder.toString());
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntry);
 		}
@@ -195,7 +195,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Iterate over source path for each directory to get permission for
 		// each collection
-		Iterator bulkMetadataEntryIterator = object.getDataObjectRegistrationRequestDTO()
+		Iterator<HpcBulkMetadataEntry> bulkMetadataEntryIterator = object.getDataObjectRegistrationRequestDTO()
 				.getParentCollectionsBulkMetadataEntries().getPathsMetadataEntries().iterator();
 		for (int i = 1; i < sourcePath.getNameCount(); i++) {
 			Path subPath = sourcePath.getRoot().resolve(sourcePath.subpath(0, i));
@@ -211,7 +211,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			if (collectionName.equals("Illumina"))
 				continue;
 
-			HpcBulkMetadataEntry bulkMetadataEntry = (HpcBulkMetadataEntry) bulkMetadataEntryIterator.next();
+			HpcBulkMetadataEntry bulkMetadataEntry = bulkMetadataEntryIterator.next();
 			if (!bulkMetadataEntry.getPath().endsWith(collectionName))
 				continue;
 
@@ -223,14 +223,14 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			archivePermissionsRequestDTO.getDirectoryPermissions().add(directoryPermissions);
 
 			if (platformName.equalsIgnoreCase("PacBio") && runFolderName.equals(collectionName)) {
-				bulkMetadataEntry = (HpcBulkMetadataEntry) bulkMetadataEntryIterator.next();
+				bulkMetadataEntry = bulkMetadataEntryIterator.next();
 				// Populate permission for the next path with same permissions
 				HpcArchiveDirectoryPermissionsRequestDTO subDirectoryPermissions = new HpcArchiveDirectoryPermissionsRequestDTO();
 				subDirectoryPermissions.setPath(bulkMetadataEntry.getPath());
 				subDirectoryPermissions.setPermissions(permission);
 				archivePermissionsRequestDTO.getDirectoryPermissions().add(subDirectoryPermissions);
 			}
-			logger.debug(subPath.toString());
+			logger.debug("Path: {}", subPath != null? subPath.toString() : "");
 			logger.debug("Owner: {}", permission.getGroup());
 			logger.debug("Group: {}", permission.getOwner());
 			logger.debug("Permissions: {}", permission.getPermissions());
@@ -242,7 +242,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
 		Path fullFilePath = Paths.get(object.getOriginalFilePath());
-		logger.info("Full File Path = " + fullFilePath);
+		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
 		for (int i = 0; i <= count; i++) {
 			if (fullFilePath.getParent().getFileName().toString().equalsIgnoreCase(parentName)) {
@@ -269,8 +269,8 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			FileOwnerAttributeView ownerAttributeView = Files.getFileAttributeView(path, FileOwnerAttributeView.class);
 			UserPrincipal owner = ownerAttributeView.getOwner();
 			permission.setOwner(owner.getName());
-			permission.setGroup("windows");
-			permission.setPermissions("windows");
+			permission.setGroup("store-IRODs-all");
+			permission.setPermissions("rwxr-x---");
 		}
 		return permission;
 	}

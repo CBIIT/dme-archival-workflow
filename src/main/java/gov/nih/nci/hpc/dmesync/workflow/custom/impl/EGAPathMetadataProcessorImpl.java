@@ -85,7 +85,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     }
 
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -123,7 +123,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       pathEntriesProject
           .getPathMetadataEntries()
-          .add(createPathEntry("collection_type", "Project"));
+          .add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
       if (runId != null) {
         pathEntriesProject.getPathMetadataEntries().add(createPathEntry("STUDY EGA_ID", studyId));
@@ -148,7 +148,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesDataset = new HpcBulkMetadataEntry();
       pathEntriesDataset
           .getPathMetadataEntries()
-          .add(createPathEntry("collection_type", "Dataset"));
+          .add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataset"));
       pathEntriesDataset.getPathMetadataEntries().add(createPathEntry("DATASET EGA_ID", datasetId));
       pathEntriesDataset.setPath(datasetCollectionPath);
       hpcBulkMetadataEntries
@@ -164,7 +164,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         String runCollectionName = runId;
         String runCollectionPath = datasetCollectionPath + "/Run_" + runCollectionName;
         HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-        pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+        pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
         pathEntriesRun.getPathMetadataEntries().add(createPathEntry("EXPERIMENT EGA_ID", experimentId));
         pathEntriesRun.getPathMetadataEntries().add(createPathEntry("RUN EGA_ID", runId));
         pathEntriesRun.getPathMetadataEntries().add(createPathEntry("EGA_SAMPLE_ID", sampleId));
@@ -220,7 +220,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   public List<HpcMetadataEntry> populateXmlMetadataEntries(
       Path xmlDirPath, List<String> attrNames, String egaId) throws DmeSyncMappingException {
 
-    List<HpcMetadataEntry> entries = new ArrayList<HpcMetadataEntry>();
+    List<HpcMetadataEntry> entries = new ArrayList<>();
 
     //Retrieve xml metadata mapping if present
     Optional<Path> xmlFilePath = null;
@@ -230,7 +230,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       //Ignore since some datasets does not have metadata
     }
     if (xmlFilePath.isPresent()) {
-      logger.info("metadata xml file for {} is {}", egaId, xmlFilePath.get().toString());
+      logger.info("metadata xml file for {} is {}", egaId, xmlFilePath.get());
 
 
       String attrTagName = getAttrTagNameFromEgaId(egaId);
@@ -272,13 +272,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
           }
         }
 
-      } catch (SAXException e) {
-        throw new DmeSyncMappingException(
-            "Unable to parse metadata file, " + xmlFilePath.get().toString(), e);
-      } catch (ParserConfigurationException e) {
-        throw new DmeSyncMappingException(
-            "Unable to parse metadata file, " + xmlFilePath.get().toString(), e);
-      } catch (IOException e) {
+      } catch (SAXException | ParserConfigurationException | IOException  e) {
         throw new DmeSyncMappingException(
             "Unable to parse metadata file, " + xmlFilePath.get().toString(), e);
       }

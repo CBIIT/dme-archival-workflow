@@ -79,7 +79,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
               + fileName;
   
       // replace spaces with underscore
-      archivePath = archivePath.replaceAll(" ", "_");
+      archivePath = archivePath.replace(" ", "_");
     } catch (Exception e) {
       threadLocalMap.remove();
       throw e;
@@ -109,7 +109,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String piCollectionName = getPiCollectionName(fileName);
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(fileName, "pi_name")));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_curator", "Tatiana Karpova"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation", getAttrValueWithKey(fileName, "affiliation")));
@@ -125,7 +125,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String userCollectionName = getUserCollectionName(fileName);
       String userCollectionPath = piCollectionPath + "/User_" + userCollectionName;
       HpcBulkMetadataEntry pathEntriesUser = new HpcBulkMetadataEntry();
-      pathEntriesUser.getPathMetadataEntries().add(createPathEntry("collection_type", "User"));
+      pathEntriesUser.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "User"));
       pathEntriesUser.getPathMetadataEntries().add(createPathEntry("user_name", getAttrValueWithKey(fileName, "user_name")));
       pathEntriesUser
           .getPathMetadataEntries()
@@ -151,7 +151,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String projectCollectionName = getProjectCollectionName(fileName);
       String projectCollectionPath = userCollectionPath + "/Project_" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithKey(fileName, "project_title")));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(fileName, "project_description")));
@@ -170,7 +170,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String runCollectionName = getRunCollectionName(fileName);
       String runCollectionPath = projectCollectionPath + "/Run_" + runCollectionName;
       HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+      pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_id", getAttrValueWithKey(fileName, "run_id")));
       if(getAttrValueWithKey(fileName, "run_date") != null)
         pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getAttrValueWithKey(fileName, "run_date")));
@@ -240,37 +240,37 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   }
 
 
-  private String getPiCollectionName(String fileName) throws DmeSyncMappingException {
+  private String getPiCollectionName(String fileName) {
     String piCollectionName = null;
     piCollectionName = getAttrValueWithKey(fileName, "pi_name");
-    piCollectionName = piCollectionName.trim().replaceAll(" ", "_");
-    piCollectionName = piCollectionName.replaceAll("\\.", "");
+    piCollectionName = piCollectionName.trim().replace(" ", "_");
+    piCollectionName = piCollectionName.replace("\\.", "");
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
   }
 
-  private String getUserCollectionName(String fileName) throws DmeSyncMappingException {
+  private String getUserCollectionName(String fileName) {
     String userCollectionName = null;
     userCollectionName = getAttrValueWithKey(fileName, "user_name");
     //Replace any spaces and period.
-    userCollectionName = userCollectionName.trim().replaceAll(" ", "_");
-    userCollectionName = userCollectionName.replaceAll("\\.", "");
+    userCollectionName = userCollectionName.trim().replace(" ", "_");
+    userCollectionName = userCollectionName.replace("\\.", "");
     logger.info("User Collection Name: {}", userCollectionName);
     return userCollectionName;
   }
   
-  private String getProjectCollectionName(String fileName) throws DmeSyncMappingException {
+  private String getProjectCollectionName(String fileName) {
     String projectCollectionName = null;
     projectCollectionName = getAttrValueWithKey(fileName, "project_title");
-    projectCollectionName = projectCollectionName.trim().replaceAll(" ", "_");
+    projectCollectionName = projectCollectionName.trim().replace(" ", "_");
     logger.info("Project Collection Name: {}", projectCollectionName);
     return projectCollectionName;
   }
   
-  private String getRunCollectionName(String fileName) throws DmeSyncMappingException {
+  private String getRunCollectionName(String fileName) {
     String runCollectionName = null;
     runCollectionName = getAttrValueWithKey(fileName, "run_id");
-    runCollectionName = runCollectionName.trim().replaceAll(" ", "_");
+    runCollectionName = runCollectionName.trim().replace(" ", "_");
     logger.info("Run Collection Name: {}", runCollectionName);
     return runCollectionName;
   }

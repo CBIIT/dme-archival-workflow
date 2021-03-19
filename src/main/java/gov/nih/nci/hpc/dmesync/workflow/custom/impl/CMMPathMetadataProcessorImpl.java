@@ -80,7 +80,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  
 	  //Add default path entry
       HpcMetadataEntry defaultEntry = new HpcMetadataEntry();
-      defaultEntry.setAttribute("collection_type");
+      defaultEntry.setAttribute(COLLECTION_TYPE_ATTRIBUTE);
       defaultEntry.setValue("Folder");
       hpcBulkMetadataEntries.getDefaultCollectionMetadataEntries().add(defaultEntry);
       
@@ -117,7 +117,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesVariant = new HpcBulkMetadataEntry();
       pathEntriesVariant.setPath(variantCollectionPath);
       pathEntriesVariant.getPathMetadataEntries().add(createPathEntry("variant_name", variantCollectionName));
-      pathEntriesVariant.getPathMetadataEntries().add(createPathEntry("collection_type", "Variant"));
+      pathEntriesVariant.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Variant"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesVariant);
       
       
@@ -274,14 +274,14 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  pathEntriesMethod.setPath(methodCollectionPath);
 	  //Add path metadata entries for "Method_XXX" collection
 	  pathEntriesMethod.getPathMetadataEntries().add(createPathEntry("instrument", getInstrumentName(object)));
-	  pathEntriesMethod.getPathMetadataEntries().add(createPathEntry("collection_type", "Negative_Stain"));
+	  pathEntriesMethod.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Negative_Stain"));
 	  hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesMethod);
 	  
 	  String rawDataCollectionPath = methodCollectionPath + "/Raw_Data";
       HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
       pathEntriesRawData.setPath(rawDataCollectionPath);
       //Add path metadata entries for "Raw_Data" collection
-      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry("collection_type", "Raw_Data"));
+      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
 	  
 	  return hpcBulkMetadataEntries;
@@ -295,7 +295,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesCryoEM = new HpcBulkMetadataEntry();
       pathEntriesCryoEM.setPath(cryoEMCollectionPath);
       //Add path metadata entries for "CryoEM" collection
-      pathEntriesCryoEM.getPathMetadataEntries().add(createPathEntry("collection_type", "CryoEM"));
+      pathEntriesCryoEM.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "CryoEM"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCryoEM);
       
 	  String runCollectionPath = cryoEMCollectionPath + "/" + getSoftware(object) + "_Run_" + getPipelineNumber(object);
@@ -305,14 +305,14 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("pipeline_number", getPipelineNumber(object)));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object)));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("software", getSoftware(object)));
-      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+      pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
       
       String rawDataCollectionPath = runCollectionPath + "/Raw_Data";
       HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
       pathEntriesRawData.setPath(rawDataCollectionPath);
       //Add path metadata entries for "Raw_Data" collection
-      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry("collection_type", "Raw_Data"));
+      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
       
 	  return hpcBulkMetadataEntries;

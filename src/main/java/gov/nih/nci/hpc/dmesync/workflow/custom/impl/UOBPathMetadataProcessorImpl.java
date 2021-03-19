@@ -48,7 +48,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String archivePath =
         destinationBaseDir
             + "/PI_"
-            + getPiCollectionName(object)
+            + getPiCollectionName()
             + "/Project_"
             + getProjectName(object)
             + "/Sample_"
@@ -57,7 +57,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -83,10 +83,10 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = pi_name, value = Mary Carrington (supplied)
 		  //key = affiliation, value = ? (supplied)
 	     
-	      String piCollectionName = getPiCollectionName(object);
+	      String piCollectionName = getPiCollectionName();
 	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
 	      
@@ -102,10 +102,10 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key = organism, value = (extracted)
 	     
 	      String projectCollectionName = getProjectName(object);
-	      projectCollectionName = projectCollectionName.replaceAll(" ", "_");
+	      projectCollectionName = projectCollectionName.replace(" ", "_");
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 	      HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getProjectName(object)));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", "Placeholder for method"));
@@ -123,7 +123,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      String sampleId = getSampleId(object);
 	      String sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
 	      HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("collection_type", "Sample"));
+	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", getAttrValueWithKey(path, "Gender")));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age_at_procurement", getAttrValueWithKey(path, "Age_at_procurement")));
@@ -158,7 +158,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   private String getCollectionNameFromParent(StatusInfo object, String parentName) {
 	  Path fullFilePath = Paths.get(object.getOriginalFilePath());
-	  logger.info("Full File Path = " + fullFilePath);
+	  logger.info("Full File Path = {}", fullFilePath);
 	  int count = fullFilePath.getNameCount();
 	  for (int i = 0; i <= count; i++) {
 	    if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
@@ -169,7 +169,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return null;
   }
 
-  private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getPiCollectionName() throws DmeSyncMappingException {
 	  String piCollectionName = null;
 	  //Example: If originalFilePath is /data/UOB_genomics/rawdata/ccbr769_RNAseq/mRNA/1030-Linehan-15/1030-Linehan-15.R1.fastq.gz
 	  //then the piName will be UOB_genomics
@@ -184,27 +184,27 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
   
   
-  private String getProjectName(StatusInfo object) throws DmeSyncMappingException {
+  private String getProjectName(StatusInfo object) {
 	  String projectName = null;
 	  //Example: If originalFilePath is /data/UOB_genomics/rawdata/ccbr769_RNAseq/mRNA/1030-Linehan-15/1030-Linehan-15.R1.fastq.gz
 	  //then the projectDirName will be RNAseq 40 cell lines from spreadsheet
 	  String fileNameId = Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
-	  logger.info("File name ID: " + fileNameId);
+	  logger.info("File name ID: {}", fileNameId);
 	  projectName = getAttrValueWithKey(fileNameId, "Project_Name");
-	  logger.info("projectName: " + projectName);
+	  logger.info("projectName: {}", projectName);
     return projectName;
   }
   
   
-  private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
+  private String getSampleId(StatusInfo object) {
 	  String sampleId = null;
 	  //Example: If sourceFilePath is /data/UOB_genomics/rawdata/ccbr769_RNAseq/mRNA/1030-Linehan-15/1030-Linehan-15.R1.fastq.gz
 	  //then the fileNameId will be 1030-Linehan-15, sampleId extracted from mapping file UOK208
 	  String fileNameId = Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
-	  logger.info("File name ID: " + fileNameId);
+	  logger.info("File name ID: {}", fileNameId);
 	  sampleId = getAttrValueWithKey(fileNameId, "Sample ID");
 	  
-	  logger.info("sampleId: " + sampleId);
+	  logger.info("sampleId: {}", sampleId);
     return sampleId;
   }
   

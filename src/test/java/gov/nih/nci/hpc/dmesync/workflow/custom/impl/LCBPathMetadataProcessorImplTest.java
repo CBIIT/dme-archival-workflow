@@ -3,7 +3,6 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +20,6 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
-import gov.nih.nci.hpc.dmesync.workflow.custom.impl.LCBPathMetadataProcessorImpl;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
@@ -79,7 +77,7 @@ public class LCBPathMetadataProcessorImplTest {
 
   @Test
   public void testGetMetadataJson()
-      throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+      throws DmeSyncMappingException, DmeSyncWorkflowException {
 
     StatusInfo statusInfoNS =
         setupStatusInfo(
@@ -93,7 +91,7 @@ public class LCBPathMetadataProcessorImplTest {
         lcbPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS);
 
     //Validate collection metadata results
-    Map<String, String> dataMap = new HashMap<String, String>();
+    Map<String, String> dataMap = new HashMap<>();
     dataMap.put("data_owner", "Sriram Subramaniam");
     dataMap.put("piArchivePath", "/CCR_LCB_SubramaniamLab_Archive/PI_Subramaniam");
     validateCollectionMetadataResults(requestDto, dataMap);

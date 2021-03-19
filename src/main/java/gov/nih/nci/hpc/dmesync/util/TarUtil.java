@@ -212,8 +212,7 @@ public class TarUtil {
   private static GzipCompressorOutputStream getGzipCompressorOutputStream(String name) throws IOException {
 	    FileOutputStream fileOutputStream = new FileOutputStream(name);
 	    BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
-	    GzipCompressorOutputStream gcos = new GzipCompressorOutputStream(bufferedOutputStream);
-	    return gcos;
+	    return new GzipCompressorOutputStream(bufferedOutputStream);
 	  }
 
   private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders)

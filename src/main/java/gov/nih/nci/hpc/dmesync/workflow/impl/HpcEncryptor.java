@@ -15,7 +15,6 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -90,7 +89,7 @@ public class HpcEncryptor
 		     return encryptCipher.doFinal(text.getBytes());
 		     
 		} catch(Exception e) {
-			    logger.error("Failed to encrypt: " + e);
+			    logger.error("Failed to encrypt: {}", e.getMessage());
 		}
 		
 		return null;    
@@ -108,7 +107,7 @@ public class HpcEncryptor
 		     return new String(decryptCipher.doFinal(binary));
 		     
 		} catch(Exception e) {
-			    logger.error("Failed to decrypt: " + e);
+			    logger.error("Failed to decrypt: {}" + e.getMessage());
 		}
 		
 		return null; 

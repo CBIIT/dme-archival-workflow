@@ -53,7 +53,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       helper.setFrom("hpcdme-sync");
       // Check if missing mrf file email, then extract
       // the user from the path to send out to the user as well as admin.
-      if (StringUtils.contains(text, "does not contain any")) {
+      if (StringUtils.contains(text, "does not contain any").booleanValue()) {
         userEmails = extractUserEmailFromPath(text);
         if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, adminEmails);
       }
@@ -148,7 +148,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     try {
       List<MetadataInfo> metadataInfo =
           dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndMetaDataKey(runId, "email");
-      Set<String> set = new HashSet<String>();
+      Set<String> set = new HashSet<>();
       for (MetadataInfo user : metadataInfo) {
         set.add(user.getMetaDataValue());
       }

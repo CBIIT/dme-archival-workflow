@@ -45,7 +45,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + fileName;
 
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -70,7 +70,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String piCollectionName = "Ognjenovic";
     String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-    pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+    pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
@@ -91,7 +91,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectCollectionName = getProjectCollectionName(object);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEP"));
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
@@ -101,7 +101,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String runCollectionName = getRunCollectionName(object);
     String runCollectionPath = projectCollectionPath + "/Run_" + runCollectionName;
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_number", projectCollectionName+"_"+runCollectionName));
     pathEntriesRun.setPath(runCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);

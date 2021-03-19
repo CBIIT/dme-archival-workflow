@@ -3,8 +3,6 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +22,6 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
-import gov.nih.nci.hpc.dmesync.workflow.custom.impl.NCEFPathMetadataProcessorImpl;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 
@@ -88,7 +85,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
  
   @Test
-  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException {
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/SChakrapani-NCEF-010-019-10025.tar", 
 			  "/mnt/IRODsScratch/work/SChakrapani-NCEF-010-019-10025.tar");
@@ -101,7 +98,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  
 	  //Validate collection metadata results
 	//Validate collection metadata results
-	  Map dataMap = new HashMap();
+	  Map<String, String> dataMap = new HashMap<>();
 	  dataMap.put("data_owner", "Sudha Chakrapani");
 	  dataMap.put("affiliation", "CWRU");
 	  dataMap.put("start_date", "4/1/18");
@@ -156,7 +153,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
   
   @Test
-  public void testGetMetadataJsonForWithRunFolder() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+  public void testGetMetadataJsonForWithRunFolder() throws DmeSyncMappingException, DmeSyncWorkflowException {
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
 			  "/mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar");
@@ -168,7 +165,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 				ncefPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS);
 	  
 	  //Validate collection metadata results
-	  Map dataMap = new HashMap();
+	  Map<String, String> dataMap = new HashMap<>();
 	  dataMap.put("data_owner", "Ronen Marmorstein");
 	  dataMap.put("affiliation", "UPENN");
 	  dataMap.put("start_date", "4/1/18");
@@ -193,7 +190,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
   
   
-  private void setupDataForMetadataJsonTest(String piCollectionName, String pi_name, String affiliation, String projectCollectionName, String startDate) {
+  private void setupDataForMetadataJsonTest(String piCollectionName, String piName, String affiliation, String projectCollectionName, String startDate) {
       
 	  ncefPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
 	  
@@ -202,7 +199,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  nameMapping.setCollectionName(piCollectionName);
 	  nameMapping.setCollectionType("PI");
 	  nameMapping.setMetaDataKey("data_owner");
-	  nameMapping.setMetaDataValue(pi_name);
+	  nameMapping.setMetaDataValue(piName);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
 	  nameMapping = new MetadataMapping();
@@ -258,7 +255,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  
   }
   
-  private void validateCollectionMetadataResults(HpcDataObjectRegistrationRequestDTO requestDto, Map dataMap) {
+  private void validateCollectionMetadataResults(HpcDataObjectRegistrationRequestDTO requestDto, Map<String, String> dataMap) {
 			  
 	  assertNotNull(requestDto);
 	  assertEquals(true, requestDto.getGenerateUploadRequestURL());

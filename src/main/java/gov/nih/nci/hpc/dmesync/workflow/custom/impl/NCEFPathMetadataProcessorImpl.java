@@ -53,7 +53,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -84,10 +84,8 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      String piCollectionName = getPiCollectionName(object);
 	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      //pathEntriesPI.getPathMetadataEntries().add(createPathEntry("pi_name", getAttrValueWithKey(path, "pi_name")));
-	      //pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation", getAttrValueWithKey(path, "affiliation")));
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
 	      
 	      //Add path metadata entries for "Project_XXX" collection
@@ -105,7 +103,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      String projectCollectionName = getProjectCollectionName(object);
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 	      HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("submission_id", getSubmissionId(projectCollectionName)));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
@@ -133,7 +131,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      String runCollectionName = getRunCollectionName(object);
 	      String runCollectionPath = projectCollectionPath + "/Run_" + runCollectionName;
 	      HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-	      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+	      pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
 	      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_number", runCollectionName));
 	      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("instrument_name", getInstrumentName(runCollectionName)));
 	      pathEntriesRun.setPath(runCollectionPath);
@@ -143,7 +141,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
 	      pathEntriesRawData.setPath(rawDataCollectionPath);
 	      //Add path metadata entries for "Raw_Data" collection
-	      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry("collection_type", "Raw_Data"));
+	      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
 	      
 	      //Set it to dataObjectRegistrationRequestDTO
@@ -167,7 +165,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   private String getCollectionNameFromParent(StatusInfo object, String parentName) {
 	  //Example originalFilepath - /mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
 	  Path fullFilePath = Paths.get(object.getOriginalFilePath());
-	  logger.info("Full File Path = " + fullFilePath);
+	  logger.info("Full File Path = {}", fullFilePath);
 	  int count = fullFilePath.getNameCount();
 	  for (int i = 0; i <= count; i++) {
 	    if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
@@ -193,7 +191,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Example: If originalFilePath is /mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
 	  //then the projectDirName will be RMarmorstein-NCEF-033-007-10031
 	  String piDirName = getCollectionNameFromParent(object, "Archive_Staging");
-	  logger.info("PI Directory Name: " + piDirName);
+	  logger.info("PI Directory Name: {}", piDirName);
 	  
 	  if(piDirName != null) {
 		  //return RMarmorstein
@@ -201,7 +199,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  } else {
 		  piCollectionName = getCollectionMappingValue(getUserId(object), "PI");
 	  }
-	  logger.info("PI Collection Name: " + piCollectionName);
+	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;
 	  
   }
@@ -212,7 +210,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Example: If originalFilePath is /mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
 	  //then the projectDirName will be RMarmorstein-NCEF-033-007-10031
 	  String projectDirName = getCollectionNameFromParent(object, "Archive_Staging");
-	  logger.info("Project Directory Name: " + projectDirName);
+	  logger.info("Project Directory Name: {}", projectDirName);
 	  if(projectDirName != null) {
 		  int startIndex = projectDirName.indexOf("NCEF");
 		  if(startIndex != -1) {
@@ -223,7 +221,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  }
 	  }
 	  
-	  logger.info("projectCollectionName: " + projectCollectionName);
+	  logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
   }
 
@@ -238,7 +236,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Example: If sourceFilePath is /mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
 	  //then the runDirName will be RMarmorstein-NCEF-033-007-10031-A.tar
 	  String runDirName = Paths.get(object.getSourceFilePath()).toFile().getName();
-	  logger.info("Run Directory Name: " + runDirName);
+	  logger.info("Run Directory Name: {}", runDirName);
 	  if(runDirName != null) {
 		  int startIndex = runDirName.indexOf("NCEF") + 12;
 		  if(startIndex != -1) {
@@ -249,11 +247,11 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  }
 	  }
 	 
-	 logger.info("runCollectionName: " + runCollectionName);
+	 logger.info("runCollectionName: {}", runCollectionName);
     return runCollectionName;
   }
 
-  private String getInstrumentName(String runNumber) throws DmeSyncMappingException {
+  private String getInstrumentName(String runNumber) {
 	  //Example: If runNumber is 10031-A then the instrumentId will be 1
 	  //TBD get the instrument names.
 	  String instrumentId =  runNumber.substring(0, 1);

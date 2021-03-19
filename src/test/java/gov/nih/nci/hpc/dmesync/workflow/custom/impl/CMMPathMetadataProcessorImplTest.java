@@ -5,9 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +20,6 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
-import gov.nih.nci.hpc.dmesync.workflow.custom.impl.CMMPathMetadataProcessorImpl;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
@@ -175,7 +171,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
   
   
   @Test
-  public void testGetMetadataJsonForCryoEM() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException, ParseException {
+  public void testGetMetadataJsonForCryoEM() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
 	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Project-B/CryoEM/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
 		

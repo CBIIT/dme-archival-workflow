@@ -79,7 +79,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     }
 
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -104,7 +104,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
       String dbCollectionPath = destinationBaseDir + "/Database_DbGap";
       HpcBulkMetadataEntry pathEntriesDB = new HpcBulkMetadataEntry();
-      pathEntriesDB.getPathMetadataEntries().add(createPathEntry("collection_type", "Database"));
+      pathEntriesDB.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Database"));
       pathEntriesDB.getPathMetadataEntries().add(createPathEntry("database_type", "dbGaP"));
       pathEntriesDB.setPath(dbCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesDB);
@@ -126,7 +126,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       pathEntriesProject
           .getPathMetadataEntries()
-          .add(createPathEntry("collection_type", "Project"));
+          .add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
       if(dataType.equals("SRA_Read")) {
         for (String metadataAttrName : mapper.getProjectMetadataAttributeNames()) {
@@ -157,7 +157,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       HpcBulkMetadataEntry pathEntriesDataset = new HpcBulkMetadataEntry();
       pathEntriesDataset
           .getPathMetadataEntries()
-          .add(createPathEntry("collection_type", "Dataset"));
+          .add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataset"));
       if(dataType.equals("SRA_Read")) {
         for (String metadataAttrName : mapper.getDatasetMetadataAttributeNames()) {
           String metadataAttrValue = getAttrValueWithKey(runId, metadataAttrName);
@@ -179,7 +179,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       HpcBulkMetadataEntry pathEntriesDataType = new HpcBulkMetadataEntry();
       pathEntriesDataType
           .getPathMetadataEntries()
-          .add(createPathEntry("collection_type", dataType));
+          .add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, dataType));
       pathEntriesDataType.setPath(dataTypeCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesDataType);
       
@@ -191,7 +191,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         String runCollectionName = runId;
         String runCollectionPath = dataTypeCollectionPath + "/Run_" + runCollectionName;
         HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-        pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+        pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
         pathEntriesRun.getPathMetadataEntries().add(createPathEntry("Run", runId));
         for (String metadataAttrName : mapper.getRunMetadataAttributeNames()) {
           String metadataAttrValue = getAttrValueWithKey(runId, metadataAttrName);

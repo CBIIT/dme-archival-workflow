@@ -57,10 +57,7 @@ public class ExcelUtil {
       Row header = sheet.createRow(rowCount++);
       header.createCell(colCount++).setCellValue("RunId");
       header.createCell(colCount++).setCellValue("ObjectId");
-      //header.createCell(colCount++).setCellValue("OrginalFileName");
       header.createCell(colCount++).setCellValue("OriginalFilePath");
-      //header.createCell(colCount++).setCellValue("SourceFileName");
-      //header.createCell(colCount++).setCellValue("SourceFilePath");
       header.createCell(colCount++).setCellValue("FullDestinationPath");
       header.createCell(colCount++).setCellValue("Filesize");
       header.createCell(colCount++).setCellValue("Status");
@@ -70,7 +67,6 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("EndTimestamp");
       header.createCell(colCount++).setCellValue("UploadStartTimestamp");
       header.createCell(colCount++).setCellValue("UploadEndTimestamp");
-      //header.createCell(colCount++).setCellValue("ArchiveSpeed(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("DataTransferRate(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("Error");
       header.createCell(colCount++).setCellValue("RetryCount");
@@ -87,10 +83,7 @@ public class ExcelUtil {
         Row row = sheet.createRow(rowCount++);
         row.createCell(colCount++).setCellValue(data.getRunId());
         row.createCell(colCount++).setCellValue(data.getId());
-        //row.createCell(colCount++).setCellValue(data.getOrginalFileName());
         row.createCell(colCount++).setCellValue(data.getOriginalFilePath());
-        //row.createCell(colCount++).setCellValue(data.getSourceFileName());
-        //row.createCell(colCount++).setCellValue(data.getSourceFilePath());
         row.createCell(colCount++).setCellValue(data.getFullDestinationPath());
         row.createCell(colCount++).setCellValue(data.getFilesize());
         row.createCell(colCount++).setCellValue(data.getStatus());
@@ -112,7 +105,6 @@ public class ExcelUtil {
           Long ellapsedTimeInMilliSec =
               (data.getEndTimestamp().getTime() - data.getStartTimestamp().getTime());
           float rate = data.getFilesize() / (ellapsedTimeInMilliSec.floatValue() / 1000);
-          //row.createCell(colCount++).setCellValue(String.format ("%.0f", rate));
           //effective data transfer rates (only transfer)
           ellapsedTimeInMilliSec =
               (data.getUploadEndTimestamp().getTime() - data.getUploadStartTimestamp().getTime());
@@ -122,7 +114,6 @@ public class ExcelUtil {
           row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
-          //row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
         }
         row.createCell(colCount++).setCellValue(data.getError());
@@ -248,7 +239,7 @@ public class ExcelUtil {
 
   private static Map<String, Map<String, String>> getMetadataMap(Sheet metadataSheet, String key)
       throws DmeSyncMappingException {
-    Map<String, Map<String, String>> metdataSheetMap = new HashMap<String, Map<String, String>>();
+    Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
     Iterator<Row> iterator = metadataSheet.iterator();
 
     // Read 1st row which is header row with attribute names
@@ -261,7 +252,7 @@ public class ExcelUtil {
       if (currentRow.getRowNum() == 0) continue;
       // Skip header row
       int counter = 0;
-      Map<String, String> rowMetadata = new HashMap<String, String>();
+      Map<String, String> rowMetadata = new HashMap<>();
 
       for (String attrName : attrNames) {
         Cell currentCell = currentRow.getCell(counter);
@@ -279,7 +270,7 @@ public class ExcelUtil {
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
           } else {
-            rowMetadata.put(attrName.trim(), (new Double(dv).toString()));
+            rowMetadata.put(attrName.trim(), (Double.toString(dv)));
           }
 
         } else {
@@ -297,7 +288,7 @@ public class ExcelUtil {
   
   private static Map<String, Map<String, String>> getMetadataMap(Sheet metadataSheet, String key1, String key2)
       throws DmeSyncMappingException {
-    Map<String, Map<String, String>> metdataSheetMap = new HashMap<String, Map<String, String>>();
+    Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
     Iterator<Row> iterator = metadataSheet.iterator();
 
     // Read 1st row which is header row with attribute names
@@ -305,12 +296,13 @@ public class ExcelUtil {
     // Read all rows (skip 1st) and construct metadata map
     // Skip cells exceeding header size
     while (iterator.hasNext()) {
-      String attrKey1 = null, attrKey2 = null;
+      String attrKey1 = null;
+      String attrKey2 = null;
       Row currentRow = iterator.next();
       if (currentRow.getRowNum() == 0) continue;
       // Skip header row
       int counter = 0;
-      Map<String, String> rowMetadata = new HashMap<String, String>();
+      Map<String, String> rowMetadata = new HashMap<>();
 
       for (String attrName : attrNames) {
         Cell currentCell = currentRow.getCell(counter);

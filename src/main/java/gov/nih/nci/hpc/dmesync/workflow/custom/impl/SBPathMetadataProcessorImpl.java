@@ -73,7 +73,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + fileName.replace(patientId, patientKey);
 
     // replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -95,7 +95,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String piCollectionName = getPiCollectionName(object);
     String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-    pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+    pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
@@ -116,7 +116,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectCollectionName = getProjectCollectionName(object);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
@@ -136,7 +136,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String patientId = getPatientId(object);
     String patientCollectionPath = projectCollectionPath + "/Patient_" + patientKey;
     HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
-    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("collection_type", "Patient"));
+    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Patient"));
     String patientIdEncrypted = Base64.getEncoder().encodeToString(encryptor.encrypt(patientId));
     String unknownEncrypted = Base64.getEncoder().encodeToString(encryptor.encrypt("Unknown"));
     pathEntriesPatient
@@ -172,7 +172,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String runId = getRunId(object);
     String runCollectionPath = patientCollectionPath + "/Run_" + runId;
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Run"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_id", runId));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object)));
@@ -221,7 +221,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         .add(createPathEntry("file_type", fileType));
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
-        .add(createPathEntry("source_path", object.getOriginalFilePath().replaceAll(patientId, patientKey)));
+        .add(createPathEntry("source_path", object.getOriginalFilePath().replace(patientId, patientKey)));
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("sample_info", getSampleInfo(fileName)));
@@ -291,7 +291,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return projectCollectionName;
   }
 
-  private String getPatientId(StatusInfo object) throws DmeSyncMappingException {
+  private String getPatientId(StatusInfo object) {
     String patientId = null;
     // Example: If originalFilePath is
     // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
@@ -356,7 +356,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return getAttrValueWithParitallyMatchingKey(metadataMap, object, "sequencer_run_date");
   }
 
-  private String getRunDateFromPath(StatusInfo object) throws DmeSyncMappingException {
+  private String getRunDateFromPath(StatusInfo object) {
     // Example: If originalFilePath is
     // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
     // then the RunDate will be November_04_2019 (This is based on parent path.)

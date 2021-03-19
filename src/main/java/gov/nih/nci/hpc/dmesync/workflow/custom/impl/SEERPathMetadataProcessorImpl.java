@@ -49,7 +49,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -72,7 +72,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       String piCollectionName = getPiCollectionName(object);
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.setPath(piCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
       
@@ -93,9 +93,8 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       String projectCollectionName = getProjectCollectionName(object);
       String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
-      //pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
-  
+      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
+
       pathEntriesProject.setPath(projectCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
       
@@ -105,7 +104,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       String datasetCollectionName = getDatasetCollectionName(object);
       String datasetCollectionPath = projectCollectionPath + "/Dataset_" + datasetCollectionName;
       HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("collection_type", "Dataset"));
+      pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataset"));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("person_id", getPersonId(object)));
       pathEntriesRun.setPath(datasetCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesRun, "Dataset", datasetCollectionName));
@@ -134,7 +133,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String piCollectionName = getCollectionMappingValue(getProjectId(object), "PI_Lab");
-	  logger.info("PI Collection Name: " + piCollectionName);
+	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;
 	  
   }
@@ -144,15 +143,15 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 
 	  String projectCollectionName =  getCollectionMappingValue(getProjectId(object), "Project");
-	  logger.info("projectCollectionName: " + projectCollectionName);
+	  logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
   }
 
 
   
-  private String getDatasetCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getDatasetCollectionName(StatusInfo object) {
       String datasetCollectionName = getPersonId(object);
-	  logger.info("datasetCollectionName: " + datasetCollectionName);
+	  logger.info("datasetCollectionName: {}", datasetCollectionName);
       return datasetCollectionName;
   }
   
@@ -186,7 +185,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			  desc = "Normal lymph node free of tumor";
 			  break;
 		 case "default":
-	    	  logger.error("Cannot obtain description for block Id in " + object.getSourceFilePath());
+	    	  logger.error("Cannot obtain description for block Id in {}", object.getSourceFilePath());
 	  }
 	  return desc;
 	  
@@ -220,7 +219,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			  desc = "HER2 immunohistochemistry slide";
 			  break;
 		 case "default":
-	    	  logger.error("Cannot obtain description for slide Id in " + object.getSourceFilePath());
+	    	  logger.error("Cannot obtain description for slide Id in {}", object.getSourceFilePath());
 	  }
 	  return desc;
 	  

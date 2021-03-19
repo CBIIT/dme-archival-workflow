@@ -52,7 +52,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -70,7 +70,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  
 	  //Add default path entry
 	  HpcMetadataEntry defaultEntry = new HpcMetadataEntry();
-	  defaultEntry.setAttribute("collection_type");
+	  defaultEntry.setAttribute(COLLECTION_TYPE_ATTRIBUTE);
 	  defaultEntry.setValue("Folder");
 	  hpcBulkMetadataEntries.getDefaultCollectionMetadataEntries().add(defaultEntry);
 	    
@@ -104,9 +104,9 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String expCollectionName = getExpCollectionName(object);
       logger.debug("exp_collection_name = {}", expCollectionName);
       String expPath = destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName + "/Exp_" + expCollectionName;
-      pathEntriesExp.setPath(expPath.replaceAll(" ", "_"));
+      pathEntriesExp.setPath(expPath.replace(" ", "_"));
       pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_name", expCollectionName));
-      pathEntriesExp.getPathMetadataEntries().add(createPathEntry("collection_type", "Exp"));
+      pathEntriesExp.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Exp"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExp);
 		     
       //Set it to dataObjectRegistrationRequestDTO

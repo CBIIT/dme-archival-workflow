@@ -32,6 +32,8 @@ import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 
 public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetadataProcessor {
 
+  protected static final String COLLECTION_TYPE_ATTRIBUTE = "collection_type";
+	
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
 

@@ -43,14 +43,14 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String archivePath =
         destinationBaseDir
             + "/PI_"
-            + getPiCollectionName(object)
+            + getPiCollectionName()
             + "/"
             + getProjectCollectionName(object)
             + "/"
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -69,17 +69,17 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Example row: collectionType - PI_Lab, collectionName - Subramaniam (derived)
 	  //key = pi_name, value = Sriram Subramaniam (supplied)
 
-      String piCollectionName = getPiCollectionName(object);
+      String piCollectionName = getPiCollectionName();
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.setPath(piCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
         
       String projectCollectionName = getProjectCollectionName(object);
       String projectCollectionPath = piCollectionPath + "/" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
       pathEntriesProject.setPath(projectCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
       
@@ -99,7 +99,7 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       return dataObjectRegistrationRequestDTO;
   }
 
-  private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getPiCollectionName() throws DmeSyncMappingException {
 	  //Example: If originalFilePath is /data/Livlab/projects/GluK2.tar
 	  //then the piDirName will be Livlab
 	  String piDirName = "Livlab";

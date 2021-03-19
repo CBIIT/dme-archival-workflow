@@ -21,7 +21,6 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
-import gov.nih.nci.hpc.dmesync.workflow.custom.impl.CompassPathMetadataProcessorImpl;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
@@ -104,7 +103,7 @@ public class CompassPathMetadataProcessorImplTest {
         compassPathMetadataProcessorImpl2.getMetaDataJson(statusInfoNS);
 
     //Validate collection metadata results
-    Map<String, String> dataMap = new HashMap<String, String>();
+    Map<String, String> dataMap = new HashMap<>();
     dataMap.put("data_owner", "Compass PI name");
     dataMap.put("affiliation", "Compass PI_Lab affiliation");
     dataMap.put("piArchivePath", "/Compass_Test_Archive/PI_Compass");

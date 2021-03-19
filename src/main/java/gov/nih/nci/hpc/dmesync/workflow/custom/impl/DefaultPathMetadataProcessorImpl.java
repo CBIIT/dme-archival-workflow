@@ -61,7 +61,7 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
     }
 
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     return archivePath;
   }

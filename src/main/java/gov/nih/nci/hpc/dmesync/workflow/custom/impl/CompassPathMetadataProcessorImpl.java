@@ -110,7 +110,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     }
 
     // replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -133,7 +133,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     String piCollectionName = getPiCollectionName();
     String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-    pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+    pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
@@ -154,7 +154,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     String projectCollectionName = getProjectCollectionName(object);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
@@ -172,7 +172,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
     String sampleCollectionPath = null;
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("collection_type", "Sample"));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
     if(projectCollectionName.equals("TSO500")) {
     	String sampleId = getSampleId(object);
         sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
@@ -221,7 +221,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     	String experimentCollectionPath = null;
         HpcBulkMetadataEntry pathEntriesExperiment = new HpcBulkMetadataEntry();
         experimentCollectionPath = sampleCollectionPath + "/" + getExperimentId(object);
-        pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry("collection_type", "Folder"));
+        pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Folder"));
     	pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry("case_id", getExperimentId(object)));
     	pathEntriesExperiment.setPath(experimentCollectionPath);
         hpcBulkMetadataEntries
@@ -232,7 +232,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     	String sampleId = getSampleId(object);
         HpcBulkMetadataEntry pathEntriesMethylationSample = new HpcBulkMetadataEntry();
         methylationSampleCollectionPath = sampleCollectionPath + "/Sample_" + sampleId;
-        pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("collection_type", "Folder"));
+        pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Folder"));
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("patient_id", sampleId));
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("library_name", sampleId));
         // load the user metadata from the externally placed excel

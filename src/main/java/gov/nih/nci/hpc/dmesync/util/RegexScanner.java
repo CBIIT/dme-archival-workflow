@@ -73,7 +73,7 @@ class RegexScanner {
 		long start = System.nanoTime();
 		List<String> files = new RegexScanner(new File("..\\website\\includes"), includes, excludes).matches();
 		long end = System.nanoTime();
-		System.out.println(files.toString().replaceAll(", ", "\n").replaceAll("[\\[\\]]", ""));
+		System.out.println(files.toString().replace(", ", "\n").replace("[\\[\\]]", ""));
 		System.out.println((end - start) / 1000000f);
 	}
 }

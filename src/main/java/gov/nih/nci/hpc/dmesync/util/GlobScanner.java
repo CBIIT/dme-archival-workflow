@@ -173,8 +173,8 @@ class GlobScanner {
 			this.ignoreCase = ignoreCase;
 
 			pattern = pattern.replace('\\', '/');
-			pattern = pattern.replaceAll("\\*\\*[^/]", "**/*");
-			pattern = pattern.replaceAll("[^/]\\*\\*", "*/**");
+			pattern = pattern.replace("\\*\\*[^/]", "**/*");
+			pattern = pattern.replace("[^/]\\*\\*", "*/**");
 			if (ignoreCase) pattern = pattern.toLowerCase();
 
 			values = pattern.split("/");
@@ -283,7 +283,7 @@ class GlobScanner {
 		long start = System.nanoTime();
 		List<String> files = new GlobScanner(new File(".."), includes, excludes, false, 1).matches();
 		long end = System.nanoTime();
-		System.out.println(files.toString().replaceAll(", ", "\n").replaceAll("[\\[\\]]", ""));
+		System.out.println(files.toString().replace(", ", "\n").replace("[\\[\\]]", ""));
 		System.out.println((end - start) / 1000000f);
 	}
 }

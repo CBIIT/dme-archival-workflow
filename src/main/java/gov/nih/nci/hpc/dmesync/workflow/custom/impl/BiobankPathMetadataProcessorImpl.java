@@ -53,7 +53,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
             + fileName;
     
     //replace spaces with underscore
-    archivePath = archivePath.replaceAll(" ", "_");
+    archivePath = archivePath.replace(" ", "_");
     
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -78,9 +78,9 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		  //key = affiliation, value = ? (supplied)
 	     
 	      String piCollectionName = getPiCollectionName();
-	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replaceAll(" ", "_");
+	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
 	      
@@ -98,7 +98,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      String projectCollectionName = getProjectCollectionName();
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 	      HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 	      pathEntriesProject.setPath(projectCollectionPath);
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
@@ -111,7 +111,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      String subfolderCollectionPath = projectCollectionPath + "/" + subfolderCollectionName;
 	      String subfolderCollectionType = StringUtils.contains(subfolderCollectionName, "Molecular") ? "Molecular" : "Report";
 	      HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
-	      pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry("collection_type", subfolderCollectionType));
+	      pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, subfolderCollectionType));
 	      pathEntriesSubFolder.setPath(subfolderCollectionPath);
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesSubFolder, subfolderCollectionType, subfolderCollectionName));
 			     
