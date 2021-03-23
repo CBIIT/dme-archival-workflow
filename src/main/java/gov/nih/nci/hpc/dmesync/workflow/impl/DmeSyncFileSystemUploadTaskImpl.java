@@ -128,7 +128,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
         //Update DB to completed but if verification fails, it will show up as error in verification 
         object.setStatus("COMPLETED");
         object.setUploadEndTimestamp(new Date());
-        object = dmeSyncWorkflowService.saveStatusInfo(object);
+        dmeSyncWorkflowService.saveStatusInfo(object);
       } else {
     	  String json = objectMapper.writeValueAsString(response.getBody());
           errorResponse = objectMapper.readValue(json, HpcExceptionDTO.class);

@@ -115,12 +115,12 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 
 	private boolean permissionReponseHasFailures(HpcArchivePermissionsResponseDTO responseDTO) {
 		if(responseDTO.getDataObjectPermissionsStatus() != null && !getPermissionReponseStatus(responseDTO.getDataObjectPermissionsStatus()))
-			return false;
+			return true;
 		for (HpcArchivePermissionResponseDTO directoryResponse: responseDTO.getDirectoryPermissionsStatus()) {
 			if(!getPermissionReponseStatus(directoryResponse))
-				return false;
+				return true;
 		}
-		return true;
+		return false;
 	}
 	
 	private boolean getPermissionReponseStatus(HpcArchivePermissionResponseDTO response) {
