@@ -57,6 +57,9 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
   @Value("${dmesync.filesystem.upload.group.search.base:}")
   private String groupSearchBase;
   
+  @Value("${dmesync.filesystem.upload.file.container.id:}")
+  private String fileContainerId;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("UploadTask");
@@ -93,7 +96,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
       //Set the source path for file system uploads.
       HpcUploadSource uploadSource = new HpcUploadSource();
       HpcFileLocation fileLocation = new HpcFileLocation();
-      fileLocation.setFileContainerId(object.getSourceFileName());
+      fileLocation.setFileContainerId(fileContainerId);
       fileLocation.setFileId(object.getSourceFilePath());
       uploadSource.setSourceLocation(fileLocation);
       object.getDataObjectRegistrationRequestDTO().setFileSystemUploadSource(uploadSource);
@@ -125,8 +128,6 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
       if (HttpStatus.OK.equals(response.getStatusCode())
           || HttpStatus.CREATED.equals(response.getStatusCode())) {
         logger.info("[{}] File upload successful", super.getTaskName());
-        //Update DB to completed but if verification fails, it will show up as error in verification 
-        object.setStatus("COMPLETED");
         object.setUploadEndTimestamp(new Date());
         dmeSyncWorkflowService.saveStatusInfo(object);
       } else {
