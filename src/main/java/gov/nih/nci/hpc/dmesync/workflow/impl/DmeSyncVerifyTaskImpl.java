@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
@@ -40,6 +41,9 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.filesystem.upload:false}")
+  private boolean fileSystemUpload;
+  
   @Autowired private RestTemplateFactory restTemplateFactory;
   
   @Autowired private ObjectMapper objectMapper;
@@ -51,7 +55,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   }
   
   @Override
-  public StatusInfo process(StatusInfo object) throws DmeSyncWorkflowException {
+  public StatusInfo process(StatusInfo object) throws DmeSyncWorkflowException, DmeSyncVerificationException {
 
     //Verify, call GET dataObject and verify file size and checksum against local db.
     try {
@@ -119,14 +123,18 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
               "Data_transfer_status is not in ARCHIVED, it is " + map.get("data_transfer_status");
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
+          if (fileSystemUpload) {
+        	  throw new DmeSyncVerificationException(msg);
+          }
         }
-
       } else {
         logger.error(
             "[{}] Received bad response from verify dataObject, responseCode {}", super.getTaskName(),
                 response.getStatusCode());
         throw new DmeSyncWorkflowException("Received bad response from verify dataObject");
       }
+    } catch (DmeSyncVerificationException e) {
+        throw e;
     } catch (Exception e) {
       logger.error("[{}] Error occured during verify task", super.getTaskName(), e);
       throw new DmeSyncWorkflowException("Error occured during verify task - " + e.getMessage(), e);

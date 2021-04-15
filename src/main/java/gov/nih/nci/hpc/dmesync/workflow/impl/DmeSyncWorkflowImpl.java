@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -103,9 +104,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       dmeSyncWorkflowService.completeWorkflow(statusInfo);
       logger.info("[Workflow] Completed");
       
-    } catch (DmeSyncMappingException e) {
+    } catch (DmeSyncMappingException | DmeSyncVerificationException  e) {
       
-      // In case of mapping exception, retry will not help.
+      // In case of mapping or verification exception on async, retry will not help.
       dmeSyncWorkflowService.recordError(statusInfo, e);
       
     } catch (DmeSyncWorkflowException e) {

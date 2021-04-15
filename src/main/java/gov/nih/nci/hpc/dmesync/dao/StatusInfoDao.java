@@ -58,4 +58,13 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   List<StatusInfo> findAllByOriginalFilePathAndStatusAndRunId(
       String originalFilePath, String status, String runId);
+
+  /**
+   * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
+   * @param originalFilePath the original file path
+   * @return the StatusInfo object
+   */
+  StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+      String originalFilePath);
+
 }

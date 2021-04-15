@@ -202,4 +202,11 @@ public interface DmeSyncWorkflowService {
    * @param entry permission bookmark entry
    */
   void savePermissionBookmarkInfo(PermissionBookmarkInfo entry);
+
+  /**
+   * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
+   * @param absolutePath
+   * @return the StatusInfo object
+   */
+  StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(String absolutePath);
 }

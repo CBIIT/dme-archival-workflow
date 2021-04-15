@@ -161,4 +161,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public void savePermissionBookmarkInfo(PermissionBookmarkInfo entry) {
     permissionBookmarkInfoDao.save(entry);
   }
+  
+  @Override
+  public StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+      String originalFilePath) {
+    return statusInfoDao.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(originalFilePath);
+  }
 }

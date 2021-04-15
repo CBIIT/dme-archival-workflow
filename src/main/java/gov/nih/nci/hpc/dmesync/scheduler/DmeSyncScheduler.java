@@ -262,6 +262,23 @@ public class DmeSyncScheduler {
           logger.debug(
               "[Scheduler] File has already been uploaded: {}", statusInfo.getOriginalFilePath());
           continue;
+        } else {
+        	statusInfo =
+                    dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+                        file.getAbsolutePath());
+          if(statusInfo != null) {
+        	//Update the run_id
+        	statusInfo.setRunId(runId);
+        	statusInfo = dmeSyncWorkflowService.saveStatusInfo(statusInfo);
+        	// Delete the metadata info created for this object ID
+        	dmeSyncWorkflowService.deleteMetadataInfoByObjectId(statusInfo.getId());
+        	// Send the incomplete objectId to the message queue for processing
+            DmeSyncMessageDto message = new DmeSyncMessageDto();
+            message.setObjectId(statusInfo.getId());
+
+            sender.send(message, "inbound.queue");
+            continue;
+          }
         }
 
       }
