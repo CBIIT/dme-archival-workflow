@@ -267,8 +267,10 @@ public class DmeSyncScheduler {
                     dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
                         file.getAbsolutePath());
           if(statusInfo != null) {
-        	//Update the run_id
+        	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
+        	statusInfo.setError("");
+        	statusInfo.setRetryCount(0L);
         	statusInfo = dmeSyncWorkflowService.saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
         	dmeSyncWorkflowService.deleteMetadataInfoByObjectId(statusInfo.getId());

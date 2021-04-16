@@ -56,7 +56,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// For dceg, take all folders name under sequencing as collections.
 		Path relativePath = Paths.get(object.getOriginalFilePath()
-				.substring(object.getOriginalFilePath().toLowerCase().indexOf("sequencing") + "sequencing/".length()));
+				.substring(object.getOriginalFilePath().indexOf("Sequencing") + "Sequencing/".length()));
 		String relativePathStr = relativePath.toString().replace("\\", "/");
 		String platformName = getPlatformName(object);
 
@@ -94,7 +94,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getPlatformName(StatusInfo object) {
-		String platformName = getCollectionNameFromParent(object, "sequencing");
+		String platformName = getCollectionNameFromParent(object, "Sequencing");
 		if (platformName.equals("Illumina")) {
 			String platformType = getCollectionNameFromParent(object, "Illumina");
 			platformName = platformName + "_" + platformType;
@@ -245,7 +245,7 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
 		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equalsIgnoreCase(parentName)) {
+			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
 				return fullFilePath.getFileName().toString();
 			}
 			fullFilePath = fullFilePath.getParent();
@@ -259,18 +259,17 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		boolean supportsPosixPermissions = Files.getFileStore(path)
 				.supportsFileAttributeView(PosixFileAttributeView.class);
 		if (supportsPosixPermissions) {
-			PosixFileAttributes posixAttributes = Files.readAttributes(path, PosixFileAttributes.class);
-			permission.setOwner(posixAttributes.owner().getName());
-			permission.setGroup(posixAttributes.group().getName());
+			permission.setOwner(String.valueOf((Integer) Files.getAttribute(path, "unix:uid")));
+			permission.setGroup(String.valueOf((Integer) Files.getAttribute(path, "unix:gid")));
 			permission.setPermissions(PosixFilePermissions.toString(Files.getPosixFilePermissions(path)));
-			permission.setUserId((Integer) Files.getAttribute(path, "unix:uid"));
-			permission.setGroupId((Integer) Files.getAttribute(path, "unix:gid"));
+			logger.debug("uid: {}", Files.getAttribute(path, "unix:uid"));
+			logger.debug("gid: {}", Files.getAttribute(path, "unix:gid"));
+			logger.debug("Permissions: {}", permission.getPermissions());
 		} else {
-			FileOwnerAttributeView ownerAttributeView = Files.getFileAttributeView(path, FileOwnerAttributeView.class);
-			UserPrincipal owner = ownerAttributeView.getOwner();
-			permission.setOwner(owner.getName());
-			permission.setGroup("store-IRODs-all");
-			permission.setPermissions("rwxr-x---");
+			//Test only
+			permission.setOwner("640000161");
+			permission.setGroup("640000161");
+			permission.setPermissions("rw-rw-r--");
 		}
 		return permission;
 	}

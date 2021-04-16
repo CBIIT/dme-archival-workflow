@@ -131,6 +131,11 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         logger.error(
             "[{}] Received bad response from verify dataObject, responseCode {}", super.getTaskName(),
                 response.getStatusCode());
+        if (fileSystemUpload) {
+          //For file system async upload, this means that the registration itself was not successful. Cleanup the tasks to start over.
+          dmeSyncWorkflowService.deleteTaskInfoByObjectId(object.getId());
+      	  throw new DmeSyncVerificationException("Data object registration not successful");
+        }
         throw new DmeSyncWorkflowException("Received bad response from verify dataObject");
       }
     } catch (DmeSyncVerificationException e) {
