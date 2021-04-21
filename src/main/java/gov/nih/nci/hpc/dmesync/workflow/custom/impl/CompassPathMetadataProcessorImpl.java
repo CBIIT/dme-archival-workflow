@@ -50,7 +50,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // Extract the Project value from the Path
     String projectCollectionName = getProjectCollectionName(object);
     
-    if (projectCollectionName.equals("TSO500") && isProcessedResults(object)) {
+    if (projectCollectionName.equals("TSO500v2") && isProcessedResults(object)) {
       archivePath =
           destinationBaseDir
               + "/PI_"
@@ -58,10 +58,10 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
               + "/Project_"
               + projectCollectionName
               + "/Sample_"
-              + getSampleId(object)
-              + "/Processed_Results/"
+              + getSampleId(object) + "/"
+              + getCollectionNameFromParent(object, "TSO500_Results") + "/"
               + fileName;
-    } else if ((projectCollectionName.equals("TSO500") || projectCollectionName.equals("ExomeRNA")) && !isProcessedResults(object)) {
+    } else if ((projectCollectionName.equals("TSO500v2") || projectCollectionName.equals("ExomeRNA")) && !isProcessedResults(object)) {
       archivePath =
           destinationBaseDir
               + "/PI_"
@@ -173,34 +173,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
     String sampleCollectionPath = null;
     pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-    if(projectCollectionName.equals("TSO500")) {
-    	String sampleId = getSampleId(object);
-        sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
-        String doneFileName = getDoneFileName(object);
-        pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getPatientId(sampleId)));
-        pathEntriesSample
-	        .getPathMetadataEntries()
-	        .add(createPathEntry("sample_type", getSampleType(doneFileName)));
-        pathEntriesSample
-	        .getPathMetadataEntries()
-	        .add(createPathEntry("flowcell_id", getTSO500FlowcellId(doneFileName)));
-        pathEntriesSample
-	        .getPathMetadataEntries()
-	        .add(createPathEntry("run_date", getRunDate(doneFileName)));
-        pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_name", sampleId));
-        // load the user metadata from the externally placed excel
-        if(StringUtils.isNotBlank(metadataFile)){
-          threadLocalMap.set(loadMetadataFile(metadataFile, "Accession ID_CP #"));
-          String surgicalCase = getAttrValueWithKey(sampleId, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Specimen ID (surgical pathology case#_block ID)");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
-          String dnaRnaId = getAttrValueWithKey(sampleId, "Accesson ID_(DNA#)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Accesson ID_(DNA#)");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
-          String diagnosis = getAttrValueWithKey(sampleId, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Diagnosis (Cancer Type)");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
-          String piCollaborator = getAttrValueWithKey(sampleId, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(sampleId, "Pi_Collaborator");
-          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
-        }
-    } else if(projectCollectionName.equals("ExomeRNA")) {
+    if(projectCollectionName.equals("TSO500v2") || projectCollectionName.equals("ExomeRNA")) {
     	String sampleId = getSampleId(object);
         sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
         pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", sampleId));
@@ -303,6 +276,26 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
 	        }
 		}
+	} else if(projectCollectionName.equals("TSO500v2")) {
+		String libraryName = getTSO500LibraryName(object);
+        String doneFileName = getDoneFileName(object);
+        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", getTSO500FlowcellId(doneFileName)));
+        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", getRunDate(doneFileName)));
+        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
+        // load the user metadata from the externally placed excel
+        if(StringUtils.isNotBlank(metadataFile)){
+          threadLocalMap.set(loadMetadataFile(metadataFile, "Accession ID_CP #"));
+          String sampleType = getAttrValueWithKey(libraryName, "Sample Type") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Type");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", sampleType));
+          String surgicalCase = getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
+          String dnaRnaId = getAttrValueWithKey(libraryName, "Accesson ID_(DNA#)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Accesson ID_(DNA#)");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
+          String diagnosis = getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
+          String piCollaborator = getAttrValueWithKey(libraryName, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Pi_Collaborator");
+          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
+        }
 	}
     logger.info(
         "Compass custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}",
@@ -358,14 +351,14 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	} else if (StringUtils.equals("Analysis", subfolder)){
 	  String resultFolder = getCollectionNameFromParent(object, "ProcessedResults_NexSeq");
 	  if(StringUtils.equals("TSO500_Results", resultFolder)) {
-	    return "TSO500";
+	    return "TSO500v2";
 	  } else {
 	    return "ExomeRNA";
 	  }
 	} else if (StringUtils.equals("DATA", subfolder)){
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		if(StringUtils.endsWith(fileName, "_001.fastq.gz") || StringUtils.endsWith(fileName, "_DNA.done") || StringUtils.endsWith(fileName, "_RNA.done"))
-			return "TSO500";
+			return "TSO500v2";
 		else 
 			return "ExomeRNA";
 	}
@@ -378,10 +371,10 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // /data/Compass/DATA/NextSeq/FastqFolder/NA18487_100ng_N1D_PS2
     // /data/Compass/Analysis/ProcessedResults_NexSeq/NA18487_100ng_N1D_PS2/Logs_Intermediates/SmallVariantFilter
     // then the SampleId will be NA18487_100ng_N1D_PS2
-    if ("TSO500".equals(getProjectCollectionName(object)) && isProcessedResults(object))
-      sampleId = getCollectionNameFromParent(object, "TSO500_Results");
-    else if ("TSO500".equals(getProjectCollectionName(object)) && !isProcessedResults(object))
-        sampleId = getCollectionNameFromParent(object, "FastqFolder");
+    if ("TSO500v2".equals(getProjectCollectionName(object)) && isProcessedResults(object))
+      sampleId = getPatientId(getCollectionNameFromParent(object, "TSO500_Results"));
+    else if ("TSO500v2".equals(getProjectCollectionName(object)) && !isProcessedResults(object))
+        sampleId = getPatientId(getCollectionNameFromParent(object, "FastqFolder"));
     else if ("ExomeRNA".equals(getProjectCollectionName(object)) && isProcessedResults(object))
       sampleId = getCollectionNameFromParent(object, "ExomeRNA_Results");
     else if ("ExomeRNA".equals(getProjectCollectionName(object)) && !isProcessedResults(object)) {
@@ -417,14 +410,21 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // then the done file resides under NA18487_100ng_N1D_PS2
     String doneFileName = null;
     Path dirPath = null;
+    String doneFileExt = null;
     if(isProcessedResults(object)) {
       dirPath = getCollectionPathFromParent(object, "TSO500_Results");
+      if(dirPath.getFileName().toString().endsWith("Pair"))
+        doneFileExt = "Pair.done";
+      else
+    	doneFileExt = "NoPair.done";
     } else {
       dirPath = getCollectionPathFromParent(object, "FastqFolder");
+      doneFileExt = ".done";
     }
+    final String doneFileEndsWith = doneFileExt;
     try (DirectoryStream<Path> stream =
         Files.newDirectoryStream(
-            dirPath, path -> path.toString().endsWith(".done"))) {
+            dirPath, path -> path.toString().endsWith(doneFileEndsWith))) {
 
       Iterator<Path> pathItr = stream.iterator();
       if (pathItr.hasNext()) {
@@ -440,16 +440,6 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
       throw new DmeSyncMappingException(
           ".done file is not found for path: " + object.getOriginalFilePath());
     return doneFileName;
-  }
-
-  private String getSampleType(String fileName) {
-    // Example: If done file name is 190627_NDX550200_0010_AHFL2KBGXB_DNA.done
-    // then the SampleType will be DNA
-    //rsync.Illumina_190205_NS500702_0557_AH27C5BGX7_DNA.done
-    //rsync.191031_NDX550200_0021_AH5WVLBGXC_RNA.done
-    //190701_NDX550199_0010_AHFLM2BGXB_ClinOmics_Compass_014_T1D_PS2_DNA.done
-    //191108_NDX550200_0022_AH5N7CBGXC_CP02094_T1D_PS_DNA.done
-    return StringUtils.substring(fileName, StringUtils.lastIndexOf(fileName, "_") + 1, -5);
   }
 
   private String getTSO500FlowcellId(String fileName) {
@@ -516,6 +506,34 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     else {
     	libraryName = getCollectionNameFromParent(object, "FastqFolder");
     	libraryName = StringUtils.substring(libraryName, 0, libraryName.lastIndexOf('_'));
+    }
+    logger.info("LibraryName: {}", libraryName);
+    return libraryName;
+  }
+  
+  private String getTSO500LibraryName(StatusInfo object) {
+    String libraryName = null;
+    // Example: If originalFilePath is
+    // /data/Compass/DATA/NextSeq/FastqFolder/NA18487_N1D_E6_H7F7TBGXC
+    // /data/Compass/Analysis/ProcessedResults_NexSeq\ExomeRNA_Results\NA12878\Mix50\NA18740_N1D_E
+    // then the library id will be NA18487_N1D_E6
+    if (isProcessedResults(object)) {
+    	String regex = "_[TN][1-9I][DR]";
+        Pattern pattern = Pattern.compile(regex);
+        Path fullFilePath = Paths.get(object.getOriginalFilePath());
+        int count = fullFilePath.getNameCount();
+        for (int i = 1; i < count; i++) {
+          Matcher matcher = pattern.matcher(fullFilePath.getParent().getFileName().toString());
+          if (matcher.find()) {
+        	  libraryName = fullFilePath.getParent().getFileName().toString();
+        	  break;
+          }
+          fullFilePath = fullFilePath.getParent();
+        }
+        libraryName = StringUtils.substring(libraryName, 0, libraryName.lastIndexOf('_'));
+    }
+    else {
+    	libraryName = getCollectionNameFromParent(object, "FastqFolder");
     }
     logger.info("LibraryName: {}", libraryName);
     return libraryName;
