@@ -530,7 +530,8 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
           }
           fullFilePath = fullFilePath.getParent();
         }
-        libraryName = StringUtils.substring(libraryName, 0, libraryName.lastIndexOf('_'));
+        if(libraryName != null && libraryName.chars().filter(num -> num == '_').count() > 2)
+        	libraryName = StringUtils.substring(libraryName, 0, libraryName.lastIndexOf('_'));
     }
     else {
     	libraryName = getCollectionNameFromParent(object, "FastqFolder");
