@@ -50,12 +50,6 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
 
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
-
-  @Value("${dmesync.filesystem.upload.user.search.base:}")
-  private String userSearchBase;
-  
-  @Value("${dmesync.filesystem.upload.group.search.base:}")
-  private String groupSearchBase;
   
   @Value("${dmesync.filesystem.upload.file.container.id:}")
   private String fileContainerId;
@@ -101,10 +95,6 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
       uploadSource.setSourceLocation(fileLocation);
       object.getDataObjectRegistrationRequestDTO().setFileSystemUploadSource(uploadSource);
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(false);
-      if(StringUtils.isNotBlank(userSearchBase) && StringUtils.isNotBlank(groupSearchBase)) {
-    	  object.getDataObjectRegistrationRequestDTO().setUserSearchBase(userSearchBase);
-    	  object.getDataObjectRegistrationRequestDTO().setGroupSearchBase(groupSearchBase);
-      }
       
       HttpHeaders jsonHeader = new HttpHeaders();
       jsonHeader.setContentType(MediaType.APPLICATION_JSON);

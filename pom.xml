@@ -85,7 +85,7 @@
 		<dependency>
 			<groupId>gov.nih.nci.hpc</groupId>
 			<artifactId>hpc-dto</artifactId>
-			<version>2.5.1</version>
+			<version>[2.7.0,)</version>
 		</dependency>
 		
 		<!-- For retries -->
@@ -112,7 +112,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 	   			<artifactId>guava</artifactId>
-	   			<version>29.0-jre</version>
+	   			<version>30.0-jre</version>
 			</dependency>
 			
 		<!-- For export -->
