@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +22,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.xml.sax.SAXException;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -121,6 +127,31 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
       return ExcelUtil.parseBulkMatadataEntries(metadataFile, key);
+  }
+  
+  public Map<String, Map<String, String>> loadJsonMetadataFile(String metadataFile, String key)
+		 throws DmeSyncMappingException {
+	ObjectMapper mapper = new ObjectMapper();
+	Map<String, Map<String, String>> metdataMap = new HashMap<>();
+
+	try {
+		JsonNode rootNode = mapper.readTree(new File(metadataFile));
+		if (rootNode.isObject()) {
+			Iterator<String> iter = rootNode.fieldNames();
+			Map<String, String> metadata = new HashMap<>();
+			while (iter.hasNext()) {
+				String nodeName = iter.next();
+				JsonNode node = rootNode.path(nodeName);
+				metadata.put(nodeName, node.asText());
+			}
+			metdataMap.put(key, metadata);
+		}
+	} catch (JsonProcessingException e) {
+		throw new DmeSyncMappingException("Failed to load json metadata from file");
+	} catch (IOException e) {
+		throw new DmeSyncMappingException("Failed to parse json metadata from file");
+	}
+	return metdataMap;
   }
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key1, String key2) throws DmeSyncMappingException {
