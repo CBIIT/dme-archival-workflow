@@ -63,7 +63,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// load the metadata from the json file
 		String metadataFile;
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(filePath.getParent(),
-				path -> path.toString().endsWith(".metadata.json"))) {
+				path -> path.toString().endsWith("archive.json"))) {
 			Iterator<Path> it = stream.iterator();
 			if (it.hasNext()) {
 				metadataFile = it.next().toString();
@@ -130,13 +130,34 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
 			pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run_Raw"));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("instrument", getAttrValueWithKey("run", "instrument")));
+					.add(createPathEntry("instrument", "placeholder for instrument"));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("date", getAttrValueWithKey("run", "date")));
+					.add(createPathEntry("date", "placeholder for date"));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("pi_group", getAttrValueWithKey("run", "pi_group")));
+					.add(createPathEntry("pi_group", "placeholder for PI group"));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("short_title", getAttrValueWithKey("run", "short_title")));
+					.add(createPathEntry("short_title", "placeholder for short title"));
+			// Below extracted from archive.json file
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("datasetid", getAttrValueWithKey("run", "datasetid")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("datasetlocation", getAttrValueWithKey("run", "datasetlocation")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("datasetname", getAttrValueWithKey("run", "datasetname")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("description", getAttrValueWithKey("run", "description")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("microscopename", getAttrValueWithKey("run", "microscopename")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("microscopeserial", getAttrValueWithKey("run", "microscopeserial")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("ownergid", getAttrValueWithKey("run", "ownergid")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("ownername", getAttrValueWithKey("run", "ownername")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("owneruid", getAttrValueWithKey("run", "owneruid")));
+			pathEntriesRun.getPathMetadataEntries()
+					.add(createPathEntry("scientist", getAttrValueWithKey("run", "scientist")));
 			pathEntriesRun.setPath(runCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
