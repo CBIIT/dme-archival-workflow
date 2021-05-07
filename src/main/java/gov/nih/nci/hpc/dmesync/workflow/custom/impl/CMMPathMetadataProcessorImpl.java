@@ -164,11 +164,11 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   
   private String getPipelineNumber(StatusInfo object) {
-	  return getCollectionNameFromParent(object, getCollectionNameFromParent(object, "CryoEM"));
+	  return getCollectionNameFromParent(object, getCollectionNameFromParent(object, getPiCollectionName(object)));
   }
   
   private String getSoftware(StatusInfo object) {
-    String runPath = getCollectionNameFromParent(object, "CryoEM");
+    String runPath = getCollectionNameFromParent(object, getPiCollectionName(object));
     return runPath.substring(0, runPath.indexOf('_'));
 }
   
@@ -190,7 +190,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  logger.debug("pi name = {}", piCollectionName);
 	  String projectCollectionName = getCollectionNameFromParent(object, piCollectionName);
 	  logger.debug("project name = {}", projectCollectionName);
-	  if(getMethodName(object).equals(projectCollectionName)) {
+	  if(getMethodName(object).equals(projectCollectionName) || "SerialEM_runs".equals(projectCollectionName)) {
 	    	//No projectId is specified, since the method sub-path comes instead of project sub-path
 	    	//Hence set projectId to be same as piId, 
 	    	projectCollectionName = piCollectionName;
