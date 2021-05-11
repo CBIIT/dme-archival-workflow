@@ -278,13 +278,19 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		}
 	} else if(projectCollectionName.equals("TSO500v2")) {
 		String libraryName = getTSO500LibraryName(object);
-        String doneFileName = getDoneFileName(object);
-        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", getTSO500FlowcellId(doneFileName)));
-        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", getRunDate(doneFileName)));
-        dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
+		
         // load the user metadata from the externally placed excel
         if(StringUtils.isNotBlank(metadataFile)){
           threadLocalMap.set(loadMetadataFile(metadataFile, "Accession ID_CP #"));
+          if(!threadLocalMap.get().containsKey(libraryName)) {
+        	  throw new DmeSyncMappingException("Library name " + libraryName + " is not available in metafile.");
+          }
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
+          String flowcellId = getAttrValueWithKey(libraryName, "Flowcell ID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Flowcell ID");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+          String runDate = getAttrValueWithKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sequencing Date");
+          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", runDate));
+
           String sampleType = getAttrValueWithKey(libraryName, "Sample Type") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Type");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", sampleType));
           String surgicalCase = getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)");
