@@ -5,6 +5,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,26 +42,6 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] CSB getArchivePath called");
 
-		threadLocalMap.set(loadMetadataFile(mappingFile, "FILE_ACCESSION"));
-
-		Path path = Paths.get(object.getSourceFilePath());
-		String fileName = path.getFileName().toString();
-
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
-				+ getProjectCollectionName(object) + "/Run_Raw_" + getRunCollectionName(object) + "/" + fileName;
-
-		// replace spaces with underscore
-		archivePath = archivePath.replace(" ", "_");
-
-		logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
-
-		return archivePath;
-	}
-
-	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
-			throws DmeSyncMappingException, DmeSyncWorkflowException {
-
 		Path filePath = Paths.get(object.getSourceFilePath());
 		// load the metadata from the json file
 		String metadataFile;
@@ -78,6 +61,24 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		threadLocalMap.set(loadJsonMetadataFile(metadataFile, "run"));
 
+		Path path = Paths.get(object.getSourceFilePath());
+		String fileName = path.getFileName().toString();
+
+		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Project_"
+				+ getProjectCollectionName() + "/Run_Raw_" + getRunCollectionName() + "/" + fileName;
+
+		// replace spaces with underscore
+		archivePath = archivePath.replace(" ", "_");
+
+		logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
+
+		return archivePath;
+	}
+
+	@Override
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
+
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -85,79 +86,66 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
 			// Add path metadata entries for "PI_XXX" collection
-			// Example row: collectionType - PI, collectionName - Susan_Lea
-			// (derived)
-			// key = data_owner, value = Susan Lea (supplied)
-			// key = affiliation, value = CSB (supplied)
+			// Example row: collectionType - PI, collectionName (derived)
+			// key = data_owner, value = (supplied)
+			// key = affiliation, value = (supplied)
+			// key = data_curator, value = Susan Lea (constant)
 
-			String piCollectionName = getPiCollectionName(object);
+			String piCollectionName = getPiCollectionName();
 			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey("run", "ownername")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation", "placeholder for affiliation"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_curator", "Susan Lea"));
 			pathEntriesPI.setPath(piCollectionPath);
-			hpcBulkMetadataEntries.getPathsMetadataEntries()
-					.add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 			// Add path metadata entries for "Project_XXX" collection
-			// Example row: collectionType - Project, collectionName -
-			// CSB_CryoEM (supplied),
-			// key = project_id, value = CSB_CryoEM (supplied)
-			// key = project_title, value = CSB CryoEM (supplied)
-			// key = project_description, value = (supplied)
-			// key = start_date, value = (supplied)
-			// key = access, value = "Closed Access" (constant)
-			// key = project_scientist, value = Joseph Caesar (supplied)
-			// key = project_status, value = Active (supplied)
-			// key = data_submitter, value = Susan Lea (supplied)
+			// Example row: collectionType - Project, collectionName (derived)
+			// key = project_id, value = (supplied)
+			// key = project_title, value = (supplied)
+			// key = project_description, value = (supplied - Optional)
+			// key = project_scientist, value = (supplied - Optional)
+			// key = start_date, value = (derived)
+			// key = access, value = "Closed Access" (default)
+			// key = project_status, value = Active (default)
+			// key = retention_period, value = 84 months (default)
 
-			String projectCollectionName = getProjectCollectionName(object);
+			String projectCollectionName = getProjectCollectionName();
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
+			DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+			String startDate = dateFormat.format(new Date());
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", getAttrValueWithKey("run", "description") + "_" + startDate));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithKey("run", "description")));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_scientist", getAttrValueWithKey("run", "scientist")));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("start_date", startDate));
 			pathEntriesProject.setPath(projectCollectionPath);
-			hpcBulkMetadataEntries.getPathsMetadataEntries()
-					.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
 			// Add path metadata entries for "Run_Raw_XXX" collection
-			// Example row: collectionType - Run_Raw, collectionName -
-			// Run_march1721 (derived)
-			// key = instrument, value = B469 Microscope (json)
-			// key = date, value = (json)
-			// key = pi_group, value = (json)
-			// key = short_title, value = (json)
-			String runCollectionName = getRunCollectionName(object);
+			// Example row: collectionType - Run_Raw, collectionName (derived)
+			// key = dataset_id, value = 2021_5_4_154630_Krios1_123456789 (supplied)
+			// key = dataset_location, value = /data/location/dataset_X (supplied)
+			// key = dataset_name, value = dataset_X (supplied)
+			// key = microscope_name, value = Krios1 (supplied)
+			// key = microscope_serial, value = 123456789 (supplied)
+			String runCollectionName = getRunCollectionName();
 			String runCollectionPath = projectCollectionPath + "/Run_Raw_" + runCollectionName;
 			HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
 			pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run_Raw"));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("instrument", "placeholder for instrument"));
+					.add(createPathEntry("dataset_id", getAttrValueWithKey("run", "datasetid")));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("date", "placeholder for date"));
+					.add(createPathEntry("dataset_location", getAttrValueWithKey("run", "datasetlocation")));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("pi_group", "placeholder for PI group"));
+					.add(createPathEntry("dataset_name", getAttrValueWithKey("run", "datasetname")));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("short_title", "placeholder for short title"));
-			// Below extracted from archive.json file
+					.add(createPathEntry("microscope_name", getAttrValueWithKey("run", "microscopename")));
 			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("datasetid", getAttrValueWithKey("run", "datasetid")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("datasetlocation", getAttrValueWithKey("run", "datasetlocation")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("datasetname", getAttrValueWithKey("run", "datasetname")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("description", getAttrValueWithKey("run", "description")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("microscopename", getAttrValueWithKey("run", "microscopename")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("microscopeserial", getAttrValueWithKey("run", "microscopeserial")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("ownergid", getAttrValueWithKey("run", "ownergid")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("ownername", getAttrValueWithKey("run", "ownername")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("owneruid", getAttrValueWithKey("run", "owneruid")));
-			pathEntriesRun.getPathMetadataEntries()
-					.add(createPathEntry("scientist", getAttrValueWithKey("run", "scientist")));
+					.add(createPathEntry("microscope_serial", getAttrValueWithKey("run", "microscopeserial")));
 			pathEntriesRun.setPath(runCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
@@ -179,18 +167,21 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return dataObjectRegistrationRequestDTO;
 	}
 
-	private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
-		String piCollectionName = "Susan_Lea";
+	private String getPiCollectionName() {
+		String piCollectionName = getAttrValueWithKey("run", "ownername");
+		piCollectionName = piCollectionName.replace(" ", "_");
 		return piCollectionName;
 	}
 
-	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
-		String projectCollectionName = "CSB_CryoEM";
+	private String getProjectCollectionName() {
+		String projectCollectionName = getAttrValueWithKey("run", "description");
+		projectCollectionName = projectCollectionName.replace(" ", "_");
 		return projectCollectionName;
 	}
 
-	private String getRunCollectionName(StatusInfo object) throws DmeSyncMappingException {
-		String runCollectionName = Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
+	private String getRunCollectionName() {
+		String runCollectionName = getAttrValueWithKey("run", "datasetname");
+		runCollectionName = runCollectionName.replace(" ", "_");
 		logger.info("runCollectionName: {}", runCollectionName);
 		return runCollectionName;
 	}
