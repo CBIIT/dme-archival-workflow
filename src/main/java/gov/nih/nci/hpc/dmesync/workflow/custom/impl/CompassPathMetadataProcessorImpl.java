@@ -286,7 +286,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         	  throw new DmeSyncMappingException("Library name " + libraryName + " is not available in metafile.");
           }
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
-          String flowcellId = getAttrValueWithKey(libraryName, "Flowcell ID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Flowcell ID");
+          String flowcellId = getAttrValueWithKey(libraryName, "FCID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "FCID");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
           String runDate = getAttrValueWithKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sequencing Date");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", runDate));
