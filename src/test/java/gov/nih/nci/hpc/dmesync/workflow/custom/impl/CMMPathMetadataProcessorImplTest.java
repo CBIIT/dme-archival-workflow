@@ -156,12 +156,12 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
   @Test
   public void testGetArchivePathForCryoEM() throws DmeSyncMappingException {
 	  
-	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Project-B/CryoEM/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
+	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
 		 
 	  
 	  //Determine the expected and actual archive path
 	  //data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar 
-	  String expectedArchivePath = "/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Project-B/CryoEM/Latitude_Run_20180310_0568/Raw_Data/image_file.tif";
+	  String expectedArchivePath = "/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Latitude_runs/CryoEM/20180310_0568/image_file.tif";
 	  String computedArchivePath = cmmPathMetadataProcessorImpl.getArchivePath(statusInfoCryoEM);
 	  
 	  //Confirm they are same
@@ -173,7 +173,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
   @Test
   public void testGetMetadataJsonForCryoEM() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
-	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Project-B/CryoEM/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
+	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
 		
 	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
 	  
@@ -209,7 +209,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  assertEquals(true, requestDto.getGenerateUploadRequestURL());
 	  assertEquals(true, requestDto.getCreateParentCollections());
 	  List<HpcBulkMetadataEntry> bulkMetadataEntries = requestDto.getParentCollectionsBulkMetadataEntries().getPathsMetadataEntries();
-	  assertEquals(6, bulkMetadataEntries.size());
+	  assertEquals(5, bulkMetadataEntries.size());
 	  
 	  HpcBulkMetadataEntry bulkEntry  = bulkMetadataEntries.get(0);
 	  assertEquals("/CCR_CMM_Archive/PI_0010", bulkEntry.getPath());
@@ -231,15 +231,15 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  assertEquals("Project-B", entry.getValue());
 	  
 	  bulkEntry  = bulkMetadataEntries.get(2);
-	  assertEquals("/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Project-B", bulkEntry.getPath());
+	  assertEquals("/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Latitude_runs", bulkEntry.getPath());
 	  metadataEntries = bulkEntry.getPathMetadataEntries();
 	  assertEquals(2, metadataEntries.size());
 	  entry = metadataEntries.get(0);
 	  assertEquals("variant_name", entry.getAttribute());
-	  assertEquals("Project-B", entry.getValue());
+	  assertEquals("Latitude_runs", entry.getValue());
 	  
 	  bulkEntry  = bulkMetadataEntries.get(4);
-	  assertEquals("/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Project-B/CryoEM/Latitude_Run_20180310_0568", bulkEntry.getPath());
+	  assertEquals("/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Latitude_runs/CryoEM/20180310_0568", bulkEntry.getPath());
 	  metadataEntries = bulkEntry.getPathMetadataEntries();
 	  assertEquals(4, metadataEntries.size());
 	  entry = metadataEntries.get(0);

@@ -6,6 +6,9 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -35,8 +38,8 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     logger.info("CMM DmeSyncPathMetadataProcessor getArchivePath for object {}", object.getId());
 
     //extract the PI id from the Path
-    //Example path 1 - /data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar
-    //Example path 2 - cryo_EM - /data/CMM_CryoEM/CMM_Data/0005/CryoEM/Latitude_runs/20170914_1849/GridSurveyImages
+    //Example path 1 - Negative_Stain /data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar
+    //Example path 2 - cryo_EM - /data/CMM_CryoEM/CMM_Data/0001/Csy_Prashant/Latitude_runs/Csy_20170417_1650/DataImages/Stack
     Path fullFilePath = Paths.get(object.getOriginalFilePath());
     
     String methodSpecificPath = "";
@@ -86,8 +89,9 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       
 	  //Add path metadata entries for "PI_XXX" collection
 	  //Example row: collectionType - PI, collectionName - 0022, 
-	  //key = pi_name, value = Richard Wyatt
+	  //key = data_owner, value = Richard Wyatt
 	  //key = affiliation, value = TSRI
+      //key = data_curator, value = Weimin Wu
       String piCollectionName = getPiCollectionName(object);
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
@@ -153,22 +157,23 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   private String getCryoEMArchivePath(StatusInfo object) {
 	  
-	  //Example path 2 - cryo_EM - /data/CMM_CryoEM/CMM_Data/0005/CryoEM/Latitude_runs/20170914_1849/GridSurveyImages.tar
-	//Example path 2 - cryo_EM - /data/CMM_CryoEM/CMM_Data/0005/CryoEM/Latitude_runs/20170914_1849/DataImages/AverageImages.tar
+	  //Example path 1 - Latitude_runs - /data/CMM_CryoEM/CMM_Data/0001/Csy_Prashant/Latitude_runs/Csy_20170417_1650/DataImages/Stack
+	  //Example path 2 - SerialEM_runs - /data/CMM_CryoEM/CMM_Data/0002/HIV-1/SerialEM_runs/20210419_Freed/stack1
+	  //Example path 3 - EPU_runs - /data/CMM_CryoEM/CMM_Data/0001/MgtE_Doreen/EPU_runs/MgtE_20160412/MgtE_20160412
 	  
-	  //Split at Latitude_run. Pick up the date folder, and append it to Latitude_run. 
+	  //Split at Latitude_run. Pick up the date folder, and append data object. 
 
-	  return "/CryoEM/" + getSoftware(object) + "_Run_"  + getPipelineNumber(object) + "/Raw_Data/" + getFileName(object);
+	  return "/CryoEM/" + getPipelineNumber(object) + "/" + getFileName(object);
 
   }
   
   
   private String getPipelineNumber(StatusInfo object) {
-	  return getCollectionNameFromParent(object, getCollectionNameFromParent(object, getPiCollectionName(object)));
+	  return getCollectionNameFromParent(object, getCollectionNameFromParent(object, getProjectCollectionName(object)));
   }
   
   private String getSoftware(StatusInfo object) {
-    String runPath = getCollectionNameFromParent(object, getPiCollectionName(object));
+    String runPath = getCollectionNameFromParent(object, getProjectCollectionName(object));
     return runPath.substring(0, runPath.indexOf('_'));
 }
   
@@ -190,11 +195,6 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  logger.debug("pi name = {}", piCollectionName);
 	  String projectCollectionName = getCollectionNameFromParent(object, piCollectionName);
 	  logger.debug("project name = {}", projectCollectionName);
-	  if(getMethodName(object).equals(projectCollectionName) || "SerialEM_runs".equals(projectCollectionName)) {
-	    	//No projectId is specified, since the method sub-path comes instead of project sub-path
-	    	//Hence set projectId to be same as piId, 
-	    	projectCollectionName = piCollectionName;
-	    }
 	  
 	  return projectCollectionName;
   }
@@ -256,7 +256,12 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   private String getRunDate(StatusInfo object) throws DmeSyncWorkflowException {
       SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
 	  String pipelineNumber = getPipelineNumber(object);
-	  String dateString = pipelineNumber.split("_")[0];
+	  String dateString = null;
+	  Pattern pattern = Pattern.compile("\\d{8}");
+	  Matcher matcher = pattern.matcher(pipelineNumber);
+      if(matcher.find()) {
+    	  dateString = matcher.group(0);
+      }
 	  try {
 		  Date date = new SimpleDateFormat("yyyyMMdd").parse(dateString);
 		  return sdf.format(date);
@@ -298,23 +303,16 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesCryoEM.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "CryoEM"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCryoEM);
       
-	  String runCollectionPath = cryoEMCollectionPath + "/" + getSoftware(object) + "_Run_" + getPipelineNumber(object);
+	  String runCollectionPath = cryoEMCollectionPath + "/" + getPipelineNumber(object);
 	  HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
       pathEntriesRun.setPath(runCollectionPath);
-      //Add path metadata entries for "Latitude_Run_XXX" collection
+      //Add path metadata entries for <Run> collection
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("pipeline_number", getPipelineNumber(object)));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object)));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("software", getSoftware(object)));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
-      
-      String rawDataCollectionPath = runCollectionPath + "/Raw_Data";
-      HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
-      pathEntriesRawData.setPath(rawDataCollectionPath);
-      //Add path metadata entries for "Raw_Data" collection
-      pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
-      
+         
 	  return hpcBulkMetadataEntries;
   }
   
