@@ -42,6 +42,9 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.metadata.update.only:false}")
+  private boolean metadataUpdateOnly;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("UploadTask");
@@ -77,15 +80,18 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       jsonHeader.setContentType(MediaType.APPLICATION_JSON);
       HttpEntity<HpcDataObjectRegistrationRequestDTO> jsonHttpEntity =
           new HttpEntity<>(object.getDataObjectRegistrationRequestDTO(), jsonHeader);
-
-      // creating an HttpEntity for dataObject
-      HttpHeaders fileHeader = new HttpHeaders();
-      fileHeader.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-      FileSystemResource file = new FileSystemResource(object.getSourceFilePath());
-      HttpEntity fileEntity = new HttpEntity<>(file, fileHeader);
-
       body.add("dataObjectRegistration", jsonHttpEntity);
-      body.add("dataObject", fileEntity);
+      
+      // creating an HttpEntity for dataObject
+      if(metadataUpdateOnly) {
+    	  body.add("dataObject", null);
+      } else {
+	      HttpHeaders fileHeader = new HttpHeaders();
+	      fileHeader.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+	      FileSystemResource file = new FileSystemResource(object.getSourceFilePath());
+	      HttpEntity fileEntity = new HttpEntity<>(file, fileHeader);
+	      body.add("dataObject", fileEntity);
+      }
 
       ResponseEntity<String> serviceResponse =
           restTemplateFactory

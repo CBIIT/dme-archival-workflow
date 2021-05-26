@@ -213,15 +213,15 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
           String sentrixId = getMethylationSentrixId(object);
           String key = sentrixId + "_" + sampleId;
           threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
-          String materialType = getAttrValueWithKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithKey(key, "Material_Type");
+          String materialType = getAttrValueWithExactKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithExactKey(key, "Material_Type");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
-          String gender = getAttrValueWithKey(key, "Gender") == null ? "Unspecified": getAttrValueWithKey(key, "Gender");
+          String gender = getAttrValueWithExactKey(key, "Gender") == null ? "Unspecified": getAttrValueWithExactKey(key, "Gender");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("gender", gender));
-          String surgicalCase = getAttrValueWithKey(key, "Surgical_Case") == null ? "Unspecified": getAttrValueWithKey(key, "Surgical_Case");
+          String surgicalCase = getAttrValueWithExactKey(key, "Surgical_Case") == null ? "Unspecified": getAttrValueWithExactKey(key, "Surgical_Case");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
-          String diagnosis = getAttrValueWithKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithKey(key, "Diagnosis");
+          String diagnosis = getAttrValueWithExactKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithExactKey(key, "Diagnosis");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
-          String piCollaborator = getAttrValueWithKey(key, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithKey(key, "PI_Collaborator");
+          String piCollaborator = getAttrValueWithExactKey(key, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithExactKey(key, "PI_Collaborator");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
         }
         pathEntriesMethylationSample.setPath(methylationSampleCollectionPath);
@@ -234,7 +234,6 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
         new HpcDataObjectRegistrationRequestDTO();
     dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
-    dataObjectRegistrationRequestDTO.setGenerateUploadRequestURL(true);
     dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(
         hpcBulkMetadataEntries);
 
@@ -262,17 +261,17 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// load the user metadata from the externally placed excel
 	        if(StringUtils.isNotBlank(metadataFile)){
 	          threadLocalMap.set(loadMetadataFile(metadataFile, "Library ID"));
-	          String surgicalCase = getAttrValueWithKey(libraryName, "surgical specimen ID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "surgical specimen ID");
+	          String surgicalCase = getAttrValueWithExactKey(libraryName, "surgical specimen ID") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "surgical specimen ID");
 	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
-	          String dnaRnaId = getAttrValueWithKey(libraryName, "LP/Source #") == null ? "Unspecified": getAttrValueWithKey(libraryName, "LP/Source #");
+	          String dnaRnaId = getAttrValueWithExactKey(libraryName, "LP/Source #") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "LP/Source #");
 	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
-	          String materialType = getAttrValueWithKey(libraryName, "Sample Source") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Source");
+	          String materialType = getAttrValueWithExactKey(libraryName, "Sample Source") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sample Source");
 	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("material_type", materialType));
-              String captureKit = getAttrValueWithKey(libraryName, "Test") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Test");
+              String captureKit = getAttrValueWithExactKey(libraryName, "Test") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Test");
               dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("capture_kit", captureKit));
-              String diagnosis = getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)");
+              String diagnosis = getAttrValueWithExactKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Diagnosis (Cancer Type)");
               dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
-	          String piCollaborator = getAttrValueWithKey(libraryName, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithKey(libraryName, "PI_Collaborator");
+	          String piCollaborator = getAttrValueWithExactKey(libraryName, "PI_Collaborator") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "PI_Collaborator");
 	          pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
 	        }
 		}
@@ -286,20 +285,20 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         	  throw new DmeSyncMappingException("Library name " + libraryName + " is not available in metafile.");
           }
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
-          String flowcellId = getAttrValueWithKey(libraryName, "FCID") == null ? "Unspecified": getAttrValueWithKey(libraryName, "FCID");
+          String flowcellId = getAttrValueWithExactKey(libraryName, "FCID") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "FCID");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-          String runDate = getAttrValueWithKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sequencing Date");
+          String runDate = getAttrValueWithExactKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sequencing Date");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", runDate));
 
-          String sampleType = getAttrValueWithKey(libraryName, "Sample Type") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Sample Type");
+          String sampleType = getAttrValueWithExactKey(libraryName, "Sample Type") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sample Type");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", sampleType));
-          String surgicalCase = getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Specimen ID (surgical pathology case#_block ID)");
+          String surgicalCase = getAttrValueWithExactKey(libraryName, "Specimen ID (surgical pathology case#_block ID)") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Specimen ID (surgical pathology case#_block ID)");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
-          String dnaRnaId = getAttrValueWithKey(libraryName, "Accesson ID_(DNA#)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Accesson ID_(DNA#)");
+          String dnaRnaId = getAttrValueWithExactKey(libraryName, "Accesson ID_(DNA#)") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Accesson ID_(DNA#)");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("dna_rna_id", dnaRnaId));
-          String diagnosis = getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Diagnosis (Cancer Type)");
+          String diagnosis = getAttrValueWithExactKey(libraryName, "Diagnosis (Cancer Type)") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Diagnosis (Cancer Type)");
           dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("diagnosis", diagnosis));
-          String piCollaborator = getAttrValueWithKey(libraryName, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithKey(libraryName, "Pi_Collaborator");
+          String piCollaborator = getAttrValueWithExactKey(libraryName, "Pi_Collaborator") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Pi_Collaborator");
           pathEntriesSample.getPathMetadataEntries().add(createPathEntry("pi_collaborator", piCollaborator));
         }
 	}

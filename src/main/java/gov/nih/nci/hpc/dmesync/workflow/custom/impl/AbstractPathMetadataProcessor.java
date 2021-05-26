@@ -125,6 +125,14 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     return (threadLocalMap.get().get(key) == null? null : threadLocalMap.get().get(key).get(attrKey));
   }
   
+  public String getAttrValueWithExactKey(String key, String attrKey) {
+	if(StringUtils.isEmpty(key)) {
+      logger.error("Excel mapping not found for {}", key);
+      return null;
+    }
+    return (threadLocalMap.get().get(key) == null? null : threadLocalMap.get().get(key).get(attrKey));
+  }
+  
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
       return ExcelUtil.parseBulkMatadataEntries(metadataFile, key);
   }
