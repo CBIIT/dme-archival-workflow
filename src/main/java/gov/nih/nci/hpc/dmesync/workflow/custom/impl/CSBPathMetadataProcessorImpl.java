@@ -110,7 +110,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// key = start_date, value = (derived)
 			// key = access, value = "Closed Access" (default)
 			// key = project_status, value = Active (default)
-			// key = retention_period, value = 84 months (default)
+			// key = retention_years, value = 7 (default)
 
 			String projectCollectionName = getProjectCollectionName();
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
