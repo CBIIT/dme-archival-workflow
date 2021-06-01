@@ -38,9 +38,16 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
     //Get the PI collection name from the PI column from metadata file using path
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
    
-    // load the user metadata from the externally placed excel
-    threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+    // load the id mapping file from the externally placed excel
+    threadLocalMap.set(loadMetadataFile(metadataFile, "rave_spec_id"));
   
+    String subfolderCollectionName = getSubCollectionName(object.getSourceFilePath());
+    if(subfolderCollectionName.equals("Genomic_Reports")) {
+  	  String raveSpecId = StringUtils.substring(fileName, 0, StringUtils.indexOf(fileName, "_"));
+  	  String publicId = getAttrValueWithExactKey(raveSpecId, "pub_id");
+  	  fileName = fileName.replace(raveSpecId, publicId);
+    }
+    
     String archivePath =
         destinationBaseDir
             + "/PI_"
@@ -48,7 +55,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
             + "/Project_"
             + getProjectCollectionName()
             + "/"
-            + getCollectionNameFromParent(object, "CMB")
+            + subfolderCollectionName
             + "/"
             + fileName;
     
@@ -107,7 +114,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      //Add path metadata entries for "Genomic_Reports" or "Molecular_Data" collection
 	      //Example row: collectionType - Report or Molecular, collectionName - Genomic_Reports (derived)
 		  //key = description, value = (supplied)
-	      String subfolderCollectionName = getCollectionNameFromParent(object, "CMB");
+	      String subfolderCollectionName = getSubCollectionName(object.getSourceFilePath());
 	      String subfolderCollectionPath = projectCollectionPath + "/" + subfolderCollectionName;
 	      String subfolderCollectionType = StringUtils.contains(subfolderCollectionName, "Molecular") ? "Molecular" : "Report";
 	      HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
@@ -122,10 +129,13 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 	
 	      //Add object metadata
-	      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", Paths.get(object.getSourceFilePath()).toFile().getName()));
-	      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("source_path", object.getOriginalFilePath()));
-	      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("patient_id", "Unknown"));
-	      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("report_id", "Unknown"));
+	      if(subfolderCollectionName.equals("Genomic_Reports")) {
+	    	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+	    	  String raveSpecId = StringUtils.substring(fileName, 0, StringUtils.indexOf(fileName, "_"));
+	    	  String publicId = getAttrValueWithExactKey(raveSpecId, "pub_id");
+		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("patient_id", publicId));
+		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("report_id", "Unknown"));
+	      }
   } finally {
 	threadLocalMap.remove();
   }
@@ -158,6 +168,8 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	  return "CMB";
   }
 	  
-  
+  private String getSubCollectionName(String path) {
+	  return "Genomic_Reports";
+  }
 
 }
