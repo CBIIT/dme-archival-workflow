@@ -1,10 +1,15 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -26,9 +31,6 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
     implements DmeSyncPathMetadataProcessor {
 
   //CMB Custom logic for DME path construction and meta data creation
-
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
 	
   @Override
   public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
@@ -38,14 +40,34 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
     //Get the PI collection name from the PI column from metadata file using path
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
    
-    // load the id mapping file from the externally placed excel
+    // extract the derived metadata from the excel that exists in the folder (assuming one excel)
+    String metadataFile;
+    try {
+	  List<Path> mappingFiles = Files.list(Paths.get(object.getSourceFilePath()).getParent())
+	    .filter(s -> s.toString().endsWith(".xlsx"))
+	    .sorted(Collections.reverseOrder())
+	    .collect(Collectors.toList());
+    
+      Iterator<Path> it = mappingFiles.iterator();
+      if(it.hasNext()) {
+        metadataFile = it.next().toString();
+      } else {
+        logger.error("Metadata excel file not found for {}", object.getOriginalFilePath());
+        throw new DmeSyncMappingException("Metadata excel file not found for " + object.getOriginalFilePath());
+      }
+    } catch (IOException e) {
+      logger.error("Metadata excel file not found for {}", object.getOriginalFilePath());
+      throw new DmeSyncMappingException("Metadata excel file not found for " + object.getOriginalFilePath());
+    }
+    
+    // load the id mapping file from the latest excel mapping file
     threadLocalMap.set(loadMetadataFile(metadataFile, "rave_spec_id"));
   
     String subfolderCollectionName = getSubCollectionName(object.getSourceFilePath());
-    if(subfolderCollectionName.equals("Genomic_Reports")) {
+    if(subfolderCollectionName.equals("Genomic_Reports") || subfolderCollectionName.equals("Molecular_Data")) {
   	  String raveSpecId = StringUtils.substring(fileName, 0, StringUtils.indexOf(fileName, "_"));
-  	  String publicId = getAttrValueWithExactKey(raveSpecId, "pub_id");
-  	  fileName = fileName.replace(raveSpecId, publicId);
+  	  String pubSpecId = getAttrValueWithExactKey(raveSpecId, "pub_spec_id");
+  	  fileName = fileName.replace(raveSpecId, pubSpecId);
     }
     
     String archivePath =
@@ -78,7 +100,6 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		  //Add to HpcBulkMetadataEntries for path attributes
 		  HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		  
-		    
 	      //Add path metadata entries for "PI_Helen_Moore" collection
 		  //Example row: collectionType - PI_Lab, collectionName - Helen_Moore (supplied)
 		  //key = pi_name, value = ? (supplied)
@@ -116,12 +137,31 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		  //key = description, value = (supplied)
 	      String subfolderCollectionName = getSubCollectionName(object.getSourceFilePath());
 	      String subfolderCollectionPath = projectCollectionPath + "/" + subfolderCollectionName;
-	      String subfolderCollectionType = StringUtils.contains(subfolderCollectionName, "Molecular") ? "Molecular" : "Report";
-	      HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
-	      pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, subfolderCollectionType));
-	      pathEntriesSubFolder.setPath(subfolderCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesSubFolder, subfolderCollectionType, subfolderCollectionName));
-			     
+	      if(!StringUtils.contains(subfolderCollectionName, "Clinical")) {
+		      String subfolderCollectionType = StringUtils.contains(subfolderCollectionName, "Molecular") ? "Molecular" : "Report";
+		      HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
+		      pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, subfolderCollectionType));
+		      pathEntriesSubFolder.setPath(subfolderCollectionPath);
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesSubFolder, subfolderCollectionType, subfolderCollectionName));
+	      } else {
+	    	  Path subfolderPath = Paths.get(subfolderCollectionPath);
+		      HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
+		      pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
+		      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", subfolderPath.getFileName().toString()));
+		      pathEntriesRun.setPath(subfolderCollectionPath.replace("\\", "/"));
+		      
+		      HpcBulkMetadataEntry pathEntriesDatabase = new HpcBulkMetadataEntry();
+		      pathEntriesDatabase.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Database"));
+		      pathEntriesDatabase.setPath(subfolderPath.getParent().toString().replace("\\", "/"));
+		      
+		      HpcBulkMetadataEntry pathEntriesClinical = new HpcBulkMetadataEntry();
+		      pathEntriesClinical.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Clinical"));
+		      pathEntriesClinical.setPath(subfolderPath.getParent().getParent().toString().replace("\\", "/"));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesClinical, "Clinical", subfolderPath.getParent().getParent().getFileName().toString()));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesDatabase, "Database", subfolderPath.getParent().getFileName().toString()));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
+		      
+	      }
 	      
 	      //Set it to dataObjectRegistrationRequestDTO
 	      dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
@@ -129,12 +169,15 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 	
 	      //Add object metadata
-	      if(subfolderCollectionName.equals("Genomic_Reports")) {
-	    	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+	      String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+	      if(subfolderCollectionName.equals("Genomic_Reports") || subfolderCollectionName.equals("Molecular_Data")) {
 	    	  String raveSpecId = StringUtils.substring(fileName, 0, StringUtils.indexOf(fileName, "_"));
-	    	  String publicId = getAttrValueWithExactKey(raveSpecId, "pub_id");
-		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("patient_id", publicId));
-		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("report_id", "Unknown"));
+	    	  String pubId = getAttrValueWithExactKey(raveSpecId, "pub_id");
+	    	  String pubSpecId = getAttrValueWithExactKey(raveSpecId, "pub_spec_id");
+		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("patient_id", pubId));
+		      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("report_id", pubSpecId + "_" + getReportDate(fileName)));
+	      } else {
+	    	  dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
 	      }
   } finally {
 	threadLocalMap.remove();
@@ -145,22 +188,8 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 
 
-  private String getCollectionNameFromParent(StatusInfo object, String parentName) {
-	  //Example originalFilepath - /mnt/10323_Data_files_for_upload/CMB/Molecular_Data
-	  Path fullFilePath = Paths.get(object.getOriginalFilePath());
-	  int count = fullFilePath.getNameCount();
-	  for (int i = 0; i <= count; i++) {
-	    if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-	      return fullFilePath.getFileName().toString();
-	    }
-	    fullFilePath = fullFilePath.getParent();
-	  }
-    return null;
-  }
-
-
   private String getPiCollectionName() {
-	  return "Helen_Moore_Test";
+	  return "Helen_Moore";
   }
   
   
@@ -169,7 +198,19 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 	  
   private String getSubCollectionName(String path) {
-	  return "Genomic_Reports";
+	  if(StringUtils.endsWith(path, "vcf"))
+		  return "Molecular_Data";
+	  if(StringUtils.endsWith(path, "pdf"))
+		  return "Genomic_Reports";
+	  //entity_ids.20210516.xlsx
+	  return "Clinical_Data/RAVE/" + getRunDate(Paths.get(path).getFileName().toString());
   }
 
+  private String getRunDate(String fileName) {
+    return StringUtils.substring(fileName, fileName.indexOf('.') + 1, fileName.lastIndexOf('.'));
+  }
+  
+  private String getReportDate(String fileName) {
+    return StringUtils.substring(fileName, fileName.indexOf("Non-Filtered") + 13, fileName.indexOf("Non-Filtered") + 23);
+  }
 }
