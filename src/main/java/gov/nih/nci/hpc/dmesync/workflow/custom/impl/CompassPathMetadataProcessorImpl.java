@@ -257,10 +257,15 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String libraryName = getExomeRNALibraryName(object);
 		if(StringUtils.isNotBlank(libraryName)) {
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
-			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", getExomeRNASampleType(libraryName)));
 			// load the user metadata from the externally placed excel
 	        if(StringUtils.isNotBlank(metadataFile)){
 	          threadLocalMap.set(loadMetadataFile(metadataFile, "Library ID"));
+	          String flowcellId = getAttrValueWithExactKey(libraryName, "FCID") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "FCID");
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+	          String runDate = getAttrValueWithExactKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sequencing Date");
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("run_date", runDate));
+	          String sampleType = getAttrValueWithExactKey(libraryName, "Sample Type") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sample Type");
+	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("sample_type", sampleType));
 	          String surgicalCase = getAttrValueWithExactKey(libraryName, "surgical specimen ID") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "surgical specimen ID");
 	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
 	          String dnaRnaId = getAttrValueWithExactKey(libraryName, "LP/Source #") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "LP/Source #");

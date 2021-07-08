@@ -115,8 +115,10 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         throw new DmeSyncWorkflowException("Upload failed with responseCode " + serviceResponse.getStatusCode());
       }
     } catch (Exception e) {
-      logger.error("[{}] error occured during upload task", super.getTaskName(), e);
-      throw new DmeSyncWorkflowException("Error occured during upload", e);
+      if (!metadataUpdateOnly) {
+    	  logger.error("[{}] error occured during upload task", super.getTaskName(), e);
+	      throw new DmeSyncWorkflowException("Error occured during upload", e);
+      }
     }
 
     return object;

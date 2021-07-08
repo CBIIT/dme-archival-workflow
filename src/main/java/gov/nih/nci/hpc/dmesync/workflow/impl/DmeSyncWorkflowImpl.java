@@ -83,11 +83,13 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     	  tasks.add(syncUploadTask);
       else
     	  tasks.add(presignUploadTask);
-      tasks.add(verifyTask);
-      tasks.add(permissionBookmarkTask);
-      if(fileSystemUpload)
-    	  tasks.add(permissionArchiveTask);
-      if (tar || untar || compress) tasks.add(cleanupTask);
+      if(!metadataUpdateOnly) {
+	      tasks.add(verifyTask);
+	      tasks.add(permissionBookmarkTask);
+	      if(fileSystemUpload)
+	    	  tasks.add(permissionArchiveTask);
+	      if (tar || untar || compress) tasks.add(cleanupTask);
+      }
     }
     
     return true;
