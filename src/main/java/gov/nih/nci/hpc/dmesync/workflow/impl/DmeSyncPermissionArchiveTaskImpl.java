@@ -130,9 +130,11 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 			|| response.getDataManagementArchivePermissionResult() != null
 				&& response.getDataManagementArchivePermissionResult().getUserPermissionResult() != null
 				&& !response.getDataManagementArchivePermissionResult().getUserPermissionResult().getResult()
+				&& !response.getDataManagementArchivePermissionResult().getUserPermissionResult().getMessage().contains("Catalog already has item by that name")
 			|| response.getDataManagementArchivePermissionResult() != null
 				&& response.getDataManagementArchivePermissionResult().getGroupPermissionResult() != null
-				&& !response.getDataManagementArchivePermissionResult().getGroupPermissionResult().getResult())
+				&& !response.getDataManagementArchivePermissionResult().getGroupPermissionResult().getResult()
+				&& !response.getDataManagementArchivePermissionResult().getGroupPermissionResult().getMessage().contains("Catalog already has item by that name"))
 			return false;
 		else
 			return true;

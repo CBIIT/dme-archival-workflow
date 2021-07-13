@@ -259,7 +259,9 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		boolean supportsPosixPermissions = Files.getFileStore(path)
 				.supportsFileAttributeView(PosixFileAttributeView.class);
 		if (supportsPosixPermissions) {
-			permission.setOwner(String.valueOf((Integer) Files.getAttribute(path, "unix:uid")));
+			// API requires owner, so setting as root since archive permission 
+			// for owner remains service account and iRODS permission is ignored for root
+			permission.setOwner("0"); 
 			permission.setGroup(String.valueOf((Integer) Files.getAttribute(path, "unix:gid")));
 			permission.setPermissions(PosixFilePermissions.toString(Files.getPosixFilePermissions(path)));
 			logger.debug("uid: {}", Files.getAttribute(path, "unix:uid"));
