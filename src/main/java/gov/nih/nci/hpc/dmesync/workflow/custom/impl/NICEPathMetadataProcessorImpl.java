@@ -91,7 +91,7 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = project_title, value = apof (derived)
 	      //key = access, value = "Closed Access" (constant)
 	      //key = method, value = "CryoEM" (constant)
-		  //key = start_date, value = (supplied)
+		  //key = project_start_date, value = (supplied)
 		  //key = project_description, value = (supplied)
 	      //key = origin, value = (fixed)
 	      //key = grid_type, value = (supplied)
@@ -108,7 +108,7 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", "CryoEM"));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("start_date", getAttrValueWithKey(path, "start_date")));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "start_date"), "MM/dd/yy"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NICE"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", "Homo Sapiens (Human)"));

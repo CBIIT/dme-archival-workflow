@@ -94,7 +94,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key submission_id, value = 007 (derived)
 	      //key = access, value = "Closed Access" (constant)
 	      //key = method, value = "CryoEM" (constant)
-		  //key = start_date, value = (supplied)
+		  //key = project_start_date, value = (supplied)
 		  //key = project_description, value = (supplied)
 	      //key = origin, value = (supplied)
 	      //key = summary_of_samples, value = (supplied)
@@ -108,7 +108,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("submission_id", getSubmissionId(projectCollectionName)));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", "CryoEM"));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("start_date", getAttrValueWithKey(path, "start_date")));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "start_date"), "MM/dd/yy"));
 	      String projectDescription = getAttrValueWithKey(path, "project_description");
 	      if(projectDescription != null && projectDescription.length() > 2500) {
 	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", projectDescription.substring(0, 2500)));

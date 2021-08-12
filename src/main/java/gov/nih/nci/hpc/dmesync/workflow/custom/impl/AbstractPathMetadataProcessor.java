@@ -108,6 +108,15 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     return pathEntry;
   }
   
+  public HpcMetadataEntry createPathEntry(String key, String value, String dateFormat) {
+	    HpcMetadataEntry pathEntry = new HpcMetadataEntry();
+	    pathEntry.setAttribute(key);
+	    pathEntry.setValue(value);
+	    pathEntry.setDateFormat(dateFormat);
+
+	    return pathEntry;
+  }
+  
   public String getAttrValueWithKey(String rowKey, String attrKey) {
 	String key = null;
 	if(threadLocalMap.get() == null)
