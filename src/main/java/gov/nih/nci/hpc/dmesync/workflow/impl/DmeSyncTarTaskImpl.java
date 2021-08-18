@@ -74,6 +74,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
               ? null
               : new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
       
+      //Check directory permission
+      if (!Files.isReadable(Paths.get(object.getOriginalFilePath()))) {
+    	  throw new Exception("No Read permission to " + object.getOriginalFilePath());
+      }
       if (compress) {
         tarFile = tarFile + ".gz";
         tarFileName = tarFileName + ".gz";
@@ -96,7 +100,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
     } catch (Exception e) {
       logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-      throw new DmeSyncWorkflowException("Error occurred during tar", e);
+      throw new DmeSyncWorkflowException("Error occurred during tar. " + e.getMessage(), e);
     }
 
     return object;

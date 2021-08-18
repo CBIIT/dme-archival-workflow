@@ -34,9 +34,9 @@ public class TarUtil {
    * @param name the name of the tar file
    * @param excludeFolders list of folder names to exclude from tar
    * @param files the files to tar
-   * @throws IOException on IO error
+ * @throws Exception 
    */
-  public static void tar(String name, List<String> excludeFolders, File... files) throws IOException {
+  public static void tar(String name, List<String> excludeFolders, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders);
@@ -50,9 +50,9 @@ public class TarUtil {
    * @param name the name of the tar.gz file
    * @param excludeFolders list of folder names to exclude from tar
    * @param files files the files to tar and compress
-   * @throws IOException on IO error
+ * @throws Exception 
    */
-  public static void targz(String name, List<String> excludeFolders, File... files) throws IOException {
+  public static void targz(String name, List<String> excludeFolders, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders);
@@ -216,7 +216,7 @@ public class TarUtil {
 	  }
 
   private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders)
-      throws IOException {
+      throws Exception {
     String entry = dir + File.separator + file.getName();
     if (file.isFile()) {
       out.putArchiveEntry(new TarArchiveEntry(file, entry));
@@ -227,6 +227,9 @@ public class TarUtil {
     } else if(file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty() && excludeFolders.contains(file.getName())) {
       logger.info("{} is excluded for tar", file.getName());
     } else if(file.isDirectory()) {
+      if (!Files.isReadable(Paths.get(file.getAbsolutePath()))) {
+        throw new Exception("No Read permission to " + file.getAbsolutePath());
+      }
       File[] children = file.listFiles();
       if (children != null) {
         for (File child : children) {

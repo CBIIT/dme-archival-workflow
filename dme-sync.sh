@@ -15,5 +15,5 @@ if [ "$env" != "dev" ] && [ "$env" != "uat" ] && [ "$env" != "prod" ]
 fi
 
 
- java -jar dme-sync-1.0.0.jar \
+ java -jar dme-sync-1.1.0.jar \
 	$env
