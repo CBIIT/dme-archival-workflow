@@ -67,6 +67,9 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
     if(subfolderCollectionName.equals("Genomic_Reports") || subfolderCollectionName.equals("Molecular_Data")) {
   	  String raveSpecId = StringUtils.substring(fileName, 0, StringUtils.indexOf(fileName, "_"));
   	  String pubSpecId = getAttrValueWithExactKey(raveSpecId, "pub_spec_id");
+  	  if (StringUtils.isBlank(pubSpecId)) {
+  		throw new DmeSyncMappingException("rave_spec_id not found: " + raveSpecId);
+  	  }
   	  fileName = fileName.replace(raveSpecId, pubSpecId);
     }
     
@@ -207,7 +210,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 
   private String getRunDate(String fileName) {
-    return StringUtils.substring(fileName, fileName.indexOf('.') + 1, fileName.lastIndexOf('.'));
+    return StringUtils.substring(fileName, fileName.indexOf('.') + 1, fileName.indexOf('.') + 9);
   }
   
   private String getReportDate(String fileName) {
