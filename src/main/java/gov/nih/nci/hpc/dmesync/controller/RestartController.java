@@ -18,6 +18,9 @@ public class RestartController {
   @Value("${dmesync.doc.name}")
   private String doc;
   
+  @Value("${dmesync.source.base.dir}")
+  private String syncBaseDir;
+  
   @GetMapping("/restart")
   public void restart() {
     DmeSyncApplication.restart();
@@ -27,7 +30,7 @@ public class RestartController {
   public void export(@PathVariable(required = false) String runId) {
     if (runId == null || runId.isEmpty()) {
       //find the latest runId
-      runId = dmeSyncWorkflowService.findTopStatusInfoByOrderByStartTimestampDesc().getRunId();
+      runId = dmeSyncWorkflowService.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir).getRunId();
     }
     mailServiceFactory.getService(doc).sendResult(runId);
   }

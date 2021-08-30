@@ -31,6 +31,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
 
+  @Value("${dmesync.doc.name}")
+  private String doc;
+  
   @Value("${dmesync.admin.emails}")
   private String adminEmails;
 
@@ -81,9 +84,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunId(runId);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(runId, doc);
       if (CollectionUtils.isNotEmpty(statusInfo)) {
-        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunId(runId);
+        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndDoc(runId, doc);
         Path path = Paths.get(logFile);
         String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 
@@ -125,11 +128,11 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       userPath = StringUtils.substringBefore(userPath, " does not");
       String user = userPath.replace("\\", "/").split("/")[1];
       CollectionNameMapping collectionName =
-          dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType(user, "User");
+          dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(user, "User", doc);
       MetadataMapping metadataMapping =
           dmeSyncWorkflowService
-              .findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKey(
-                  "User", collectionName.getMapValue(), "email");
+              .findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
+                  "User", collectionName.getMapValue(), "email", doc);
       userEmail = metadataMapping.getMetaDataValue();
     } catch (Exception e) {
       logger.error("User email could not be extracted from message: {}", text);
@@ -147,7 +150,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     String userEmail = null;
     try {
       List<MetadataInfo> metadataInfo =
-          dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndMetaDataKey(runId, "email");
+          dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(runId, "email", doc);
       Set<String> set = new HashSet<>();
       for (MetadataInfo user : metadataInfo) {
         set.add(user.getMetaDataValue());

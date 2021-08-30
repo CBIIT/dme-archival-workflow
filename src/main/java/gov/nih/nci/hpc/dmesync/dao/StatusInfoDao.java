@@ -28,9 +28,10 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   /**
    * findByRunId
    * @param runId the runId
+   * @param doc the doc
    * @return the list of StatusInfo objects
    */
-  List<StatusInfo> findByRunId(String runId);
+  List<StatusInfo> findByRunIdAndDoc(String runId, String doc);
 
   /**
    * findFirstByOriginalFilePathAndSourceFileNameAndStatus
@@ -43,10 +44,12 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
       String originalFilePath, String sourceFileName, String status);
 
   /**
-   * findTopByOrderByStartTimestampDesc
+   * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
+   * @param doc the doc
+   * @param baseDir the base directory
    * @return the StatusInfo object
    */
-  StatusInfo findTopByOrderByStartTimestampDesc();
+  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
    * findAllByOriginalFilePathAndStatusAndRunId

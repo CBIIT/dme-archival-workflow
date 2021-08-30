@@ -36,12 +36,13 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status);
 
   /**
-   * findStatusInfoByRunId
+   * findStatusInfoByRunIdAndDoc
    *
    * @param runId the runId
+   * @param doc the doc
    * @return the list of StatusInfo objects
    */
-  List<StatusInfo> findStatusInfoByRunId(String runId);
+  List<StatusInfo> findStatusInfoByRunIdAndDoc(String runId, String doc);
 
   /**
    * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
@@ -55,11 +56,12 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String sourceFileName, String status);
 
   /**
-   * findTopStatusInfoByOrderByStartTimestampDesc
-   *
+   * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
+   * @param doc the doc
+   * @param baseDir the base directory
    * @return the StatusInfo object
    */
-  StatusInfo findTopStatusInfoByOrderByStartTimestampDesc();
+  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
@@ -73,35 +75,38 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status, String runId);
 
   /**
-   * findCollectionNameMappingByMapKeyAndCollectionType
+   * findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc
    *
    * @param key the key
    * @param collectionType the collection type
+   * @param doc the doc
    * @return CollectionNameMapping
    */
-  CollectionNameMapping findCollectionNameMappingByMapKeyAndCollectionType(
-      String key, String collectionType);
+  CollectionNameMapping findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(
+      String key, String collectionType, String doc);
 
   /**
-   * findAllMetadataMappingByCollectionTypeAndCollectionName
+   * findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc
    *
    * @param collectionType the collection type
    * @param collectionName the collection name
+   * @param doc the doc
    * @return List of MetadataMapping
    */
-  List<MetadataMapping> findAllMetadataMappingByCollectionTypeAndCollectionName(
-      String collectionType, String collectionName);
+  List<MetadataMapping> findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+      String collectionType, String collectionName, String doc);
 
   /**
-   * findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKey
+   * findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc
    *
    * @param collectionType the collection type
    * @param collectionName the collection name
    * @param metaDataKey the key
+   * @param doc the doc
    * @return MetadataMapping
    */
-  MetadataMapping findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKey(
-      String collectionType, String collectionName, String metaDataKey);
+  MetadataMapping findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
+      String collectionType, String collectionName, String metaDataKey, String doc);
   /**
    * findAllPermissionBookmarkInfoByCreated
    *
@@ -118,21 +123,23 @@ public interface DmeSyncWorkflowService {
   void deleteMetadataInfoByObjectId(Long objectId);
 
   /**
-   * findAllMetadataInfoByRunId
+   * findAllMetadataInfoByRunIdAndDoc
    *
    * @param runId the runId
+   * @param doc the doc
    * @return list of MetadataInfo
    */
-  List<MetadataInfo> findAllMetadataInfoByRunId(String runId);
+  List<MetadataInfo> findAllMetadataInfoByRunIdAndDoc(String runId, String doc);
   
   /**
-   * findAllMetadataInfoByRunIdAndMetaDataKey
+   * findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc
    *
    * @param runId the runId
    * @param key the metaDataKey
+   * @param doc the doc
    * @return list of MetadataInfo
    */
-  List<MetadataInfo> findAllMetadataInfoByRunIdAndMetaDataKey(String runId, String key);
+  List<MetadataInfo> findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(String runId, String key, String doc);
 
   /**
    * Save the end timestamp and remove temp task states

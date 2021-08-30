@@ -5,6 +5,7 @@ import javax.persistence.*;
 @Entity
 public class MetadataMapping {
   @Id @GeneratedValue private Long id;
+  private String doc;
   private String collectionType;
   private String collectionName;
   private String metaDataKey;
@@ -16,6 +17,14 @@ public class MetadataMapping {
 
   public void setId(Long id) {
     this.id = id;
+  }
+
+  public String getDoc() {
+	return doc;
+  }
+
+  public void setDoc(String doc) {
+	this.doc = doc;
   }
 
   public String getCollectionType() {

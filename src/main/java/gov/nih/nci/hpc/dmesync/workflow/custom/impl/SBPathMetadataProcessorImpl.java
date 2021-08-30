@@ -99,7 +99,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "sb"));
 
     // Add path metadata entries for "Project_XXX" collection
     // Example row: collectionType - Project, collectionName - Surgery_Branch_NGS
@@ -121,7 +121,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "sb"));
 
     // Add path metadata entries for "Patient_XXX" collection
     // Example row: collectionType - Patient, collectionName - Patient_8021351
@@ -157,7 +157,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPatient.setPath(patientCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPatient, "Patient", patientId));
+        .add(populateStoredMetadataEntries(pathEntriesPatient, "Patient", patientId, "sb"));
 
     // Add path metadata entries for "Run" collection
     // Example row: collectionType - Run, collectionName - Run_Seq_<date>_<sequencer> (derived)
@@ -186,7 +186,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesRun.setPath(runCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesRun, "Run", "Run"));
+        .add(populateStoredMetadataEntries(pathEntriesRun, "Run", "Run", "sb"));
 
     // Set it to dataObjectRegistrationRequestDTO
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
@@ -269,7 +269,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String piDirName = getCollectionNameFromParent(object, parent);
     logger.info("PI Directory Name: {}", piDirName);
 
-    piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab");
+    piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab", "sb");
 
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
@@ -285,7 +285,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectDirName = getCollectionNameFromParent(object, parent);
     logger.info("Project Directory Name: {}", projectDirName);
 
-    projectCollectionName = getCollectionMappingValue(projectDirName, "Project");
+    projectCollectionName = getCollectionMappingValue(projectDirName, "Project", "sb");
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;

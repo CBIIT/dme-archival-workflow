@@ -209,8 +209,8 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataValue(affiliation);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
-	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI_Lab", piCollectionName)).thenReturn(piNameMetaMappings);
+	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "PI_Lab", piCollectionName, "ncef")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
 	  
@@ -250,8 +250,8 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  projectNameMetaMappings.add(projectNameMapping);
 	  
 	  
-	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "Project", projectCollectionName)).thenReturn(projectNameMetaMappings);
+	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "Project", projectCollectionName, "ncef")).thenReturn(projectNameMetaMappings);
 	  
   }
   

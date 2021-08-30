@@ -4,11 +4,15 @@ import javax.persistence.*;
 
 @Entity
 public class TaskInfo {
-  @Id @GeneratedValue private Long id;
+  private Long id;
   private Long objectId; //StatusInfo.id
   private String taskName;
   private boolean completed;
 
+  @Id
+  @Column(name = "ID", nullable = false, precision = 0)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "TASK_INFO_SEQ")
+  @SequenceGenerator(name = "TASK_INFO_SEQ", sequenceName = "TASK_INFO_SEQ", allocationSize = 1)
   public Long getId() {
     return id;
   }

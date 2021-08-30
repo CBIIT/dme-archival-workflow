@@ -14,19 +14,21 @@ public interface MetadataInfoDao<T extends MetadataInfo> extends JpaRepository<T
   void deleteByObjectId(Long objectId);
 
   /**
-   * findAllByRunId
+   * findAllByRunIdAndDoc
    * @param runId the runId
+   * @param doc the doc
    * @return list of MetadataInfo
    */
-  @Query("select m from MetadataInfo m, StatusInfo s where s.id = m.objectId and s.runId = ?1")
-  List<MetadataInfo> findAllByRunId(String runId);
+  @Query("select m from MetadataInfo m, StatusInfo s where s.id = m.objectId and s.runId = ?1 and s.doc = ?2")
+  List<MetadataInfo> findAllByRunIdAndDoc(String runId, String doc);
   
   /**
-   * findAllByRunIdAndMetaDataKey
+   * findAllByRunIdAndMetaDataKeyAndDoc
    * @param runId the runId
    * @param metaDataKey the metaDataKey
+   * @param doc the doc
    * @return list of MetadataInfo
    */
-  @Query("select m from MetadataInfo m, StatusInfo s where s.id = m.objectId and s.runId = ?1 and m.metaDataKey = ?2")
-  List<MetadataInfo> findAllByRunIdAndMetaDataKey(String runId, String metaDataKey);
+  @Query("select m from MetadataInfo m, StatusInfo s where s.id = m.objectId and s.runId = ?1 and s.doc = ?3 and m.metaDataKey = ?2")
+  List<MetadataInfo> findAllByRunIdAndMetaDataKeyAndDoc(String runId, String metaDataKey, String doc);
 }

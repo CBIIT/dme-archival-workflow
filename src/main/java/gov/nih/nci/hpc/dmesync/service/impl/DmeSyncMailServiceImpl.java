@@ -63,8 +63,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunId(runId);
-      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunId(runId);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(runId, doc);
+      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 

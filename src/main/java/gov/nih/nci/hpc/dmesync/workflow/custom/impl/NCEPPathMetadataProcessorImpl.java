@@ -74,7 +74,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "ncep"));
 
     //Add path metadata entries for "Project_XXX" collection
     //Example row: collectionType - Project, collectionName - Glacios (derived),
@@ -94,7 +94,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEP"));
     pathEntriesProject.setPath(projectCollectionPath);
-    hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+    hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "ncep"));
 
     //Add path metadata entries for "Run_XXX" collection
     //Example row: collectionType - Run, collectionName - 20200107 (derived)

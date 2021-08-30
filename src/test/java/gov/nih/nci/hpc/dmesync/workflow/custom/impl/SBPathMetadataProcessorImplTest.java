@@ -46,13 +46,13 @@ public class SBPathMetadataProcessorImplTest {
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("XXX");
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findCollectionNameMappingByMapKeyAndCollectionType("exome", "PI_Lab"))
+            .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("exome", "PI_Lab", "sb"))
         .thenReturn(piMapping);
 
     CollectionNameMapping userMapping = new CollectionNameMapping();
     userMapping.setMapValue("Surgery_Branch_NGS");
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findCollectionNameMappingByMapKeyAndCollectionType("exome", "Project"))
+            .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("exome", "Project", "sb"))
         .thenReturn(userMapping);
   }
 
@@ -173,7 +173,7 @@ public class SBPathMetadataProcessorImplTest {
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_lab", "NCI, CCR"));
 
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", piCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "sb"))
         .thenReturn(piNameMetaMappings);
 
     List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
@@ -186,8 +186,8 @@ public class SBPathMetadataProcessorImplTest {
     projectNameMetaMappings.add(populateMetadataMapping(projectCollectionName, "Project", "affiliation", "NCI, CCR"));
 
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName(
-                "Project", projectCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+                "Project", projectCollectionName, "sb"))
         .thenReturn(projectNameMetaMappings);
     
     List<MetadataMapping> patientNameMetaMappings = new ArrayList<>();
@@ -198,8 +198,8 @@ public class SBPathMetadataProcessorImplTest {
     patientNameMetaMappings.add(populateMetadataMapping(patientCollectionName, "Patient", "description", "Sample patient description"));
 
     when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName(
-                "Patient", patientCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+                "Patient", patientCollectionName, "sb"))
         .thenReturn(patientNameMetaMappings);
     
   }

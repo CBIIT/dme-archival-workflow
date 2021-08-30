@@ -74,7 +74,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.setPath(piCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "seer"));
       
       logger.info("created PI_Lab metadata");
       
@@ -96,7 +96,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 
       pathEntriesProject.setPath(projectCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "seer"));
       
       //Add path metadata entries for "Dataset_XXX" collection
       //Example row: collectionType - Dataset, collectionName - Dataset_PC7001 (derived)
@@ -107,7 +107,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataset"));
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("person_id", getPersonId(object)));
       pathEntriesRun.setPath(datasetCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesRun, "Dataset", datasetCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesRun, "Dataset", datasetCollectionName, "seer"));
 		     
       //Set it to dataObjectRegistrationRequestDTO
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
@@ -132,7 +132,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 
   private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
-	  String piCollectionName = getCollectionMappingValue(getProjectId(object), "PI_Lab");
+	  String piCollectionName = getCollectionMappingValue(getProjectId(object), "PI_Lab", "seer");
 	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;
 	  
@@ -142,7 +142,7 @@ public class SEERPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
  
   private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 
-	  String projectCollectionName =  getCollectionMappingValue(getProjectId(object), "Project");
+	  String projectCollectionName =  getCollectionMappingValue(getProjectId(object), "Project", "seer");
 	  logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
   }

@@ -8,12 +8,13 @@ public interface CollectionNameMappingDao<T extends CollectionNameMapping>
     extends JpaRepository<T, Long> {
 
   /**
-   * findByMapKeyAndCollectionType
+   * findByMapKeyAndCollectionTypeAndDoc
    * 
    * @param key the key 
    * @param collectionType the collection type
+   * @param doc the doc
    * @return CollectionNameMapping
    */
-  @Query("select m from CollectionNameMapping m where m.mapKey = ?1 and m.collectionType = ?2")
-  CollectionNameMapping findByMapKeyAndCollectionType(String key, String collectionType);
+  @Query("select m from CollectionNameMapping m where m.mapKey = ?1 and m.collectionType = ?2 and m.doc = ?3")
+  CollectionNameMapping findByMapKeyAndCollectionTypeAndDoc(String key, String collectionType, String doc);
 }

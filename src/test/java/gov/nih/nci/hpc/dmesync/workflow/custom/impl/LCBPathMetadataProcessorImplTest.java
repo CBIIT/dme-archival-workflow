@@ -44,7 +44,7 @@ public class LCBPathMetadataProcessorImplTest {
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("Subramaniam");
     when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findCollectionNameMappingByMapKeyAndCollectionType("Livlab", "PI_Lab"))
+            .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Livlab", "PI_Lab", "lcb"))
         .thenReturn(piMapping);
   }
 
@@ -110,6 +110,7 @@ public class LCBPathMetadataProcessorImplTest {
   private MetadataMapping populateMetadataMapping(
       String collectionName, String collectionType, String metadataKey, String metadataValue) {
     MetadataMapping nameMapping = new MetadataMapping();
+    nameMapping.setDoc("lcb");
     nameMapping.setCollectionName(collectionName);
     nameMapping.setCollectionType(collectionType);
     nameMapping.setMetaDataKey(metadataKey);
@@ -124,7 +125,7 @@ public class LCBPathMetadataProcessorImplTest {
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Sriram Subramaniam"));
 
     when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", piCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "lcb"))
         .thenReturn(piNameMetaMappings);   
   }
 

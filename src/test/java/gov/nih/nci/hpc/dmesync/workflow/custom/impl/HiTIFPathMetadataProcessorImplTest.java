@@ -55,11 +55,11 @@ StatusInfo statusInfo = null;
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
 	 piMapping.setMapValue("Tom_Misteli");
-	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("Ziad", "PI_Lab")).thenReturn(piMapping);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "PI_Lab", "hitif")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping userMapping = new CollectionNameMapping();
 	 userMapping.setMapValue("Ziad_Jowhar");
-	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("Ziad", "User")).thenReturn(userMapping);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "User", "hitif")).thenReturn(userMapping);
 	 
 	 hitifPathMetadataProcessorImpl.destinationBaseDir = "/HiTIF_Archive";
 	  
@@ -89,7 +89,7 @@ StatusInfo statusInfo = null;
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Tom Misteli");
 	  nameMetaMappings.add(nameMapping);	 
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", "Tom_Misteli")).thenReturn(nameMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", "Tom_Misteli", "hitif")).thenReturn(nameMetaMappings);
 	  
 	  List<MetadataMapping> userNameMetaMappings = new ArrayList<>();
 	  MetadataMapping userNameMapping = new MetadataMapping();
@@ -98,7 +98,7 @@ StatusInfo statusInfo = null;
 	  userNameMapping.setMetaDataKey("name");
 	  userNameMapping.setMetaDataValue("Ziad Jowhar");
 	  userNameMetaMappings.add(userNameMapping);
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName("User", "Ziad_Jowhar")).thenReturn(userNameMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("User", "Ziad_Jowhar", "hitif")).thenReturn(userNameMetaMappings);
 	  
 	  List<MetadataMapping> expMetaMappings = new ArrayList<>();
 	  MetadataMapping expMapping = new MetadataMapping();
@@ -107,8 +107,8 @@ StatusInfo statusInfo = null;
 	  expMapping.setMetaDataKey("experiment_name");
 	  expMapping.setMetaDataValue("180712-U2F-20x-CyclinA488opti-FUCCI-Q670N1-DAPIsat_20180712_142846");
 	  expMetaMappings.add(expMapping);
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "Exp", "180712-U2F-20x-CyclinA488opti-FUCCI-Q670N1-DAPIsat_20180712_142846")).thenReturn(expMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "Exp", "180712-U2F-20x-CyclinA488opti-FUCCI-Q670N1-DAPIsat_20180712_142846", "hitif")).thenReturn(expMetaMappings);
 	  
 	  //Execute the method to test
 	  

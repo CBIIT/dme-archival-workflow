@@ -4,11 +4,15 @@ import javax.persistence.*;
 
 @Entity
 public class MetadataInfo {
-  @Id @GeneratedValue private Long id;
+  private Long id;
   private Long objectId; //StatusInfo.id
   private String metaDataKey;
   private String metaDataValue;
 
+  @Id
+  @Column(name = "ID", nullable = false, precision = 0)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "METADATA_INFO_SEQ")
+  @SequenceGenerator(name = "METADATA_INFO_SEQ", sequenceName = "METADATA_INFO_SEQ", allocationSize = 1)
   public Long getId() {
     return id;
   }

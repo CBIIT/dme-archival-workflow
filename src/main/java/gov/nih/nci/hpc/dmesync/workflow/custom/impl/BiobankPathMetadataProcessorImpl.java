@@ -113,7 +113,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "biobank"));
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - CMB (supplied)
@@ -132,7 +132,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 	      pathEntriesProject.setPath(projectCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "biobank"));
 	 
 	      
 	      //Add path metadata entries for "Genomic_Reports" or "Molecular_Data" collection
@@ -145,7 +145,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		      HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
 		      pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, subfolderCollectionType));
 		      pathEntriesSubFolder.setPath(subfolderCollectionPath);
-		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesSubFolder, subfolderCollectionType, subfolderCollectionName));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesSubFolder, subfolderCollectionType, subfolderCollectionName, "biobank"));
 	      } else {
 	    	  Path subfolderPath = Paths.get(subfolderCollectionPath);
 		      HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
@@ -160,8 +160,8 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		      HpcBulkMetadataEntry pathEntriesClinical = new HpcBulkMetadataEntry();
 		      pathEntriesClinical.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Clinical"));
 		      pathEntriesClinical.setPath(subfolderPath.getParent().getParent().toString().replace("\\", "/"));
-		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesClinical, "Clinical", subfolderPath.getParent().getParent().getFileName().toString()));
-		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesDatabase, "Database", subfolderPath.getParent().getFileName().toString()));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesClinical, "Clinical", subfolderPath.getParent().getParent().getFileName().toString(), "biobank"));
+		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesDatabase, "Database", subfolderPath.getParent().getFileName().toString(), "biobank"));
 		      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 		      
 	      }

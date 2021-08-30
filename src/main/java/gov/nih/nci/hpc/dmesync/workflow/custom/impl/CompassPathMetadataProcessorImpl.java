@@ -137,7 +137,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "compass"));
 
     // Add path metadata entries for "Project_XXX" collection
     // Example row: collectionType - Project, collectionName - Compass
@@ -158,7 +158,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "compass"));
 
     // Add path metadata entries for "Sample" collection
     // Example row: collectionType - Sample, collectionName - Sample_<sample id> (derived)
@@ -187,7 +187,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     pathEntriesSample.setPath(sampleCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesSample, "Sample", "Compass"));
+        .add(populateStoredMetadataEntries(pathEntriesSample, "Sample", "Compass", "compass"));
 
     // Add the case_id attribute for the ExomeRNA experiment folder
     if(projectCollectionName.equals("ExomeRNA") && isProcessedResults(object)) {
@@ -341,7 +341,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 
   private String getPiCollectionName() throws DmeSyncMappingException {
-    return getCollectionMappingValue("Compass", "PI_Lab");
+    return getCollectionMappingValue("Compass", "PI_Lab", "compass");
   }
 
   private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
@@ -372,7 +372,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		else 
 			return "ExomeRNA";
 	}
-    return getCollectionMappingValue("Compass", "Project");
+    return getCollectionMappingValue("Compass", "Project", "compass");
   }
 
   private String getSampleId(StatusInfo object) throws DmeSyncMappingException {

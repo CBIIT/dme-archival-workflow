@@ -48,11 +48,11 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
 	 piMapping.setMapValue("Alison_Van_Dyke");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("BCT", "PI_Lab")).thenReturn(piMapping);
+	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "PI_Lab", "seer")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping projectMapping = new CollectionNameMapping();
 	 projectMapping.setMapValue("BCT_Pilot");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType("BCT", "Project")).thenReturn(projectMapping);
+	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "Project", "seer")).thenReturn(projectMapping);
 	 
 	 
      //Create the statusInfo object with the test Path
@@ -167,8 +167,8 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataValue(affiliation);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
-	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI_Lab", piCollectionName)).thenReturn(piNameMetaMappings);
+	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "PI_Lab", piCollectionName, "seer")).thenReturn(piNameMetaMappings);
 	  
 	  //Database entries for Project Collection metadata
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
@@ -236,8 +236,8 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  projectNameMapping.setMetaDataValue("VTRBCT");
 	  projectNameMetaMappings.add(projectNameMapping);
 	  
-	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "Project", projectCollectionName)).thenReturn(projectNameMetaMappings);
+	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "Project", projectCollectionName, "seer")).thenReturn(projectNameMetaMappings);
 	  
   }
   

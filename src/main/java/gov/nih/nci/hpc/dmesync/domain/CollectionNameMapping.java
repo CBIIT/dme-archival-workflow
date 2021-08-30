@@ -5,6 +5,7 @@ import javax.persistence.*;
 @Entity
 public class CollectionNameMapping {
   @Id @GeneratedValue private Long id;
+  private String doc;
   private String mapKey;
   private String collectionType;
   private String mapValue;
@@ -17,6 +18,14 @@ public class CollectionNameMapping {
     this.id = id;
   }
 
+  public String getDoc() {
+	return doc;
+  }
+
+  public void setDoc(String doc) {
+	this.doc = doc;
+  }
+	  
   public String getMapKey() {
     return mapKey;
   }

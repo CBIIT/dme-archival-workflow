@@ -64,8 +64,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public List<StatusInfo> findStatusInfoByRunId(String runId) {
-    return statusInfoDao.findByRunId(runId);
+  public List<StatusInfo> findStatusInfoByRunIdAndDoc(String runId, String doc) {
+    return statusInfoDao.findByRunIdAndDoc(runId, doc);
   }
 
   @Override
@@ -76,8 +76,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public StatusInfo findTopStatusInfoByOrderByStartTimestampDesc() {
-    return statusInfoDao.findTopByOrderByStartTimestampDesc();
+  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir) {
+    return statusInfoDao.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, baseDir);
   }
 
   @Override
@@ -88,23 +88,23 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public CollectionNameMapping findCollectionNameMappingByMapKeyAndCollectionType(
-      String key, String collectionType) {
-    return collectionNameMappingDao.findByMapKeyAndCollectionType(key, collectionType);
+  public CollectionNameMapping findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(
+      String key, String collectionType, String doc) {
+    return collectionNameMappingDao.findByMapKeyAndCollectionTypeAndDoc(key, collectionType, doc);
   }
 
   @Override
-  public List<MetadataMapping> findAllMetadataMappingByCollectionTypeAndCollectionName(
-      String collectionType, String collectionName) {
-    return metadataMappingDao.findAllByCollectionTypeAndCollectionName(
-        collectionType, collectionName);
+  public List<MetadataMapping> findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+      String collectionType, String collectionName, String doc) {
+    return metadataMappingDao.findAllByCollectionTypeAndCollectionNameAndDoc(
+        collectionType, collectionName, doc);
   }
   
   @Override
-  public MetadataMapping findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKey(
-      String collectionType, String collectionName, String metaDataKey) {
-    return metadataMappingDao.findByCollectionTypeAndCollectionNameAndMetaDataKey(
-        collectionType, collectionName, metaDataKey);
+  public MetadataMapping findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
+      String collectionType, String collectionName, String metaDataKey, String doc) {
+    return metadataMappingDao.findByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
+        collectionType, collectionName, metaDataKey, doc);
   }
 
   @Override
@@ -118,13 +118,13 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public List<MetadataInfo> findAllMetadataInfoByRunId(String runId) {
-    return metadataInfoDao.findAllByRunId(runId);
+  public List<MetadataInfo> findAllMetadataInfoByRunIdAndDoc(String runId, String doc) {
+    return metadataInfoDao.findAllByRunIdAndDoc(runId, doc);
   }
   
   @Override
-  public List<MetadataInfo> findAllMetadataInfoByRunIdAndMetaDataKey(String runId, String key) {
-    return metadataInfoDao.findAllByRunIdAndMetaDataKey(runId, key);
+  public List<MetadataInfo> findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(String runId, String key, String doc) {
+    return metadataInfoDao.findAllByRunIdAndMetaDataKeyAndDoc(runId, key, doc);
   }
 
   @Override

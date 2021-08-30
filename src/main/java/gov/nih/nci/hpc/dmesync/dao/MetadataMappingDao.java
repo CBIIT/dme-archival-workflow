@@ -8,15 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 public interface MetadataMappingDao<T extends MetadataMapping> extends JpaRepository<T, Long> {
 
   /**
-   * findAllByCollectionTypeAndCollectionName
+   * findAllByCollectionTypeAndCollectionNameAndDoc
    * @param collectionType the collection type
    * @param collectionName the collection name
+   * @param doc the doc
    * @return List of MetadataMapping
    */
-  @Query("select m from MetadataMapping m where m.collectionType = ?1 and m.collectionName = ?2")
-  List<MetadataMapping> findAllByCollectionTypeAndCollectionName(
-      String collectionType, String collectionName);
+  @Query("select m from MetadataMapping m where m.collectionType = ?1 and m.collectionName = ?2 and m.doc = ?3")
+  List<MetadataMapping> findAllByCollectionTypeAndCollectionNameAndDoc(
+      String collectionType, String collectionName, String doc);
 
-  MetadataMapping findByCollectionTypeAndCollectionNameAndMetaDataKey(
-      String collectionType, String collectionName, String metaDataKey);
+  MetadataMapping findByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
+      String collectionType, String collectionName, String metaDataKey, String doc);
 }

@@ -48,12 +48,12 @@ public class CompassPathMetadataProcessorImplTest {
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("Compass");
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findCollectionNameMappingByMapKeyAndCollectionType("Compass", "PI_Lab"))
+            .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Compass", "PI_Lab", "compass"))
         .thenReturn(piMapping);
     CollectionNameMapping projectMapping = new CollectionNameMapping();
     projectMapping.setMapValue("Compass");
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findCollectionNameMappingByMapKeyAndCollectionType("Compass", "Project"))
+            .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Compass", "Project", "compass"))
         .thenReturn(projectMapping);
   }
 
@@ -136,6 +136,7 @@ public class CompassPathMetadataProcessorImplTest {
   private MetadataMapping populateMetadataMapping(
       String collectionName, String collectionType, String metadataKey, String metadataValue) {
     MetadataMapping nameMapping = new MetadataMapping();
+    nameMapping.setDoc("compass");
     nameMapping.setCollectionName(collectionName);
     nameMapping.setCollectionType(collectionType);
     nameMapping.setMetaDataKey(metadataKey);
@@ -150,7 +151,7 @@ public class CompassPathMetadataProcessorImplTest {
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Compass PI name"));
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "affiliation", "Compass PI_Lab affiliation"));
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName("PI_Lab", piCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "compass"))
         .thenReturn(piNameMetaMappings);   
     
     List<MetadataMapping> projectMetaMappings = new ArrayList<>();
@@ -162,13 +163,13 @@ public class CompassPathMetadataProcessorImplTest {
     projectMetaMappings.add(populateMetadataMapping(piCollectionName, "Project", "summary_of_samples", "Placeholder for summary_of_samples"));
     projectMetaMappings.add(populateMetadataMapping(piCollectionName, "Project", "source_organism", "Placeholder for source_organism"));
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName("Project", piCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("Project", piCollectionName, "compass"))
         .thenReturn(projectMetaMappings);   
     
     List<MetadataMapping> sampleMetaMappings = new ArrayList<>();
     sampleMetaMappings.add(populateMetadataMapping(piCollectionName, "Sample", "sequencing_application_type", "Placeholder for sequencing_application_type"));
     when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
-            .findAllMetadataMappingByCollectionTypeAndCollectionName("Sample", piCollectionName))
+            .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("Sample", piCollectionName, "compass"))
         .thenReturn(sampleMetaMappings);   
   }
   

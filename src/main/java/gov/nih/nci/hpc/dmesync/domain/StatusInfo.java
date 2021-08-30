@@ -8,7 +8,8 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 
 @Entity
 public class StatusInfo {
-  @Id @GeneratedValue private Long id;
+  private Long id;
+  private String doc;
   private String runId;
   private String orginalFileName;
   private String originalFilePath;
@@ -26,9 +27,13 @@ public class StatusInfo {
   private Date tarEndTimestamp;
   private Long retryCount = 0L;
   private String error;
-  @Transient private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
-  @Transient private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
+  private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
+  private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
 
+  @Id
+  @Column(name = "ID", nullable = false, precision = 0)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "STATUS_INFO_SEQ")
+  @SequenceGenerator(name = "STATUS_INFO_SEQ", sequenceName = "STATUS_INFO_SEQ", allocationSize = 1)
   public Long getId() {
     return id;
   }
@@ -37,6 +42,14 @@ public class StatusInfo {
     this.id = id;
   }
 
+  public String getDoc() {
+    return doc;
+  }
+
+  public void setDoc(String doc) {
+    this.doc = doc;
+  }
+  
   public String getRunId() {
     return runId;
   }
@@ -169,22 +182,26 @@ public class StatusInfo {
     this.error = error;
   }
 
+  @Transient
   public HpcDataObjectRegistrationRequestDTO getDataObjectRegistrationRequestDTO() {
     return dataObjectRegistrationRequestDTO;
   }
 
+  @Transient
   public void setDataObjectRegistrationRequestDTO(
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO) {
     this.dataObjectRegistrationRequestDTO = dataObjectRegistrationRequestDTO;
   }
 
+  @Transient
   public HpcArchivePermissionsRequestDTO getArchivePermissionsRequestDTO() {
 	return archivePermissionsRequestDTO;
-}
+  }
 
-public void setArchivePermissionsRequestDTO(HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO) {
+  @Transient
+  public void setArchivePermissionsRequestDTO(HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO) {
 	this.archivePermissionsRequestDTO = archivePermissionsRequestDTO;
-}
+  }
 
 @Override
   public String toString() {

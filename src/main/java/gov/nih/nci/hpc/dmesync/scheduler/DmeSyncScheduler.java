@@ -120,7 +120,7 @@ public class DmeSyncScheduler {
 
     if (shutDownFlag) {
       //check if the one time run has already occurred
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunId(oneTimeRunId);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(oneTimeRunId, doc);
       //If it has been called already, return
       if (!CollectionUtils.isEmpty(statusInfo)) {
         return;
@@ -366,6 +366,7 @@ public class DmeSyncScheduler {
     statusInfo.setSourceFilePath(file.getAbsolutePath());
     statusInfo.setFilesize(file.getSize());
     statusInfo.setStartTimestamp(new Date());
+    statusInfo.setDoc(doc);
     if(completed) {
       statusInfo.setStatus("COMPLETED");
       statusInfo.setError("specified file extension doesn't exist in correct depth");
@@ -380,11 +381,12 @@ public class DmeSyncScheduler {
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
-      List<StatusInfo> currentRun = dmeSyncWorkflowService.findStatusInfoByRunId(currentRunId);
+      List<StatusInfo> currentRun = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(currentRunId, doc);
       if(CollectionUtils.isEmpty(currentRun))
         return;
     } else {
-      StatusInfo latest = dmeSyncWorkflowService.findTopStatusInfoByOrderByStartTimestampDesc();
+      //Add base path also to distinguish multiple docs running the workflow.
+      StatusInfo latest = dmeSyncWorkflowService.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir);
       if(latest != null)
         currentRunId = latest.getRunId();
     }

@@ -48,6 +48,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	   sourcePath = sourcePath.replace("/", "\\");
 	 statusInfoObj.setOriginalFilePath(sourcePath); 
 	 statusInfoObj.setSourceFilePath(sourcePath); 
+	 statusInfoObj.setDoc("cmm");
 	 return statusInfoObj;
  }
   
@@ -78,23 +79,25 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
+	  nameMapping.setDoc("cmm");
 	  nameMapping.setCollectionName("0022");
 	  nameMapping.setCollectionType("PI_Lab");
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Richard Wyatt");
 	  piNameMetaMappings.add(nameMapping);	 
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI_Lab", "0022")).thenReturn(piNameMetaMappings);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "PI_Lab", "0022", "cmm")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
 	  MetadataMapping projectNameMapping = new MetadataMapping();
+	  projectNameMapping.setDoc("cmm");
 	  projectNameMapping.setCollectionName("HIV_Primer");
 	  projectNameMapping.setCollectionType("Project");
 	  projectNameMapping.setMetaDataKey("project_name");
 	  projectNameMapping.setMetaDataValue("HIV-1 env in complex with bn Abs");
 	  projectNameMetaMappings.add(projectNameMapping);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "Project", "HIV_Trimer")).thenReturn(projectNameMetaMappings);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "Project", "HIV_Trimer", "cmm")).thenReturn(projectNameMetaMappings);
 	  
 	 
 	  //Execute the method to test
@@ -179,23 +182,25 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
+	  nameMapping.setDoc("cmm");
 	  nameMapping.setCollectionName("0010");
 	  nameMapping.setCollectionType("PI_Lab");
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Wei Yang");
 	  piNameMetaMappings.add(nameMapping);	 
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "PI_Lab", "0010")).thenReturn(piNameMetaMappings);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "PI_Lab", "0010", "cmm")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
 	  MetadataMapping projectNameMapping = new MetadataMapping();
+	  projectNameMapping.setDoc("cmm");
 	  projectNameMapping.setCollectionName("Project-B");
 	  projectNameMapping.setCollectionType("Project");
 	  projectNameMapping.setMetaDataKey("project_name");
 	  projectNameMapping.setMetaDataValue("Gp5 DNA polymerase and Gp4 studies");
 	  projectNameMetaMappings.add(projectNameMapping);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(
-			  "Project", "Project-B")).thenReturn(projectNameMetaMappings);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+			  "Project", "Project-B", "cmm")).thenReturn(projectNameMetaMappings);
 	  
 	 
 	  //Execute the method to test

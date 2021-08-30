@@ -40,6 +40,9 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
   protected static final String COLLECTION_TYPE_ATTRIBUTE = "collection_type";
 	
+  @Value("${dmesync.doc.name}")
+  private String doc;
+  
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
 
@@ -55,12 +58,12 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
   
-  public String getCollectionMappingValue(String key, String collectionType)
+  public String getCollectionMappingValue(String key, String collectionType, String doc)
       throws DmeSyncMappingException {
 
     //Retrieve collection name mapping for a given key and collection type
     CollectionNameMapping collectionNameMapping =
-        dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionType(key, collectionType);
+        dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(key, collectionType, doc);
 
     if (collectionNameMapping == null) {
       String msg =
@@ -77,11 +80,11 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
 
   public HpcBulkMetadataEntry populateStoredMetadataEntries(
-      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName) {
+      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName, String doc) {
 
     //Retrieve custom metadata mapping if present
     List<MetadataMapping> metadataMappings =
-        dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionName(collectionType, collectionName);
+        dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(collectionType, collectionName, doc);
     if (metadataMappings != null && !metadataMappings.isEmpty()) {
       for (MetadataMapping mappingEntry : metadataMappings) {
         bulkMetadataEntry

@@ -86,7 +86,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "ncef"));
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - NCEF-033-007 (derived), 
@@ -197,7 +197,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //return RMarmorstein
 		  piCollectionName =  piDirName.substring(0, piDirName.indexOf("-"));
 	  } else {
-		  piCollectionName = getCollectionMappingValue(getUserId(object), "PI");
+		  piCollectionName = getCollectionMappingValue(getUserId(object), "PI", "ncef");
 	  }
 	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;
@@ -217,7 +217,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			  //return NCEF-033-007
 			  projectCollectionName =  projectDirName.substring(startIndex, startIndex + 12);
 		  } else {
-			  projectCollectionName =  getCollectionMappingValue(getUserId(object), "Project");
+			  projectCollectionName =  getCollectionMappingValue(getUserId(object), "Project", "ncef");
 		  }
 	  }
 	  
@@ -243,7 +243,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			  //returns 10031-A
 			  runCollectionName =  runDirName.substring(startIndex + 1, runDirName.indexOf(".tar"));
 		  } else {
-			  runCollectionName = getCollectionMappingValue(getUserId(object), "Run");
+			  runCollectionName = getCollectionMappingValue(getUserId(object), "Run", "ncef");
 		  }
 	  }
 	 
