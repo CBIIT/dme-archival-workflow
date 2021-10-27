@@ -9,11 +9,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
 
@@ -43,8 +44,14 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
   @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
 
+  @Value("${dmesync.db.access:local}")
+  private String access;
+
   @Value("${dmesync.tar:false}")
   private boolean tar;
+  
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
 
   @Value("${dmesync.untar:false}")
   private boolean untar;
@@ -68,7 +75,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
-    if (tar) tasks.add(tarTask);
+    if (tar || tarIndividualFiles) tasks.add(tarTask);
     else if (compress) tasks.add(compressTask);
     if (untar) tasks.add(untarTask);
 
@@ -88,7 +95,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)
 	    	  tasks.add(permissionArchiveTask);
-	      if (tar || untar || compress) tasks.add(cleanupTask);
+	      if (tar || tarIndividualFiles || untar || compress) tasks.add(cleanupTask);
       }
     }
     
@@ -115,6 +122,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     } catch (DmeSyncMappingException | DmeSyncVerificationException  e) {
       
       // In case of mapping or verification exception on async, retry will not help.
+      statusInfo.setError(e.getMessage());
       dmeSyncWorkflowService.recordError(statusInfo, e);
       
     } catch (DmeSyncWorkflowException e) {

@@ -21,6 +21,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.format.CellDateFormatter;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -270,7 +271,9 @@ public class ExcelUtil {
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
           } else {
-            rowMetadata.put(attrName.trim(), (Double.toString(dv)));
+        	DataFormatter dataFormatter = new DataFormatter();
+        	String value = dataFormatter.formatCellValue(currentCell);
+            rowMetadata.put(attrName.trim(), value);
           }
 
         } else {
