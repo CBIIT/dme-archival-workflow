@@ -77,7 +77,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + "/Patient_"
             + patientId
             + "/Sample_"
-            + getRunId(object)
+            + getSampleId(object)
             + "/"
             + fileName;
 
@@ -177,21 +177,17 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
     pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Patient"));
     String patientIdEncrypted = Base64.getEncoder().encodeToString(encryptor.encrypt(patientKey));
-    String unknownEncrypted = Base64.getEncoder().encodeToString(encryptor.encrypt("Unknown"));
     pathEntriesPatient
         .getPathMetadataEntries()
         .add(createPathEntry("patient_id", patientIdEncrypted));
     pathEntriesPatient
         .getPathMetadataEntries()
         .add(createPathEntry("patient_key", patientId));
-    pathEntriesPatient
-        .getPathMetadataEntries()
-        .add(createPathEntry("histology", getHistology(object)));
     
     // For now, we are adding mandatory metadata which are TBD
     //pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_name", unknownEncrypted));
     //pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("date_of_birth", unknownEncrypted));
-    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("biological_sex", getBiologicalSex(object)));
+    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("gender", getBiologicalSex(object)));
     
     pathEntriesPatient.setPath(patientCollectionPath);
     hpcBulkMetadataEntries
@@ -212,13 +208,14 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // key = resection_date, value = 9/28/1980 (derived)
     String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
     String runId = getRunId(object);
-    String runCollectionPath = patientCollectionPath + "/Sample_" + runId;
+    String sampleId = getSampleId(object);
+    String runCollectionPath = patientCollectionPath + "/Sample_" + sampleId;
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_id", runId));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_id", runId));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDateFromPath(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_type", getSampleType(object)));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("analyte_type", getSampleType(object)));
     String sequencer = getSequencer(object);
     if (StringUtils.isNotEmpty(sequencer))
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencer", sequencer));
@@ -226,7 +223,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     if (StringUtils.isNotEmpty(kitUsed))
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("kit_used", kitUsed));
     pathEntriesRun.setPath(runCollectionPath);
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(fileName)));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
     if (StringUtils.isNotEmpty(getSampleSource(fileName)))
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue_type", getTissueType(object)));
     if (StringUtils.isNotEmpty(getResectionDate(object)))
@@ -235,17 +232,13 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("matched_normal", getMatchedNormal(object)));
     if (StringUtils.isNotEmpty(getMatchedRnaseq(object)))
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("matched_rnaseq", getMatchedRnaseq(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_name", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("method", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("is_cell_line", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("genotype", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("cell_line_name", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("race", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "placeholder"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("metastasis_site", "placeholder"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("library_strategy", getLibraryType(object)));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue", "NOS"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequenced_material", getSequencedMaterial(object)));//is_cell_line
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", "Homo sapiens"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
         .add(populateStoredMetadataEntries(pathEntriesRun, "Sample", "Sample"));
@@ -441,7 +434,28 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // then the MatchedRnaseq will be SB_4431Met_Frag13_FrTu_January_26_2021_rnaseq (This is based on excel column, "MatchedRNASeq")
 		return getAttrValueWithParitallyMatchingKey(metadataMap, object, "MatchedRNASeq");
   }
-
+  
+  private String getSequencedMaterial(StatusInfo object) throws DmeSyncMappingException {
+	    // Example: If originalFilePath is
+	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
+	    // then the SequencedMaterial will be FrTu (This is based on excel column, "SequencedMaterial")
+		return getAttrValueWithParitallyMatchingKey(metadataMap, object, "SequencedMaterial");
+  }
+  
+  private String getLibraryType(StatusInfo object) throws DmeSyncMappingException {
+	    // Example: If originalFilePath is
+	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
+	    // then the LibraryType will be TD (This is based on excel column, "LibraryType")
+		return getAttrValueWithParitallyMatchingKey(metadataMap, object, "LibraryType");
+  }
+ 
+  private String getIsPrimary(StatusInfo object) throws DmeSyncMappingException {
+	    // Example: If originalFilePath is
+	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
+	    // then the IsPrimary will be N (This is based on excel column, "IsPrimary")
+		return getAttrValueWithParitallyMatchingKey(metadataMap, object, "IsPrimary");
+  }
+  
   private String getSequencer(StatusInfo object) throws DmeSyncMappingException {
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
@@ -457,14 +471,16 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
 
 
-  private String getSampleInfo(String objectName) {
+  private String getSampleInfo(StatusInfo object) throws DmeSyncMappingException {
     // Example: If objectName is
     // SB_4431Met_Frag1_FrTu_November_30_2020_exome_recal.bam
     // then the SampleInfo will be Metastasis from "Met" (Metastasis "Met", Primary "Pri", Other)
     // PBL will be Other.
+	String objectName = Paths.get(object.getOriginalFilePath()).toFile().getName();
     String sampleInfo = null;
     if (StringUtils.contains(objectName, "Met")) sampleInfo = "Metastasis";
-    else if (StringUtils.contains(objectName, "Pri")) sampleInfo = "Primary";
+    else if (getIsPrimary(object).equalsIgnoreCase("Y")) sampleInfo = "Primary";
+    else if (getTissueType(object).equalsIgnoreCase("Normal")) sampleInfo = "Normal";
     else sampleInfo = "Other";
     return sampleInfo;
   }
@@ -489,16 +505,22 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // then the resection_date will be November_12_2020 (This is based on excel column, "Resectiondate")
     return getAttrValueWithParitallyMatchingKey(metadataMap, object, "Resectiondate");
   }
+ 
+  private String getSampleId(StatusInfo object) {
+	  String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
+	  //Extract filename ending with _exome or _rnaseq from the path
+      String sampleId = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
+      sampleId = StringUtils.substringBefore(sampleId, "_rnaseq") + (fileName.contains("_rnaseq") ? "_rnaseq" : "");
+      return sampleId;
+  }
   
   private String getAttrValueWithParitallyMatchingKey(Map<String, Map<String, String>> map, StatusInfo object, String attrKey)
       throws DmeSyncMappingException {
     String key = null;
     String fullKey = Paths.get(object.getOriginalFilePath()).toFile().getName();
-    //If it is a bam file, find the sample ID
     if(object.getOriginalFilePath().contains("Bams") || object.getOriginalFilePath().contains("fastq_files")) {
       //Extract filename ending with _exome or _rnaseq from the path
-      String partialName = StringUtils.substringBefore(fullKey, "_exome") + (fullKey.contains("_exome") ? "_exome" : "");
-      partialName = StringUtils.substringBefore(partialName, "_rnaseq") + (fullKey.contains("_rnaseq") ? "_rnaseq" : "");
+      String partialName = getSampleId(object);
       for (Map.Entry<String, Map<String, String>> entry : map.entrySet()) {
         if(StringUtils.contains(entry.getKey(), partialName)) {
           //Sample match.

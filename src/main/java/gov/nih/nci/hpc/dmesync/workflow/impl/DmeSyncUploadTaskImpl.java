@@ -16,12 +16,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 /**
  * DME Sync Upload Task Implementation
@@ -32,6 +35,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
   @Autowired private RestTemplateFactory restTemplateFactory;
+  @Autowired private ObjectMapper objectMapper;
 
   @Value("${hpc.server.url}")
   private String serverUrl;
@@ -78,8 +82,10 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       
       HttpHeaders jsonHeader = new HttpHeaders();
       jsonHeader.setContentType(MediaType.APPLICATION_JSON);
-      HttpEntity<HpcDataObjectRegistrationRequestDTO> jsonHttpEntity =
-          new HttpEntity<>(object.getDataObjectRegistrationRequestDTO(), jsonHeader);
+      objectMapper.setSerializationInclusion(Include.NON_NULL);
+      String jsonRequestDto = objectMapper.writeValueAsString(object.getDataObjectRegistrationRequestDTO());
+      HttpEntity<String> jsonHttpEntity =
+          new HttpEntity<>(jsonRequestDto, jsonHeader);
       body.add("dataObjectRegistration", jsonHttpEntity);
       
       // creating an HttpEntity for dataObject
