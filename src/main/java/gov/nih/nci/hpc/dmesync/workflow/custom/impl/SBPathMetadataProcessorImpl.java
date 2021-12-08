@@ -46,7 +46,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   @Value("${dmesync.work.base.dir}")
   private String workDir;
   
-  @Value("${dmesync.search.dir}")
+  @Value("${dmesync.search.dir:}")
   private String searchDir;
   
   Map<String, Map<String, String>> metadataMap = null;
@@ -182,7 +182,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         .add(createPathEntry("patient_id", patientIdEncrypted));
     pathEntriesPatient
         .getPathMetadataEntries()
-        .add(createPathEntry("patient_key", patientId));
+        .add(createPathEntry("subject_id", patientId));
     
     // For now, we are adding mandatory metadata which are TBD
     //pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_name", unknownEncrypted));
@@ -237,7 +237,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue", "NOS"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequenced_material", getSequencedMaterial(object)));//is_cell_line
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", "Homo sapiens"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", "Human"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
