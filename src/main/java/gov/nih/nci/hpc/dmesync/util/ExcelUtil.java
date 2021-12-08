@@ -282,8 +282,8 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
         }
       }
-
-      metdataSheetMap.put(attrKey, rowMetadata);
+      if(StringUtils.isNotBlank(attrKey))
+    	  metdataSheetMap.put(attrKey, rowMetadata);
     }
 
     return metdataSheetMap;
