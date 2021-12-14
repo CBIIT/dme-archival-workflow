@@ -12,11 +12,16 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
+import org.apache.poi.hssf.usermodel.HSSFRichTextString;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.format.CellDateFormatter;
 import org.apache.poi.ss.usermodel.Cell;
@@ -201,6 +206,46 @@ public class ExcelUtil {
     }
     return metadataMap;
   }
+  
+	public static void convertTextToExcel(File textFile, File excelFile) throws IOException {
+
+		// Sets up the Workbook and gets the 1st (0) sheet.
+		HSSFWorkbook workbook = new HSSFWorkbook();
+		HSSFSheet sheet = workbook.createSheet("Sheet1");
+
+		int rowNo = 0;
+		int columnNo = 0;
+
+		Scanner scanner = new Scanner(textFile);
+		while (scanner.hasNextLine()) {
+			String line = scanner.nextLine();
+			// Create a new row
+			HSSFRow tempRow = sheet.createRow(rowNo);
+
+			Scanner lineScanner = new Scanner(line);
+			lineScanner.useDelimiter("\t");
+			// While there is more text to get it will loop.
+			while (lineScanner.hasNext()) {
+				// Creates the cell in that row.
+				Cell tempCell = tempRow.createCell(columnNo);
+				String output = lineScanner.next();
+				// Write the output to that cell.
+				tempCell.setCellValue(new HSSFRichTextString(output));
+				columnNo++;
+			}
+			lineScanner.close();
+			// Resets the column count for the new row.
+			columnNo = 0;
+			rowNo++;
+		}
+		scanner.close();
+
+		// Writes the file and closes everything.
+		FileOutputStream out = new FileOutputStream(excelFile);
+		workbook.write(out);
+		workbook.close();
+		out.close();
+	}
 
   private static List<String> getHeader(Sheet metadataSheet, String key)
       throws DmeSyncMappingException {
@@ -349,4 +394,5 @@ public class ExcelUtil {
 
     return metdataSheetMap;
   }
+  
 }
