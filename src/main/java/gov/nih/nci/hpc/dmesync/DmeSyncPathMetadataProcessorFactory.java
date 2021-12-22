@@ -75,6 +75,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("csb")
   private DmeSyncPathMetadataProcessor csbProcessor;
   
+  @Autowired
+  @Qualifier("template")
+  private DmeSyncPathMetadataProcessor templateProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -108,6 +112,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return dcegProcessor;
     } else if ("csb".equals(doc)){
         return csbProcessor;
+    }  else if ("template".equals(doc)){
+        return templateProcessor;
     } else {
         return defaultProcessor;
     }
