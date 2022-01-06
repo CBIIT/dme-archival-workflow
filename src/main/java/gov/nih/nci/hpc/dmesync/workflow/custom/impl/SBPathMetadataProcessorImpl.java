@@ -91,6 +91,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Find corresponding fastq files and create a symbolic link in the work dir if it doesn't already exist
 	    String partialName = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
 	    partialName = StringUtils.substringBefore(partialName, "_rnaseq") + (partialName.contains("_rnaseq") ? "_rnaseq" : "");
+	    partialName = StringUtils.substringBefore(partialName, "_1.");
+	    partialName = StringUtils.substringBefore(partialName, "_2.");
+	    partialName = StringUtils.substringBefore(partialName, ".");
+	    partialName = StringUtils.substringBefore(partialName, "_recal");
 	    final String fastqFilePartialName = partialName;
 	    try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(searchDir),
 				path -> path.getFileName().toString().startsWith(fastqFilePartialName))) {
@@ -241,7 +245,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("kit_used", kitUsed));
     pathEntriesRun.setPath(runCollectionPath);
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
-    if (StringUtils.isNotEmpty(getSampleSource(fileName)))
+    if (StringUtils.isNotEmpty(getTissueType(object)))
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue_type", getTissueType(object)));
     if (StringUtils.isNotEmpty(getResectionDate(object)))
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("resection_date", getResectionDate(object)));
@@ -405,6 +409,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String fileName = fullFilePath.getFileName().toString();
     String runDate = StringUtils.substringBefore(fileName, "_rnaseq");
     runDate = StringUtils.substringBefore(runDate, "_exome");
+    runDate = StringUtils.substringBefore(runDate, "_1.");
+    runDate = StringUtils.substringBefore(runDate, "_2.");
+    runDate = StringUtils.substringBefore(runDate, ".");
+    runDate = StringUtils.substringBefore(runDate, "_recal");
     runDate = StringUtils.isNotEmpty(StringUtils.substringAfter(runDate, "_FrTu_")) ? StringUtils.substringAfter(runDate, "_FrTu_") : runDate;
     runDate = StringUtils.isNotEmpty(StringUtils.substringAfter(runDate, "_PBL_")) ? StringUtils.substringAfter(runDate, "_PBL_") : runDate;
     logger.info("runDate: {}", runDate);
@@ -529,6 +537,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Extract filename ending with _exome or _rnaseq from the path
       String sampleId = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
       sampleId = StringUtils.substringBefore(sampleId, "_rnaseq") + (fileName.contains("_rnaseq") ? "_rnaseq" : "");
+      sampleId = StringUtils.substringBefore(sampleId, "_1.");
+      sampleId = StringUtils.substringBefore(sampleId, "_2.");
+      sampleId = StringUtils.substringBefore(sampleId, ".");
+      sampleId = StringUtils.substringBefore(sampleId, "_recal");
       return sampleId;
   }
   
