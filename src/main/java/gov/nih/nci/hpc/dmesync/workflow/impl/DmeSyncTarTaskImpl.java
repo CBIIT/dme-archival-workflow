@@ -40,9 +40,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
   @Value("${dmesync.tar.exclude.folder:}")
   private String excludeFolder;
   
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("TarTask");
+    if (tarIndividualFiles)
+    	super.setCheckTaskForCompletion(false);
     return true;
   }
   
