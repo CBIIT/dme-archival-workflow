@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -110,6 +111,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
 
     String projectCollectionName = getProjectCollectionName(object);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
+    projectCollectionPath = projectCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
@@ -165,6 +167,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
     String sampleId = getSampleId(object);
     String sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
+    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
     pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
     pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
@@ -240,12 +243,25 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     return projectCollectionName;
   }
 
-  private String getSampleId(StatusInfo object) {
-	  String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
-	// Example: If originalFilePath is
-	// H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
-	// then the sampleId after the last underscore will be SL112746
-      return StringUtils.substringBefore(StringUtils.substringAfterLast(fileName, "_"),".");
+  private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
+	  String path = Paths.get(object.getOriginalFilePath()).toString();
+	  String fileName = Paths.get(object.getOriginalFilePath()).getFileName().toString();
+	  String sampleId = null;
+	// 1) If Sample_xxx folder exists in the path, then use the name
+	// 2) If HudsonAlpha_xxx projects, extract Sample name from file name
+	// If file name is H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
+	// then the sampleId after the last underscore will be SL112746 (Library ID)
+	// 3) Else use project name
+	if (path.contains("Sample_")) {
+	  sampleId = path.substring(path.indexOf("Sample_") + "Sample_".length(),
+			 path.indexOf(File.separator, path.indexOf("Sample_")));
+	}
+	else if (path.contains("HudsonAlpha_")) {
+	  sampleId = StringUtils.substringBefore(StringUtils.substringAfterLast(fileName, "_"),".");
+	} else {
+	  sampleId = getProjectCollectionName(object);
+	}
+	return sampleId;
   }
   
   private String getAttrWithKey(String key, String attrKey) {
