@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
@@ -157,7 +159,7 @@ public class ExcelUtil {
     return fileName;
   }
 
-  public static Map<String, Map<String, String>> parseBulkMatadataEntries(
+  public static Map<String, Map<String, String>> parseBulkMetadataEntries(
       String metadataFile, String key) throws DmeSyncMappingException {
     if (StringUtils.isEmpty(metadataFile)) return null;
 
@@ -182,7 +184,65 @@ public class ExcelUtil {
     return metadataMap;
   }
   
-  public static Map<String, Map<String, String>> parseBulkMatadataEntries(
+  public static Map<String, Map<String, String>> parseMetadataTemplateEntries(
+	      String metadataFile) throws DmeSyncMappingException {
+    if (StringUtils.isEmpty(metadataFile)) return null;
+
+    Map<String, Map<String, String>> metadataMap = null;
+    Map<String, Map<String, String>> projectMap = null;
+    Map<String, Map<String, String>> sampleMap = null;
+    Workbook workbook = null;
+    List<String> missingMetadata = null;
+    StringBuffer sb = new StringBuffer();
+
+    try (FileInputStream fis = new FileInputStream(metadataFile)) {
+      workbook = WorkbookFactory.create(fis);
+      Sheet metadataSheet = workbook.getSheet("Data Dictionary");
+      metadataMap = getMandatoryMetadataMap(metadataSheet);
+      Sheet projectSheet = workbook.getSheet("Project Template");
+      projectMap = getProjectMetadataMap(projectSheet);
+      Sheet sampleSheet = workbook.getSheet("Sample Template");
+      sampleMap = getSampleMetadataMap(sampleSheet);
+      missingMetadata = validateMandatoryMetadata(metadataMap.get("PI_Lab_Required"), projectMap.get("Project"));
+      if(CollectionUtils.isNotEmpty(missingMetadata))
+    	  sb.append("Missing mandatory metadata for PI_Lab: " + String.join(", ", missingMetadata) + "\n");
+      missingMetadata = validateMandatoryMetadata(metadataMap.get("Project_Required"), projectMap.get("Project"));
+      if(CollectionUtils.isNotEmpty(missingMetadata))
+    	  sb.append("Missing mandatory metadata for Project: " + String.join(", ", missingMetadata) + "\n");
+      for(Map.Entry<String, Map<String, String>> sampleEntry : sampleMap.entrySet()) {
+    	  missingMetadata = validateMandatoryMetadata(metadataMap.get("Sample_Required"), sampleEntry.getValue());
+    	  if(CollectionUtils.isNotEmpty(missingMetadata))
+        	  sb.append("Missing mandatory metadata for " + sampleEntry.getKey() + ": " + String.join(", ", missingMetadata) + "\n");
+      }
+      if(StringUtils.isNotEmpty(sb.toString()))
+    	  throw new DmeSyncMappingException(sb.toString());
+      metadataMap.putAll(projectMap);
+      metadataMap.putAll(sampleMap);
+    } catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+      logger.error("Error reading metadata from excel file {}", metadataFile);
+      throw new DmeSyncMappingException("Error reading metadata from excel file", e);
+    } finally {
+      if (workbook != null)
+        try {
+          workbook.close();
+        } catch (IOException e) {
+          logger.error("Error closing metadata from excel file {}", metadataFile);
+        }
+    }
+    return metadataMap;
+  }
+  
+  private static List<String> validateMandatoryMetadata(Map<String, String> mandatoryEntryMap, Map<String, String> metadataEntryMap) {
+	  List<String> missingMetadata = new ArrayList<>();
+	  for(Map.Entry<String, String> entry : mandatoryEntryMap.entrySet()) {
+		  if (StringUtils.isBlank(metadataEntryMap.get(entry.getKey()))) {
+			  missingMetadata.add(entry.getKey());
+		  }
+      }
+	  return missingMetadata;
+  }
+  
+  public static Map<String, Map<String, String>> parseBulkMetadataEntries(
       String metadataFile, String key1, String key2) throws DmeSyncMappingException {
     if (StringUtils.isEmpty(metadataFile)) return null;
 
@@ -247,10 +307,11 @@ public class ExcelUtil {
 		out.close();
 	}
 
-  private static List<String> getHeader(Sheet metadataSheet, String key)
+  private static List<String> getHeader(Sheet metadataSheet, String key, Integer rowNum)
       throws DmeSyncMappingException {
     List<String> header = new ArrayList<>();
-    Row firstRow = metadataSheet.getRow(metadataSheet.getFirstRowNum());
+    Integer rowNumber = rowNum == null ? metadataSheet.getFirstRowNum() : rowNum;
+    Row firstRow = metadataSheet.getRow(rowNumber);
     Iterator<Cell> cellIterator = firstRow.iterator();
     while (cellIterator.hasNext()) {
       Cell currentCell = cellIterator.next();
@@ -265,7 +326,7 @@ public class ExcelUtil {
     return header;
   }
   
-  private static List<String> getHeader(Sheet metadataSheet, String key1, String key2)
+  private static List<String> getHeader(Sheet metadataSheet, String key1, String key2, Integer rowNum)
       throws DmeSyncMappingException {
     List<String> header = new ArrayList<>();
     Row firstRow = metadataSheet.getRow(metadataSheet.getFirstRowNum());
@@ -289,7 +350,7 @@ public class ExcelUtil {
     Iterator<Row> iterator = metadataSheet.iterator();
 
     // Read 1st row which is header row with attribute names
-    List<String> attrNames = getHeader(metadataSheet, key);
+    List<String> attrNames = getHeader(metadataSheet, key, null);
     // Read all rows (skip 1st) and construct metadata map
     // Skip cells exceeding header size
     while (iterator.hasNext()) {
@@ -334,13 +395,160 @@ public class ExcelUtil {
     return metdataSheetMap;
   }
   
+  private static Map<String, Map<String, String>> getSampleMetadataMap(Sheet metadataSheet)
+	      throws DmeSyncMappingException {
+    Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
+    Iterator<Row> iterator = metadataSheet.iterator();
+
+    List<String> attrNames = null;
+    while (iterator.hasNext()) {
+      String attrKey = null;
+      Row currentRow = iterator.next();
+      if (currentRow.getRowNum() == 0 || currentRow.getRowNum() == 1) continue;
+      Cell currentCell = currentRow.getCell(0);
+      if (currentCell.getStringCellValue().equalsIgnoreCase("Sample ID")) {
+    	  attrNames = getHeader(metadataSheet, "Sample ID", currentRow.getRowNum());
+    	  continue;
+      } else if (currentCell.getStringCellValue().startsWith("Optional Fields")) {
+    	  continue;
+      }
+      int counter = 0;
+      Map<String, String> rowMetadata = new HashMap<>();
+
+      for (String attrName : attrNames) {
+        currentCell = currentRow.getCell(counter);
+        counter++;
+        if (currentCell == null) continue;
+        if (attrName.equalsIgnoreCase("Sample ID") && StringUtils.isNotBlank(currentCell.getStringCellValue())) {
+          attrKey = currentCell.getStringCellValue();
+        }
+        if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+          double dv = currentCell.getNumericCellValue();
+          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
+            Date date = HSSFDateUtil.getJavaDate(dv);
+            String df = currentCell.getCellStyle().getDataFormatString();
+            String strValue = new CellDateFormatter(df).format(date);
+            rowMetadata.put(attrName.trim(), strValue);
+          } else {
+        	DataFormatter dataFormatter = new DataFormatter();
+        	String value = dataFormatter.formatCellValue(currentCell);
+            rowMetadata.put(attrName.trim(), value);
+          }
+
+        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        	Boolean value = currentCell.getBooleanCellValue();
+        	rowMetadata.put(attrName.trim(), value.toString());
+        } else {
+          if (currentCell.getStringCellValue() != null
+              && !currentCell.getStringCellValue().isEmpty())
+            rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
+        }
+      }
+      if(StringUtils.isNotBlank(attrKey))
+    	  if(metdataSheetMap.get(attrKey) == null) {
+    		  metdataSheetMap.put(attrKey, rowMetadata);
+    	  } else  {
+    		  metdataSheetMap.get(attrKey).putAll(rowMetadata);
+    	  }
+    }
+
+    return metdataSheetMap;
+  }
+  
+  private static Map<String, Map<String, String>> getProjectMetadataMap(Sheet metadataSheet) {
+	Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
+    Iterator<Row> iterator = metadataSheet.iterator();
+
+    // Read all rows and construct Project metadata map
+    while (iterator.hasNext()) {
+      String attrKey = "Project";
+      Row currentRow = iterator.next();
+      if (currentRow.getRowNum() == 0) continue;
+      // Skip title row
+      Map<String, String> rowMetadata = new HashMap<>();
+
+      Cell currentCell = currentRow.getCell(0);
+      if (currentCell == null) 
+    	  continue;
+      String attrName = currentCell.getStringCellValue();
+      currentCell = currentRow.getCell(1);
+      if (currentCell == null) 
+    	  continue;
+      if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+    	  double dv = currentCell.getNumericCellValue();
+          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
+            Date date = HSSFDateUtil.getJavaDate(dv);
+            String df = currentCell.getCellStyle().getDataFormatString();
+            String strValue = new CellDateFormatter(df).format(date);
+            rowMetadata.put(attrName.trim(), strValue);
+          } else {
+        	DataFormatter dataFormatter = new DataFormatter();
+        	String value = dataFormatter.formatCellValue(currentCell);
+            rowMetadata.put(attrName.trim(), value);
+          }
+      } else {
+      if (currentCell.getStringCellValue() != null
+          && !currentCell.getStringCellValue().isEmpty())
+        rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
+      }
+      if(metdataSheetMap.get(attrKey) == null)
+    	  metdataSheetMap.put(attrKey, rowMetadata);
+      else
+    	  metdataSheetMap.get(attrKey).putAll(rowMetadata);
+    }
+
+    return metdataSheetMap;
+  }
+  
+  private static Map<String, Map<String, String>> getMandatoryMetadataMap(Sheet metadataSheet) {
+    Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
+    Iterator<Row> iterator = metadataSheet.iterator();
+
+    // Read all rows and construct Project metadata map
+    String attrKey = null;
+    while (iterator.hasNext()) {
+      Row currentRow = iterator.next();
+      Map<String, String> rowMetadata = new HashMap<>();
+
+      Cell currentCell = currentRow.getCell(0);
+      if (currentCell == null) 
+    	  continue;
+      if (currentCell.getStringCellValue().equalsIgnoreCase("PI_Lab Collection")) {
+    	  attrKey = "PI_Lab";
+    	  continue;
+      } else if (currentCell.getStringCellValue().equalsIgnoreCase("Project Collection")) {
+    	  attrKey = "Project";
+    	  continue;
+      } else if (currentCell.getStringCellValue().equalsIgnoreCase("Sample Collection")) {
+    	  attrKey = "Sample";
+    	  continue;
+      }
+      
+      String required = currentCell.getStringCellValue().trim();
+      String key = attrKey + "_" + required;
+      currentCell = currentRow.getCell(1);
+      if (currentCell == null) 
+    	  continue;
+      String attrName = currentCell.getStringCellValue();
+      currentCell = currentRow.getCell(2);
+      String attrValue = currentCell.getStringCellValue();
+      rowMetadata.put(attrName.trim(), attrValue.trim());
+      if(metdataSheetMap.get(key) == null)
+    	  metdataSheetMap.put(key, rowMetadata);
+      else
+    	  metdataSheetMap.get(key).putAll(rowMetadata);
+    }
+
+    return metdataSheetMap;
+  }
+  
   private static Map<String, Map<String, String>> getMetadataMap(Sheet metadataSheet, String key1, String key2)
       throws DmeSyncMappingException {
     Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
     Iterator<Row> iterator = metadataSheet.iterator();
 
     // Read 1st row which is header row with attribute names
-    List<String> attrNames = getHeader(metadataSheet, key1, key2);
+    List<String> attrNames = getHeader(metadataSheet, key1, key2, null);
     // Read all rows (skip 1st) and construct metadata map
     // Skip cells exceeding header size
     while (iterator.hasNext()) {

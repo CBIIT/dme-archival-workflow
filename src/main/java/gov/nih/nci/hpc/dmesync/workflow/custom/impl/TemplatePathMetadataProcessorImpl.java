@@ -3,7 +3,6 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,9 +35,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
   
   @Value("${dmesync.source.base.dir}")
   private String sourceDir;
-  
-  Map<String, Map<String, String>> metadataMap = null;
-  
+    
   @Override
   public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
@@ -87,7 +84,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateTemplateMetadataEntries(pathEntriesPI, "PI_Lab", "Project"));
 
     // Add path metadata entries for "Project_XXX" collection
     // Example row: collectionType - Project, collectionName - HudsonAlpha_3680
@@ -114,47 +111,10 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     projectCollectionPath = projectCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
-    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_id", getAttrWithKey(projectCollectionName, "Project Identifier")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_poc", getAttrWithKey(projectCollectionName, "Project POC")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_poc_email", getAttrWithKey(projectCollectionName, "POC email")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_start_date", getAttrWithKey(projectCollectionName, "Start Date"), "dd-MMM-yy"));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_title", getAttrWithKey(projectCollectionName, "Project Title")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_description", getAttrWithKey(projectCollectionName, "Project Description")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("organism", getAttrWithKey(projectCollectionName, "Organism")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("is_cell_line", "Unknown"));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("summary_of_samples", getAttrWithKey(projectCollectionName, "Summary of samples")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_type", getAttrWithKey(projectCollectionName, "Type pf project")));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("project_status", StringUtils.capitalize(getAttrWithKey(projectCollectionName, "Status"))));
-	if(StringUtils.isNotBlank(getAttrWithKey(projectCollectionName, "Completed Date")))
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("project_completed_date", getAttrWithKey(projectCollectionName, "Completed Date"), "dd-MMM-yy"));
-	pathEntriesProject.getPathMetadataEntries().add(
-		createPathEntry("origin", getAttrWithKey(projectCollectionName, "Origin of data")));
-	if(StringUtils.isNotBlank(getAttrWithKey(projectCollectionName, "Deposition")))
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("deposition", getAttrWithKey(projectCollectionName, "Deposition")));
-	if(StringUtils.isNotBlank(getAttrWithKey(projectCollectionName, "Publications")))
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("publications", getAttrWithKey(projectCollectionName, "Publications")));
-	if(StringUtils.isNotBlank(getAttrWithKey(projectCollectionName, "Collaborators")))
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("collaborators", getAttrWithKey(projectCollectionName, "Collaborators")));
 	pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
-        .getPathsMetadataEntries()
-        .add(pathEntriesProject);
+	    .getPathsMetadataEntries()
+	    .add(populateTemplateMetadataEntries(pathEntriesProject, "Project", "Project"));
 
 
     // Add path metadata entries for "Sample" collection
@@ -169,16 +129,10 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     String sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
     sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));  
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("disease", getAttrWithKey(projectCollectionName, "Study disease")));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("method", getAttrWithKey(projectCollectionName, "Type pf project")));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_type", "Unknown"));
     pathEntriesSample.setPath(sampleCollectionPath);
     hpcBulkMetadataEntries
-        .getPathsMetadataEntries()
-        .add(pathEntriesSample);
+	    .getPathsMetadataEntries()
+	    .add(populateTemplateMetadataEntries(pathEntriesSample, "Sample", sampleId));
 
     // Set it to dataObjectRegistrationRequestDTO
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
@@ -261,26 +215,13 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
 	} else {
 	  sampleId = getProjectCollectionName(object);
 	}
-	return sampleId;
-  }
-  
-  private String getAttrWithKey(String key, String attrKey) {
-		if(StringUtils.isEmpty(key)) {
-	      logger.error("Excel mapping not found for {}", key);
-	      return null;
-	    }
-	    return (metadataMap.get(key) == null? null : metadataMap.get(key).get(attrKey));
+	return "CL0106_T1";
   }
   
   @PostConstruct
-  private void init() {
+  private void init() throws DmeSyncMappingException {
 	if("template".equalsIgnoreCase(doc)) {
-	    try {
-	      metadataMap = ExcelUtil.parseBulkMatadataEntries(metadataFile, "Directory containing data");
-	    } catch (DmeSyncMappingException e) {
-	        logger.error(
-	            "Failed to initialize metadata template path metadata processor", e);
-	    }
+		metadataMap = ExcelUtil.parseMetadataTemplateEntries(metadataFile);
 	}
   }
 }

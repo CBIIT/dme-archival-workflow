@@ -45,6 +45,8 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
   @Autowired DmeSyncWorkflowService dmeSyncWorkflowService;
   
+  Map<String, Map<String, String>> metadataMap = null;
+
   protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
     @Override
     protected HashMap<String, Map<String, String>> initialValue() {
@@ -99,6 +101,39 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
     return bulkMetadataEntry;
   }
+  
+  public HpcBulkMetadataEntry populateTemplateMetadataEntries(
+	      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName) {
+
+    //Retrieve and populate required metadata
+	Map<String, String> mandatoryEntryMap = metadataMap.get(collectionType + "_Required");
+	for(Map.Entry<String, String> entry : mandatoryEntryMap.entrySet()) {
+		if(metadataMap.get(collectionName) != null && metadataMap.get(collectionName).get(entry.getKey()) != null)
+			bulkMetadataEntry
+	        .getPathMetadataEntries()
+	        .add(createPathEntry(entry.getValue(), metadataMap.get(collectionName).get(entry.getKey())));
+		else {
+	      String msg =
+	              "No metadata entries found for CollectionType "
+	                  + collectionType
+	                  + " and CollectionName "
+	                  + collectionName;
+	      logger.error(msg);
+		}
+    }
+	//Retrieve and populate optional metadata
+	Map<String, String> optionalEntryMap = metadataMap.get(collectionType + "_Optional");
+	if(optionalEntryMap != null) {
+		for(Map.Entry<String, String> entry : optionalEntryMap.entrySet()) {
+			if(metadataMap.get(collectionName) != null && metadataMap.get(collectionName).get(entry.getKey()) != null)
+				bulkMetadataEntry
+		        .getPathMetadataEntries()
+		        .add(createPathEntry(entry.getValue(), metadataMap.get(collectionName).get(entry.getKey())));
+	    }
+	}
+    
+    return bulkMetadataEntry;
+  }
 
   public HpcMetadataEntry createPathEntry(String key, String value) {
     HpcMetadataEntry pathEntry = new HpcMetadataEntry();
@@ -143,7 +178,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
-      return ExcelUtil.parseBulkMatadataEntries(metadataFile, key);
+      return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
   }
   
   public Map<String, Map<String, String>> loadJsonMetadataFile(String metadataFile, String key)
@@ -172,7 +207,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key1, String key2) throws DmeSyncMappingException {
-    return ExcelUtil.parseBulkMatadataEntries(metadataFile, key1, key2);
+    return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
   }
 
   public List<HpcMetadataEntry> extractMetadataFromFile(File dataObjectFile) throws DmeSyncMappingException {
