@@ -79,6 +79,14 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("template")
   private DmeSyncPathMetadataProcessor templateProcessor;
   
+  @Autowired
+  @Qualifier("mocha")
+  private DmeSyncPathMetadataProcessor mochaProcessor;
+  
+  @Autowired
+  @Qualifier("scaf")
+  private DmeSyncPathMetadataProcessor scafProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -114,6 +122,10 @@ public class DmeSyncPathMetadataProcessorFactory {
         return csbProcessor;
     }  else if ("template".equals(doc)){
         return templateProcessor;
+    }  else if ("mocha".equals(doc)){
+        return mochaProcessor;
+    }  else if ("scaf".equals(doc)){
+        return scafProcessor;
     } else {
         return defaultProcessor;
     }
