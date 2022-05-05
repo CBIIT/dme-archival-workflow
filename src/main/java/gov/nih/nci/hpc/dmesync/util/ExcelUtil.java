@@ -337,7 +337,7 @@ public class ExcelUtil {
       if (cellValue == null || cellValue.isEmpty())
         throw new DmeSyncMappingException(
             "Empty header column value in column " + currentCell.getColumnIndex());
-      header.add(cellValue);
+      header.add(cellValue.trim());
     }
     if (!header.contains(key1) || !header.contains(key2))
       throw new DmeSyncMappingException("Key: " + key1 + " or Key: " + key2 + " header column is missing");
