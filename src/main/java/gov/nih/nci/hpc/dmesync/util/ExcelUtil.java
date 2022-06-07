@@ -382,6 +382,9 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), value);
           }
 
+        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        	Boolean value = currentCell.getBooleanCellValue();
+        	rowMetadata.put(attrName.trim(), value.toString());
         } else {
           if (currentCell.getStringCellValue() != null
               && !currentCell.getStringCellValue().isEmpty())
@@ -590,6 +593,9 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), String.format ("%.0f", dv));
           }
 
+        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        	Boolean dv = currentCell.getBooleanCellValue();
+        	rowMetadata.put(attrName.trim(), dv.toString());
         } else {
           if (currentCell.getStringCellValue() != null
               && !currentCell.getStringCellValue().isEmpty())

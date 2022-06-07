@@ -30,6 +30,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
+import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncDataObjectListQuery;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -48,6 +49,7 @@ public class DmeSyncScheduler {
   @Autowired private DmeSyncProducer sender;
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
 
   @Value("${dmesync.doc.name}")
   private String doc;
@@ -97,6 +99,12 @@ public class DmeSyncScheduler {
   @Value("${logging.file}")
   private String logFile;
 
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
+  @Value("${dmesync.source.softlink.file:}")
+  private String sourceSoftlinkFile;
+  
   private String runId;
 
   /**
@@ -129,11 +137,18 @@ public class DmeSyncScheduler {
 
     MDC.put("run.id", runId);
 
-    logger.info(
-        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
-        dateFormat.format(new Date()),
-        runId,
-        syncBaseDir);
+    if(createSoftlink)
+    	 logger.info(
+    		        "[Scheduler] Current time: {} executing Run ID: {} softlink file to read {}",
+    		        dateFormat.format(new Date()),
+    		        runId,
+    		        sourceSoftlinkFile);
+    else
+	    logger.info(
+	        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
+	        dateFormat.format(new Date()),
+	        runId,
+	        syncBaseDir);
 
     // The scheduler will scan through the specified directories to find candidate for archival.
     // Find the eligible file/directory,Include/Exclude or existence of a file, modified date etc.
@@ -141,9 +156,13 @@ public class DmeSyncScheduler {
     // If not, then it inserts the data and sends the details to the message queue for processing.
 
     try {
-
+      List<HpcPathAttributes> paths = null;
+      if(createSoftlink) {
+    	  paths = queryDataObjects();
+      } else {
       // Scan through the specified base directory and find candidates for processing
-      List<HpcPathAttributes> paths = scanDirectory();
+    	  paths = scanDirectory();
+      }
       
       List<HpcPathAttributes> folders = new ArrayList<>();
       List<HpcPathAttributes> files = new ArrayList<>();
@@ -220,6 +239,17 @@ public class DmeSyncScheduler {
               excludePatterns,
               includePatterns,
               tar ? Integer.parseInt(depth) : untar ? Integer.parseInt(depth) + 1 : 0);
+    }
+    return result;
+  }
+  
+  private List<HpcPathAttributes> queryDataObjects() throws HpcException, IOException {
+    List<HpcPathAttributes> result = new ArrayList<>();
+    Path filePath = Paths.get(sourceSoftlinkFile);
+    List<String> lines = Files.readAllLines(filePath);
+    //process each collection
+    for(String collectionPath: lines) {
+      result.addAll(dmeSyncDataObjectListQuery.getPathAttributes(collectionPath));
     }
     return result;
   }

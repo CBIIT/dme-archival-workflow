@@ -43,7 +43,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncCreateChecksumTaskImpl createChecksumTask;
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
   @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
-
+  @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
+  
   @Value("${dmesync.db.access:local}")
   private String access;
 
@@ -68,6 +69,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
   @Value("${dmesync.metadata.update.only:false}")
   private boolean metadataUpdateOnly;
   
@@ -82,15 +86,17 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum)
+      if(checksum && !createSoftlink)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
       else if (metadataUpdateOnly)
     	  tasks.add(syncUploadTask);
+      else if (createSoftlink)
+    	  tasks.add(createSoftlinkTask);
       else
     	  tasks.add(presignUploadTask);
-      if(!metadataUpdateOnly) {
+      if(!metadataUpdateOnly && !createSoftlink) {
 	      tasks.add(verifyTask);
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)
