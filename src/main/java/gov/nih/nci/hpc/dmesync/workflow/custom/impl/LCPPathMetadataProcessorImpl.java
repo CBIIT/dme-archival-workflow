@@ -37,7 +37,10 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   @Value("${dmesync.source.base.dir}")
   private String sourceDir;
-    
+  
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
   Map<String, Map<String, String>> sampleNameMap = null;
   
   @Override
@@ -64,7 +67,9 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + "/Sample_"
             + getSampleId(object)
             + "/"
-            + (isAnalysis(object) ? "Analysis/" + fileName : fileName);
+            + (isAnalysis(object) ? "Analysis/" : "") 
+            + (createSoftlink ? "Raw/" : "")
+    		+ fileName;
 
     // replace spaces with underscore
     archivePath = archivePath.replace(" ", "_");
@@ -139,7 +144,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     if(getAttrWithKey(sampleId, applicationType, "Tissue") != null)
     	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrWithKey(sampleId, applicationType, "Tissue")));
     if(getAttrWithKey(sampleId, applicationType, "Tissue Type") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", "Tissue Type"));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrWithKey(sampleId, applicationType, "Tissue Type")));
     if(getAttrWithKey(sampleId, applicationType, "Age") != null)
     	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age", getAttrWithKey(sampleId, applicationType, "Age")));
     if(getAttrWithKey(sampleId, applicationType, "Organism") != null)
@@ -166,6 +171,15 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
         pathEntriesAnalysis.setPath(analysisCollectionPath);
         hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
+    }
+    
+    if (createSoftlink) {
+    	// Add path metadata entries for "Raw" collection
+        String rawCollectionPath = isAnalysis(object) ? sampleCollectionPath + "/Analysis/Raw" : sampleCollectionPath + "/Raw";
+        HpcBulkMetadataEntry pathEntriesRaw = new HpcBulkMetadataEntry();
+        pathEntriesRaw.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw"));
+        pathEntriesRaw.setPath(rawCollectionPath);
+        hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRaw);
     }
     
     // Set it to dataObjectRegistrationRequestDTO
