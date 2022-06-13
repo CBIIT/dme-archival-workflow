@@ -9,6 +9,9 @@ import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
+
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +45,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   @Value("${dmesync.doc.name}")
   private String doc;
+  
+  @Value("${dmesync.source.base.dir}")
+  private String baseDir;
   
   @Value("${dmesync.work.base.dir}")
   private String workDir;
@@ -86,53 +92,55 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
     
-    Path metadataFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
-    if(object.getOriginalFilePath().contains("Bams")) {
-	    // Find corresponding fastq files and create a symbolic link in the work dir if it doesn't already exist
-	    String partialName = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
-	    partialName = StringUtils.substringBefore(partialName, "_rnaseq") + (partialName.contains("_rnaseq") ? "_rnaseq" : "");
-	    partialName = StringUtils.substringBefore(partialName, "_1.");
-	    partialName = StringUtils.substringBefore(partialName, "_2.");
-	    partialName = StringUtils.substringBefore(partialName, ".");
-	    partialName = StringUtils.substringBefore(partialName, "_recal");
-	    final String fastqFilePartialName = partialName;
-	    try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(searchDir),
-				path -> path.getFileName().toString().startsWith(fastqFilePartialName))) {
-			Iterator<Path> it = stream.iterator();
-			while (it.hasNext()) {
-				Path fastqFile = it.next();
-				Path link = Paths.get(workDir, "fastq_files", patientId, fastqFile.getFileName().toString());
-				if (!Files.exists(link)) {
-					//Create parent folder if it doesn’t exist
-		 			Files.createDirectories(link.getParent());
-					Files.createSymbolicLink(link, fastqFile);
-			    }
+    if (!isSingleCell()) {
+	    Path metadataFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
+	    if(object.getOriginalFilePath().contains("Bams")) {
+		    // Find corresponding fastq files and create a symbolic link in the work dir if it doesn't already exist
+		    String partialName = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
+		    partialName = StringUtils.substringBefore(partialName, "_rnaseq") + (partialName.contains("_rnaseq") ? "_rnaseq" : "");
+		    partialName = StringUtils.substringBefore(partialName, "_1.");
+		    partialName = StringUtils.substringBefore(partialName, "_2.");
+		    partialName = StringUtils.substringBefore(partialName, ".");
+		    partialName = StringUtils.substringBefore(partialName, "_recal");
+		    final String fastqFilePartialName = partialName;
+		    try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(searchDir),
+					path -> path.getFileName().toString().startsWith(fastqFilePartialName))) {
+				Iterator<Path> it = stream.iterator();
+				while (it.hasNext()) {
+					Path fastqFile = it.next();
+					Path link = Paths.get(workDir, "fastq_files", patientId, fastqFile.getFileName().toString());
+					if (!Files.exists(link)) {
+						//Create parent folder if it doesn’t exist
+			 			Files.createDirectories(link.getParent());
+						Files.createSymbolicLink(link, fastqFile);
+				    }
+				}
+			} catch (IOException e) {
+				logger.info("Fastq file not found for {}", object.getOriginalFilePath());
 			}
-		} catch (IOException e) {
-			logger.info("Fastq file not found for {}", object.getOriginalFilePath());
-		}
-	    // Convert patient sample sheet to excel for loading if not already created
-    	if(!Files.exists(metadataFilePath)) {
-    		Path path = Paths.get(object.getOriginalFilePath());
-        	Path sampleSheetPath = Paths.get(path.getParent().getParent().toString(), "successfulRun.txt");
-        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
-        	try {
-        		ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()));
-        	} catch (IOException e) {
-        		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
-        	}
-            
-        }
-    } else if(object.getOriginalFilePath().contains("fastq_files")) {
-    	//Set source path to the actual file.
-    	try {
-    		String fastqFile = Files.readSymbolicLink(Paths.get(object.getOriginalFilePath())).toString();
-    		object.setSourceFilePath(fastqFile);
-    	} catch (Exception e) {
-    		logger.info("File is not a symbolic link {}", object.getOriginalFilePath());
-    	}
+		    // Convert patient sample sheet to excel for loading if not already created
+	    	if(!Files.exists(metadataFilePath)) {
+	    		Path path = Paths.get(object.getOriginalFilePath());
+	        	Path sampleSheetPath = Paths.get(path.getParent().getParent().toString(), "successfulRun.txt");
+	        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
+	        	try {
+	        		ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()));
+	        	} catch (IOException e) {
+	        		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
+	        	}
+	            
+	        }
+	    } else if(object.getOriginalFilePath().contains("fastq_files")) {
+	    	//Set source path to the actual file.
+	    	try {
+	    		String fastqFile = Files.readSymbolicLink(Paths.get(object.getOriginalFilePath())).toString();
+	    		object.setSourceFilePath(fastqFile);
+	    	} catch (Exception e) {
+	    		logger.info("File is not a symbolic link {}", object.getOriginalFilePath());
+	    	}
+	    }
+	    threadLocalMap.set(loadMetadataFile(metadataFilePath.toString(), "SampleID"));
     }
-    threadLocalMap.set(loadMetadataFile(metadataFilePath.toString(), "SampleID"));
     
     return archivePath;
   }
@@ -244,7 +252,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     if (StringUtils.isNotEmpty(kitUsed))
       pathEntriesRun.getPathMetadataEntries().add(createPathEntry("kit_used", kitUsed));
     pathEntriesRun.setPath(runCollectionPath);
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
+    if (StringUtils.isNotEmpty(getSampleInfo(object)))
+    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
     if (StringUtils.isNotEmpty(getTissueType(object)))
     	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue_type", getTissueType(object)));
     if (StringUtils.isNotEmpty(getResectionDate(object)))
@@ -304,7 +313,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         .getMetadataEntries()
         .add(createPathEntry("data_compression_status", dataCompressionStatus));
   } finally {
-	threadLocalMap.remove();
+	if (!isSingleCell())
+	  threadLocalMap.remove();
   }
     logger.info(
         "CCRSB custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
@@ -355,6 +365,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the patientCollectionName will be 612161e212
+    if (isSingleCell()) {
+    	return getAttrWithKey(object.getOrginalFileName(), "PatientID");
+    }
+    	
     try {
     	patientId = getCollectionNameFromParent(object, "pipelineData");
     } catch (Exception e) {
@@ -369,6 +383,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the MRN will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
+    if (isSingleCell()) {
+    	return getAttrWithKey(object.getOrginalFileName(), "MRN");
+    }
     patientKey = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MRN");
     logger.info("patientKey: {}", patientKey);
     return patientKey;
@@ -379,6 +396,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the Histology will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
+    if (isSingleCell()) {
+    	return getAttrWithKey(object.getOrginalFileName(), "Histology");
+    }
     histology = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Histology");
     logger.info("histology: {}", histology);
     return histology;
@@ -389,24 +409,24 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the RunId will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
+    if (isSingleCell()) {
+    	return getAttrWithKey(object.getOrginalFileName(), "RunID");
+    }
     runId = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "RunID");
     logger.info("RunId: {}", runId);
     return runId;
   }
 
-  private String getRunDate(StatusInfo object) throws DmeSyncMappingException {
-    // Example: If originalFilePath is
-    // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
-    // then the RunDate will be November_04_2019 (This is based on excel column, "sequencer_run_date")
-    return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "sequencer_run_date");
-  }
 
-  private String getRunDateFromPath(StatusInfo object) {
+  private String getRunDateFromPath(StatusInfo object) throws DmeSyncMappingException {
     // Example: If originalFilePath is
 	// /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the RunDate will be December_15_2020
     Path fullFilePath = Paths.get(object.getOriginalFilePath());
     String fileName = fullFilePath.getFileName().toString();
+    if (isSingleCell()) {
+		return StringUtils.substringBefore(getRunId(object), "_rnaseq");
+	}
     String runDate = StringUtils.substringBefore(fileName, "_rnaseq");
     runDate = StringUtils.substringBefore(runDate, "_exome");
     runDate = StringUtils.substringBefore(runDate, "_1.");
@@ -423,6 +443,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// Example: If originalFilePath is
     // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
     // then the SequencingCenter will be SB (This is based on excel column, "SequencingCenter")
+    if (isSingleCell()) {
+    	return getAttrWithKey(object.getOrginalFileName(), "SequencingCenter") == null ? "Unknown"
+				: getAttrWithKey(object.getOrginalFileName(), "SequencingCenter");
+	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "SequencingCenter");
   }
   
@@ -430,6 +454,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the SampleType will be DNA (This is based on excel column, "analyte_type")
+	if (isSingleCell()) {
+	  return "Unknown";
+	}
 	return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "analyte_type");
   }
   
@@ -437,6 +464,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the TissueType will be Tumor (This is based on excel column, "tissue_type")
+	    if (isSingleCell()) {
+		  return "Unknown";
+		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "tissue_type");
   }
   
@@ -444,6 +474,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the BiologicalSex will be Male (This is based on excel column, "Gender")
+	    if (isSingleCell()) {
+			return getAttrWithKey(object.getOrginalFileName(), "Gender");
+		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Gender");
   }
   
@@ -451,6 +484,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the MatchedNormal will be SB_4431N_PBL_November_30_2020_exome (This is based on excel column, "MatchedNormal")
+	    if (isSingleCell()) {
+			return getAttrWithKey(object.getOrginalFileName(), "MatchedNormal");
+		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MatchedNormal");
   }
   
@@ -458,6 +494,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the MatchedRnaseq will be SB_4431Met_Frag13_FrTu_January_26_2021_rnaseq (This is based on excel column, "MatchedRNASeq")
+	    if (isSingleCell()) {
+			return getAttrWithKey(object.getOrginalFileName(), "MatchedRNASeq");
+		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MatchedRNASeq");
   }
   
@@ -465,6 +504,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the SequencedMaterial will be FrTu (This is based on excel column, "SequencedMaterial")
+	    if (isSingleCell()) {
+			return getAttrWithKey(object.getOrginalFileName(), "SequencedMaterial");
+		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "SequencedMaterial");
   }
   
@@ -472,6 +514,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the LibraryType will be TD (This is based on excel column, "LibraryType")
+	  	if (isSingleCell()) {
+	    	return getAttrWithKey(object.getOrginalFileName(), "LibraryType");
+	    }
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "LibraryType");
   }
  
@@ -479,6 +524,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // Example: If originalFilePath is
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the IsPrimary will be N (This is based on excel column, "IsPrimary")
+	    if (isSingleCell()) {
+	    	return getAttrWithKey(object.getOrginalFileName(), "IsPrimary");
+	    }
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "IsPrimary");
   }
   
@@ -486,6 +534,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the Sequencer will be NextSeq550A (This is based on excel column, "Sequencer")
+	if (isSingleCell()) {
+		return getAttrWithKey(object.getOrginalFileName(), "Sequencer");
+	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Sequencer");
   }
 
@@ -493,6 +544,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the kit_used will be SureSelect_RNA_XT_HS2 (This is based on excel column, "LibraryEnrichment")
+    if (isSingleCell()) {
+		return getAttrWithKey(object.getOrginalFileName(), "LibraryEnrichment");
+	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "LibraryEnrichment");
   }
 
@@ -502,6 +556,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // SB_4431Met_Frag1_FrTu_November_30_2020_exome_recal.bam
     // then the SampleInfo will be Metastasis from "Met" (Metastasis "Met", Primary "Pri", Other)
     // PBL will be Other.
+	if (isSingleCell()) {
+		return "";
+	}
 	String objectName = Paths.get(object.getOriginalFilePath()).toFile().getName();
     String sampleInfo = null;
     if (StringUtils.contains(objectName, "Met")) sampleInfo = "Metastasis";
@@ -511,30 +568,24 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return sampleInfo;
   }
 
-  private String getSampleSource(String objectName) {
-    // Example: If objectName is
-    // SB_4431Met_Frag1_FrTu_November_30_2020_exome_recal.bam
-    // then the SampleSource will be FrTu (FrTu,FFPE,Xeno,TC)
-    // PBL will be PBL
-    String sampleSource = null;
-    if (StringUtils.contains(objectName, "FrTu")) sampleSource = "FrTu";
-    else if (StringUtils.contains(objectName, "FFPE")) sampleSource = "FFPE";
-    else if (StringUtils.contains(objectName, "Xeno")) sampleSource = "Xeno";
-    else if (StringUtils.contains(objectName, "TC")) sampleSource = "TC";
-    else if (StringUtils.contains(objectName, "PBL")) sampleSource = "PBL";
-    return sampleSource;
-  }
   
   private String getResectionDate(StatusInfo object) throws DmeSyncMappingException {
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the resection_date will be November_12_2020 (This is based on excel column, "Resectiondate")
+	if (isSingleCell()) {
+		return getAttrWithKey(object.getOrginalFileName(), "Resectiondate") == null ? "Unknown"
+				: getAttrWithKey(object.getOrginalFileName(), "Resectiondate");
+	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Resectiondate");
   }
  
   private String getSampleId(StatusInfo object) {
 	  String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
 	  //Extract filename ending with _exome or _rnaseq from the path
+	  if (isSingleCell()) {
+	    return getAttrWithKey(object.getOrginalFileName(), "SampleID");
+	  }
       String sampleId = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
       sampleId = StringUtils.substringBefore(sampleId, "_rnaseq") + (fileName.contains("_rnaseq") ? "_rnaseq" : "");
       sampleId = StringUtils.substringBefore(sampleId, "_1.");
@@ -567,5 +618,30 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     if(StringUtils.isEmpty(attrValue))
       attrValue = "Unknown";
     return attrValue;
+  }
+  
+  private String getAttrWithKey(String key1, String attrKey) {
+	if(StringUtils.isEmpty(key1)) {
+      logger.error("Excel mapping not found for {}", key1);
+      return null;
+    }
+    return (metadataMap.get(key1) == null? null : metadataMap.get(key1).get(attrKey));
+  }
+  
+  private boolean isSingleCell() {
+    return baseDir.contains("10X_Fastqs");
+  }
+
+  @PostConstruct
+  private void init() throws DmeSyncMappingException {
+	if("sb".equalsIgnoreCase(doc) && isSingleCell()) {
+    	Path excelFilePath = Paths.get(workDir, "10XMetaForUpload.xls");
+    	try {
+    		ExcelUtil.convertTextToExcel(new File(metadataFile), new File(excelFilePath.toString()));
+    	} catch (IOException e) {
+    		throw new DmeSyncMappingException("Can't convert 10XMetaForUpload.txt file to excel", e);
+    	}
+		metadataMap = ExcelUtil.parseBulkMetadataEntries(excelFilePath.toString(), "Fastq");
+	}
   }
 }
