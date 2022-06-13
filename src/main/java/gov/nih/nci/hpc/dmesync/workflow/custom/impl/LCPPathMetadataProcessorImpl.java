@@ -51,6 +51,9 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example source path -
     // /data/LCP_Omics/pilot_project/rawdata/exome_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
     // /FNL_SF_Archive/PI_Lab_Xin_Wang/Project_XinWang_CS025208_241RNA_241RNA_080219/Flowcell_HKY7MDMXX/Sample_100_LCP0088_Bx1/100_LCP0088_Bx1_S78_R1_001.fastq.gz
+    // /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/DEG_ALL/RSEM.genes.expected_count.all_samples.txt
+    // /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/bams/LCP0036_BX1PT1_A.star_rg_added.sorted.dmark.bam
+    // /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/Reports/multiqc_report.html
     String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
     String archivePath = null;
 
@@ -64,12 +67,12 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + getApplicationTypeCollecionName(object)
             + "/Study_Site_"
             + getStudySite(object)
-            + "/Sample_"
+            + (isPipelinerMulti(object) ? "/Analysis/" + fileName: "/Sample_"
             + getSampleId(object)
             + "/"
             + (isAnalysis(object) ? "Analysis/" : "") 
             + (createSoftlink ? "Raw/" : "")
-    		+ fileName;
+    		+ fileName);
 
     // replace spaces with underscore
     archivePath = archivePath.replace(" ", "_");
@@ -127,59 +130,68 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesStudySite.setPath(studySiteCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesStudySite);
 
-    // Add path metadata entries for "Sample" collection
     String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
-    String sampleId = getSampleId(object);
-    String applicationType = getApplicationType(object);
-	String sampleCollectionPath = studySiteCollectionPath + "/Sample_" + sampleId;
-    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
-    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(sampleId, applicationType, "Sample Name")));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", applicationType));
-    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(sampleId, applicationType, "Analyte Type")));
-    if(getAttrWithKey(sampleId, applicationType, "Disease") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrWithKey(sampleId, applicationType, "Disease")));
-    if(getAttrWithKey(sampleId, applicationType, "Tissue") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrWithKey(sampleId, applicationType, "Tissue")));
-    if(getAttrWithKey(sampleId, applicationType, "Tissue Type") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrWithKey(sampleId, applicationType, "Tissue Type")));
-    if(getAttrWithKey(sampleId, applicationType, "Age") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age", getAttrWithKey(sampleId, applicationType, "Age")));
-    if(getAttrWithKey(sampleId, applicationType, "Organism") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism_strain", getAttrWithKey(sampleId, applicationType, "Organism")));
-    if(getAttrWithKey(sampleId, applicationType, "Sex") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", getAttrWithKey(sampleId, applicationType, "Sex")));
-    if(getAttrWithKey(sampleId, applicationType, "Is FFPE") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_ffpe", getAttrWithKey(sampleId, applicationType, "Is FFPE")));
-    if(getAttrWithKey(sampleId, applicationType, "Is Tumor") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_tumor", getAttrWithKey(sampleId, applicationType, "Is Tumor")));
-    if(getAttrWithKey(sampleId, applicationType, "Patient ID") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrWithKey(sampleId, applicationType, "Patient ID")));
-    if(getAttrWithKey(sampleId, applicationType, "Used in retrospective manuscript?") != null)
-    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_used_in_retrospective_manuscript", getAttrWithKey(sampleId, applicationType, "Used in retrospective manuscript?")));
-    pathEntriesSample.setPath(sampleCollectionPath);
-    hpcBulkMetadataEntries
-	    .getPathsMetadataEntries()
-	    .add(pathEntriesSample);
-
-    if(isAnalysis(object)) {
+    if(isPipelinerMulti(object)) {
     	// Add path metadata entries for "Analysis" collection
-        String analysisCollectionPath = sampleCollectionPath + "/Analysis";
+        String analysisCollectionPath = studySiteCollectionPath + "/Analysis";
         HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
         pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
         pathEntriesAnalysis.setPath(analysisCollectionPath);
         hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
-    }
-    
-    if (createSoftlink) {
-    	// Add path metadata entries for "Raw" collection
-        String rawCollectionPath = isAnalysis(object) ? sampleCollectionPath + "/Analysis/Raw" : sampleCollectionPath + "/Raw";
-        HpcBulkMetadataEntry pathEntriesRaw = new HpcBulkMetadataEntry();
-        pathEntriesRaw.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw"));
-        pathEntriesRaw.setPath(rawCollectionPath);
-        hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRaw);
+    } else {
+	    // Add path metadata entries for "Sample" collection
+	    String sampleId = getSampleId(object);
+	    String applicationType = getApplicationType(object);
+		String sampleCollectionPath = studySiteCollectionPath + "/Sample_" + sampleId;
+	    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
+	    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(sampleId, applicationType, "Sample Name")));
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", applicationType));
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(sampleId, applicationType, "Analyte Type")));
+	    if(getAttrWithKey(sampleId, applicationType, "Disease") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrWithKey(sampleId, applicationType, "Disease")));
+	    if(getAttrWithKey(sampleId, applicationType, "Tissue") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrWithKey(sampleId, applicationType, "Tissue")));
+	    if(getAttrWithKey(sampleId, applicationType, "Tissue Type") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrWithKey(sampleId, applicationType, "Tissue Type")));
+	    if(getAttrWithKey(sampleId, applicationType, "Age") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age", getAttrWithKey(sampleId, applicationType, "Age")));
+	    if(getAttrWithKey(sampleId, applicationType, "Organism") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism_strain", getAttrWithKey(sampleId, applicationType, "Organism")));
+	    if(getAttrWithKey(sampleId, applicationType, "Sex") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", getAttrWithKey(sampleId, applicationType, "Sex")));
+	    if(getAttrWithKey(sampleId, applicationType, "Is FFPE") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_ffpe", getAttrWithKey(sampleId, applicationType, "Is FFPE")));
+	    if(getAttrWithKey(sampleId, applicationType, "Is Tumor") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_tumor", getAttrWithKey(sampleId, applicationType, "Is Tumor")));
+	    if(getAttrWithKey(sampleId, applicationType, "Patient ID") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrWithKey(sampleId, applicationType, "Patient ID")));
+	    if(getAttrWithKey(sampleId, applicationType, "Used in retrospective manuscript?") != null)
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_used_in_retrospective_manuscript", getAttrWithKey(sampleId, applicationType, "Used in retrospective manuscript?")));
+	    pathEntriesSample.setPath(sampleCollectionPath);
+	    hpcBulkMetadataEntries
+		    .getPathsMetadataEntries()
+		    .add(pathEntriesSample);
+	
+	    if(isAnalysis(object)) {
+	    	// Add path metadata entries for "Analysis" collection
+	        String analysisCollectionPath = sampleCollectionPath + "/Analysis";
+	        HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
+	        pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
+	        pathEntriesAnalysis.setPath(analysisCollectionPath);
+	        hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
+	    }
+	    
+	    if (createSoftlink) {
+	    	// Add path metadata entries for "Raw" collection
+	        String rawCollectionPath = isAnalysis(object) ? sampleCollectionPath + "/Analysis/Raw" : sampleCollectionPath + "/Raw";
+	        HpcBulkMetadataEntry pathEntriesRaw = new HpcBulkMetadataEntry();
+	        pathEntriesRaw.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw"));
+	        pathEntriesRaw.setPath(rawCollectionPath);
+	        hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRaw);
+	    }
     }
     
     // Set it to dataObjectRegistrationRequestDTO
@@ -267,19 +279,23 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
   
   private String getApplicationType(StatusInfo object) throws DmeSyncMappingException {
-		// Example: If originalFilePath is
-	    // /data/LCP_Omics/pilot_project/rawdata/rna_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
-		// then the sampleId will be LCP0051_Bx1PT1_ZN_A
-		String applicationType = null;
-		if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "exome")) {
-			applicationType = "WES";
-		} else {
-			applicationType = "RNA-seq";
-		}
-		return applicationType;
+	// Example: If originalFilePath is
+	// /data/LCP_Omics/pilot_project/rawdata/rna_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
+	// then the sampleId will be LCP0051_Bx1PT1_ZN_A
+	String applicationType = null;
+	if(isPipelinerMulti(object))
+	  return "WTS";
+	if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "exome")) {
+		applicationType = "WES";
+	} else {
+		applicationType = "RNA-seq";
+	}
+	return applicationType;
   }
   
   private String getStudySite(StatusInfo object) throws DmeSyncMappingException {
+	if(isPipelinerMulti(object))
+	  return "NIH";
 	String sampleId = getSampleId(object);
 	String applicationType = getApplicationType(object);
 	if(getAttrWithKey(sampleId, applicationType, "Site") == null)
@@ -288,23 +304,34 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
   
   private String getAttrWithKey(String key1, String key2, String attrKey) {
-		if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
-	      logger.error("Excel mapping not found for {}", key1 + key2);
-	      return null;
-	    }
-	    return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
+	if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
+	  logger.error("Excel mapping not found for {}", key1 + key2);
+	  return null;
+	}
+	return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
   }
   
   private String getSampleIdWithKey(String key1, String key2, String attrKey) {
-		if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
-	      logger.error("Excel mapping not found for {}", key1 + key2);
-	      return null;
-	    }
-	    return (sampleNameMap.get(key1 + "_" + key2) == null? null : sampleNameMap.get(key1 + "_" + key2).get(attrKey));
+	if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
+	  logger.error("Excel mapping not found for {}", key1 + key2);
+	  return null;
+	}
+	return (sampleNameMap.get(key1 + "_" + key2) == null? null : sampleNameMap.get(key1 + "_" + key2).get(attrKey));
   }
   
   private boolean isAnalysis(StatusInfo object) {
-    return object.getOriginalFilePath().contains("Analysis");
+    return object.getOriginalFilePath().contains("Analysis") || isPipelinerBam(object);
+  }
+  
+  private boolean isPipelinerBam(StatusInfo object) {
+	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/bams/LCP0036_BX1PT1_A.star_rg_added.sorted.dmark.bam
+	return object.getOriginalFilePath().contains("pipeliner") && object.getOriginalFilePath().contains("bams");
+  }
+  
+  private boolean isPipelinerMulti(StatusInfo object) {
+	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/DEG_ALL/RSEM.genes.expected_count.all_samples.txt
+	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/Reports/multiqc_report.html
+    return object.getOriginalFilePath().contains("pipeliner") && !object.getOriginalFilePath().contains("bams");
   }
   
   @PostConstruct
