@@ -425,7 +425,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     Path fullFilePath = Paths.get(object.getOriginalFilePath());
     String fileName = fullFilePath.getFileName().toString();
     if (isSingleCell()) {
-		return StringUtils.substringBefore(getRunId(object), "_rnaseq");
+		return StringUtils.substringBefore(getRunId(object), "_");
 	}
     String runDate = StringUtils.substringBefore(fileName, "_rnaseq");
     runDate = StringUtils.substringBefore(runDate, "_exome");
