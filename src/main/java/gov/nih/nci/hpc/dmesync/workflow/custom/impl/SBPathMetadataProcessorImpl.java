@@ -267,8 +267,11 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue", "NOS"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequenced_material", getSequencedMaterial(object)));//is_cell_line
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", "Human"));
+    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", getStrain(object)));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
+    if(isSingleCell() && getAttrWithKey(object.getOrginalFileName(), "Comment") != null)
+    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("comment", getAttrWithKey(object.getOrginalFileName(), "Comment")));
+    	
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
         .add(populateStoredMetadataEntries(pathEntriesRun, "Sample", "Sample"));
@@ -455,9 +458,21 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the SampleType will be DNA (This is based on excel column, "analyte_type")
 	if (isSingleCell()) {
-	  return "Unknown";
+		return getAttrWithKey(object.getOrginalFileName(), "analyte_type") == null ? "Unknown"
+				: getAttrWithKey(object.getOrginalFileName(), "analyte_type");
 	}
 	return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "analyte_type");
+  }
+  
+  private String getStrain(StatusInfo object) throws DmeSyncMappingException {
+    // Example: If originalFilePath is
+    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
+    // then the Strain will be Human (This is based on excel column, "strain" for SC)
+	if (isSingleCell()) {
+		return getAttrWithKey(object.getOrginalFileName(), "strain") == null ? "Human"
+				: getAttrWithKey(object.getOrginalFileName(), "strain");
+	}
+	return "Human";
   }
   
   private String getTissueType(StatusInfo object) throws DmeSyncMappingException {
