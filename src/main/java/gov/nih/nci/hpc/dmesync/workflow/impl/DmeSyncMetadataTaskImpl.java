@@ -43,6 +43,9 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -57,6 +60,8 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
     try {
       DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
       String archivePath = metadataTask.getArchivePath(object);
+      if(moveProcessedFiles)
+    	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());
       object.setFullDestinationPath(archivePath);
       //Save Archive Path in DB
       saveArchivePath(object, archivePath);

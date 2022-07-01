@@ -209,4 +209,12 @@ public interface DmeSyncWorkflowService {
    * @return the StatusInfo object
    */
   StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(String absolutePath);
+  
+  /**
+   * findStatusInfoByStatus
+   * 
+   * @param status the status
+   * @return the list of StatusInfo objects
+   */
+  List<StatusInfo> findStatusInfoByStatus(String status);
 }

@@ -82,8 +82,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + getProjectCollectionName(object)
             + "/Patient_"
             + patientId
-            + "/Sample_"
-            + getSampleId(object)
+            + (isSingleCell() ? "/Run_" : "/Sample_")
+            + (isSingleCell() ? getRunId(object): getSampleId(object))
             + "/"
             + fileName;
 
@@ -238,7 +238,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
     String runId = getRunId(object);
     String sampleId = getSampleId(object);
-    String runCollectionPath = patientCollectionPath + "/Sample_" + sampleId;
+    String runCollectionPath = patientCollectionPath + (isSingleCell() ? "/Run_" + runId : "/Sample_" + sampleId);
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
@@ -269,8 +269,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", getStrain(object)));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
-    if(isSingleCell() && getAttrWithKey(object.getOrginalFileName(), "Comment") != null)
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("comment", getAttrWithKey(object.getOrginalFileName(), "Comment")));
+    if(isSingleCell() && getAttrWithKey(runId, object.getOrginalFileName(), "Comment") != null)
+    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("comment", getAttrWithKey(runId, object.getOrginalFileName(), "Comment")));
     	
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
@@ -328,7 +328,6 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example originalFilepath -
     // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
     Path fullFilePath = Paths.get(object.getOriginalFilePath());
-    logger.info("Full File Path = {}", fullFilePath);
     int count = fullFilePath.getNameCount();
     for (int i = 0; i <= count; i++) {
       if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
@@ -363,13 +362,13 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return projectCollectionName;
   }
 
-  private String getPatientId(StatusInfo object) {
+  private String getPatientId(StatusInfo object) throws DmeSyncMappingException {
     String patientId = null;
     // Example: If originalFilePath is
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the patientCollectionName will be 612161e212
     if (isSingleCell()) {
-    	return getAttrWithKey(object.getOrginalFileName(), "PatientID");
+    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "PatientID");
     }
     	
     try {
@@ -387,7 +386,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the MRN will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
     if (isSingleCell()) {
-    	return getAttrWithKey(object.getOrginalFileName(), "MRN");
+    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "MRN");
     }
     patientKey = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MRN");
     logger.info("patientKey: {}", patientKey);
@@ -400,7 +399,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the Histology will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
     if (isSingleCell()) {
-    	return getAttrWithKey(object.getOrginalFileName(), "Histology");
+    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Histology");
     }
     histology = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Histology");
     logger.info("histology: {}", histology);
@@ -413,7 +412,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the RunId will be extracted from metafile using sample SB_4431Met_Frag13_FrTu_December_15_2020_exome
     if (isSingleCell()) {
-    	return getAttrWithKey(object.getOrginalFileName(), "RunID");
+    	return getCollectionNameFromParent(object, "10X_Fastqs");
     }
     runId = getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "RunID");
     logger.info("RunId: {}", runId);
@@ -447,8 +446,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB/data/bam_files/exome/SB/8021351_BREAST_November_04_2019/4390-1Met-Frag12_FrTu_November_04_2019_recal.bam
     // then the SequencingCenter will be SB (This is based on excel column, "SequencingCenter")
     if (isSingleCell()) {
-    	return getAttrWithKey(object.getOrginalFileName(), "SequencingCenter") == null ? "Unknown"
-				: getAttrWithKey(object.getOrginalFileName(), "SequencingCenter");
+    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "SequencingCenter") == null ? "Unknown"
+				: getAttrWithKey(getRunId(object), object.getOrginalFileName(), "SequencingCenter");
 	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "SequencingCenter");
   }
@@ -458,8 +457,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the SampleType will be DNA (This is based on excel column, "analyte_type")
 	if (isSingleCell()) {
-		return getAttrWithKey(object.getOrginalFileName(), "analyte_type") == null ? "Unknown"
-				: getAttrWithKey(object.getOrginalFileName(), "analyte_type");
+		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "analyte_type") == null ? "Unknown"
+				: getAttrWithKey(getRunId(object), object.getOrginalFileName(), "analyte_type");
 	}
 	return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "analyte_type");
   }
@@ -469,8 +468,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the Strain will be Human (This is based on excel column, "strain" for SC)
 	if (isSingleCell()) {
-		return getAttrWithKey(object.getOrginalFileName(), "strain") == null ? "Human"
-				: getAttrWithKey(object.getOrginalFileName(), "strain");
+		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "strain") == null ? "Human"
+				: getAttrWithKey(getRunId(object), object.getOrginalFileName(), "strain");
 	}
 	return "Human";
   }
@@ -490,7 +489,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the BiologicalSex will be Male (This is based on excel column, "Gender")
 	    if (isSingleCell()) {
-			return getAttrWithKey(object.getOrginalFileName(), "Gender");
+	    	if(getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Gender") == null )
+	    		return "Unknown";
+	    	else
+	    		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Gender").startsWith("M")? "Male" : "Female";
 		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Gender");
   }
@@ -500,7 +502,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the MatchedNormal will be SB_4431N_PBL_November_30_2020_exome (This is based on excel column, "MatchedNormal")
 	    if (isSingleCell()) {
-			return getAttrWithKey(object.getOrginalFileName(), "MatchedNormal");
+			return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "MatchedNormal");
 		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MatchedNormal");
   }
@@ -510,7 +512,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the MatchedRnaseq will be SB_4431Met_Frag13_FrTu_January_26_2021_rnaseq (This is based on excel column, "MatchedRNASeq")
 	    if (isSingleCell()) {
-			return getAttrWithKey(object.getOrginalFileName(), "MatchedRNASeq");
+			return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "MatchedRNASeq");
 		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "MatchedRNASeq");
   }
@@ -520,7 +522,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the SequencedMaterial will be FrTu (This is based on excel column, "SequencedMaterial")
 	    if (isSingleCell()) {
-			return getAttrWithKey(object.getOrginalFileName(), "SequencedMaterial");
+			return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "SequencedMaterial");
 		}
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "SequencedMaterial");
   }
@@ -530,7 +532,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the LibraryType will be TD (This is based on excel column, "LibraryType")
 	  	if (isSingleCell()) {
-	    	return getAttrWithKey(object.getOrginalFileName(), "LibraryType");
+	    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "LibraryType");
 	    }
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "LibraryType");
   }
@@ -540,7 +542,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
 	    // then the IsPrimary will be N (This is based on excel column, "IsPrimary")
 	    if (isSingleCell()) {
-	    	return getAttrWithKey(object.getOrginalFileName(), "IsPrimary");
+	    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "IsPrimary");
 	    }
 		return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "IsPrimary");
   }
@@ -550,7 +552,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the Sequencer will be NextSeq550A (This is based on excel column, "Sequencer")
 	if (isSingleCell()) {
-		return getAttrWithKey(object.getOrginalFileName(), "Sequencer");
+		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Sequencer");
 	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Sequencer");
   }
@@ -560,7 +562,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the kit_used will be SureSelect_RNA_XT_HS2 (This is based on excel column, "LibraryEnrichment")
     if (isSingleCell()) {
-		return getAttrWithKey(object.getOrginalFileName(), "LibraryEnrichment");
+		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "LibraryEnrichment");
 	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "LibraryEnrichment");
   }
@@ -589,17 +591,17 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the resection_date will be November_12_2020 (This is based on excel column, "Resectiondate")
 	if (isSingleCell()) {
-		return getAttrWithKey(object.getOrginalFileName(), "Resectiondate") == null ? "Unknown"
-				: getAttrWithKey(object.getOrginalFileName(), "Resectiondate");
+		return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Resectiondate") == null ? "Unknown"
+				: getAttrWithKey(getRunId(object), object.getOrginalFileName(), "Resectiondate");
 	}
     return getAttrValueWithParitallyMatchingKey(threadLocalMap.get(), object, "Resectiondate");
   }
  
-  private String getSampleId(StatusInfo object) {
+  private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
 	  String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
 	  //Extract filename ending with _exome or _rnaseq from the path
 	  if (isSingleCell()) {
-	    return getAttrWithKey(object.getOrginalFileName(), "SampleID");
+	    return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "SampleID");
 	  }
       String sampleId = StringUtils.substringBefore(fileName, "_exome") + (fileName.contains("_exome") ? "_exome" : "");
       sampleId = StringUtils.substringBefore(sampleId, "_rnaseq") + (fileName.contains("_rnaseq") ? "_rnaseq" : "");
@@ -635,12 +637,12 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return attrValue;
   }
   
-  private String getAttrWithKey(String key1, String attrKey) {
-	if(StringUtils.isEmpty(key1)) {
-      logger.error("Excel mapping not found for {}", key1);
-      return null;
-    }
-    return (metadataMap.get(key1) == null? null : metadataMap.get(key1).get(attrKey));
+  private String getAttrWithKey(String key1, String key2, String attrKey) {
+		if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
+	      logger.error("Excel mapping not found for {}", key1 + key2);
+	      return null;
+	    }
+	    return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
   }
   
   private boolean isSingleCell() {
@@ -656,7 +658,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     	} catch (IOException e) {
     		throw new DmeSyncMappingException("Can't convert 10XMetaForUpload.txt file to excel", e);
     	}
-		metadataMap = ExcelUtil.parseBulkMetadataEntries(excelFilePath.toString(), "Fastq");
+		metadataMap = ExcelUtil.parseBulkMetadataEntries(excelFilePath.toString(), "RunID", "Fastq");
 	}
   }
 }

@@ -102,6 +102,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.create.softlink:false}")
   private boolean createSoftlink;
   
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
   @Value("${dmesync.source.softlink.file:}")
   private String sourceSoftlinkFile;
   
@@ -113,6 +116,11 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
 
+	if (moveProcessedFiles) {
+		findFilesToMove();
+		return;
+	}
+	
     // Make sure the work dir is different from the source dir so we don't cleanup any original files.
     if ((tar || untar) && (syncWorkDir == null || Paths.get(syncBaseDir).startsWith(syncWorkDir) )){
       logger.error("[Scheduler] work directory must be different from the source dir");
@@ -215,6 +223,65 @@ public class DmeSyncScheduler {
     }
   }
 
+  /**
+   * Temporary scheduler to move SB Single Cell fastq from Sample to Run directory
+   */
+  private void findFilesToMove() {
+
+  
+    runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
+
+    if (shutDownFlag) {
+      //check if the one time run has already occurred
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunId(oneTimeRunId);
+      //If it has been called already, return
+      if (!CollectionUtils.isEmpty(statusInfo)) {
+        return;
+      }
+    }
+
+    MDC.put("run.id", runId);
+
+    logger.info(
+        "[Scheduler] Current time: {} executing Run ID: {} base directory {}, restarting files from DB",
+        dateFormat.format(new Date()),
+        runId,
+        syncBaseDir);
+
+    try {
+
+      List<StatusInfo> statusInfoList =
+                dmeSyncWorkflowService.findStatusInfoByStatus("COMPLETED");
+      for(StatusInfo statusInfo : statusInfoList) {
+	      if(statusInfo != null) {
+	    	//Update the run_id and reset the retry count and errors
+	    	statusInfo.setRunId(runId);
+	    	statusInfo.setError("");
+	    	statusInfo.setRetryCount(0L);
+	    	statusInfo = dmeSyncWorkflowService.saveStatusInfo(statusInfo);
+	    	// Delete the metadata info created for this object ID
+	    	dmeSyncWorkflowService.deleteMetadataInfoByObjectId(statusInfo.getId());
+	    	// Send the incomplete objectId to the message queue for processing
+	        DmeSyncMessageDto message = new DmeSyncMessageDto();
+	        message.setObjectId(statusInfo.getId());
+	
+	        sender.send(message, "inbound.queue");
+	      }
+      }
+
+      logger.info(
+          "[Scheduler] Completed restaring files at {} for Run ID: {} base directory to reprocess {}",
+          dateFormat.format(new Date()),
+          runId,
+          syncBaseDir);
+
+    } catch (Exception e) {
+      logger.error("[Scheduler] Failed to restart files, {}", syncBaseDir, e);
+    } finally {
+      MDC.clear();
+      runId = null;
+    }
+  }
   private List<HpcPathAttributes> scanDirectory() throws HpcException {
     
     HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();

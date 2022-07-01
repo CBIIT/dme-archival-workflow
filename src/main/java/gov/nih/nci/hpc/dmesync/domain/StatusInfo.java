@@ -26,6 +26,7 @@ public class StatusInfo {
   private Date tarEndTimestamp;
   private Long retryCount = 0L;
   private String error;
+  @Transient private String moveDataObjectOrignalPath;
   @Transient private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
   @Transient private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
 
@@ -169,6 +170,14 @@ public class StatusInfo {
     this.error = error;
   }
 
+  public String getMoveDataObjectOrignalPath() {
+	return moveDataObjectOrignalPath;
+  }
+
+  public void setMoveDataObjectOrignalPath(String moveDataObjectOrignalPath) {
+	this.moveDataObjectOrignalPath = moveDataObjectOrignalPath;
+  }
+
   public HpcDataObjectRegistrationRequestDTO getDataObjectRegistrationRequestDTO() {
     return dataObjectRegistrationRequestDTO;
   }
@@ -180,11 +189,11 @@ public class StatusInfo {
 
   public HpcArchivePermissionsRequestDTO getArchivePermissionsRequestDTO() {
 	return archivePermissionsRequestDTO;
-}
+  }
 
-public void setArchivePermissionsRequestDTO(HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO) {
+  public void setArchivePermissionsRequestDTO(HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO) {
 	this.archivePermissionsRequestDTO = archivePermissionsRequestDTO;
-}
+  }
 
 @Override
   public String toString() {

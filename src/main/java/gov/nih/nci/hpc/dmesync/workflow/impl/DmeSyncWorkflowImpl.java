@@ -44,6 +44,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
   @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
   @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
+  @Autowired private DmeSyncMoveDataObjectTaskImpl moveDataObjectTask;
   
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -75,6 +76,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.metadata.update.only:false}")
   private boolean metadataUpdateOnly;
   
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
   @PostConstruct
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
@@ -86,7 +90,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum && !createSoftlink)
+      if(checksum && !createSoftlink && !moveProcessedFiles)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
@@ -94,9 +98,11 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     	  tasks.add(syncUploadTask);
       else if (createSoftlink)
     	  tasks.add(createSoftlinkTask);
+      else if (moveProcessedFiles)
+    	  tasks.add(moveDataObjectTask);
       else
     	  tasks.add(presignUploadTask);
-      if(!metadataUpdateOnly && !createSoftlink) {
+      if(!metadataUpdateOnly && !createSoftlink && !moveProcessedFiles) {
 	      tasks.add(verifyTask);
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)
