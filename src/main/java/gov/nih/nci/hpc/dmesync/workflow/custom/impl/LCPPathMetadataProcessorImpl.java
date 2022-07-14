@@ -219,6 +219,17 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return dataObjectRegistrationRequestDTO;
   }
 
+  private String getCollectionNameFromParent(String path, String parentName) {
+    Path fullFilePath = Paths.get(path);
+    int count = fullFilePath.getNameCount();
+    for (int i = 0; i <= count; i++) {
+      if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+        return fullFilePath.getFileName().toString();
+      }
+      fullFilePath = fullFilePath.getParent();
+    }
+    return null;
+  }
 
   private String getDataOwnerCollectionName(StatusInfo object) throws DmeSyncMappingException {
     String dataOwnerCollectionName = null;
@@ -235,8 +246,10 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectCollectionName = null;
     // Example: If originalFilePath is
     // /data/LCP_Omics/pilot_project/rawdata/exome_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
-    // then return the mapped Project for LCP_Omics
-    projectCollectionName = getCollectionMappingValue("LCP_Omics", "Project");
+    // then return the mapped Project for pilot_project
+    // else if data/LCP_Omics/frozen_crc/pipeliner/rna/qc
+    // then return the mapped Project for frozen_crc
+    projectCollectionName = getCollectionMappingValue(getCollectionNameFromParent(sourceDir, "LCP_Omics"), "Project");
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
@@ -253,9 +266,17 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// Else if file name is LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
 	// then the sampleId will be LCP0051_Bx1PT1_ZN_A
 	if (path.contains("Sample_")) {
-		String sampleName = path.substring(path.indexOf("Sample_"),
-			path.indexOf(File.separator, path.indexOf("Sample_")));
+		String sampleName = "";
+		if(path.contains("FNL_SF_Archive")) {
+			sampleName = path.substring(path.indexOf("Sample_"),
+					path.indexOf(File.separator, path.indexOf("Sample_")));
+		} else {
+			sampleName = path.substring(path.indexOf("Sample_"),
+					path.indexOf("_ZN", path.indexOf("Sample_")) + 3);
+		}
 		sampleId = getSampleIdWithKey(sampleName, applicationType, "Sample ID");
+		if(sampleId == null)
+			sampleId = getSampleIdWithKey(sampleName.replace("Bx1", "BX1"), applicationType, "Sample ID");
 		
 	} else {
 		sampleId = StringUtils.substringBefore(fileName, ".");
