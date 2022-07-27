@@ -277,6 +277,8 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		sampleId = getSampleIdWithKey(sampleName, applicationType, "Sample ID");
 		if(sampleId == null)
 			sampleId = getSampleIdWithKey(sampleName.replace("Bx1", "BX1"), applicationType, "Sample ID");
+		if(sampleId == null)
+			sampleId = getSampleIdWithKey(sampleName.replace("BX1", "Bx1"), applicationType, "Sample ID");
 		
 	} else {
 		sampleId = StringUtils.substringBefore(fileName, ".");
