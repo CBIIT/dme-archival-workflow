@@ -51,8 +51,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				+ "/Project_"
 				+ getProjectCollectionName(object) 
 				+ (isAggregatedDatasets(object) ? "" : "/Patient_" 
-				+ getPatientCollectionName(object))
-				+ "/" 
+				+ getPatientCollectionName(object)
+				+ "/Sample_" 
+				+ getSampleName(object))
+				+ "/"
 				+ getSampleName(object) + "_" + fileName;
 
 		// replace spaces with underscore
@@ -112,6 +114,22 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("primary_site", getAttrWithKey(scafId, "primary_site")));
 			pathEntriesPatient.setPath(patientCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPatient);
+						
+			// Add path metadata entries for "Sample" collection
+			// Example row: collectionType - Sample
+			String sampleCollectionName = getSampleName(object);
+			String sampleCollectionPath = patientCollectionPath + "/Sample_" + sampleCollectionName;
+			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleCollectionName));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("scaf_number", scafId));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", getAttrWithKey(scafId, "New sample ID")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", "SingleCellRNA-Seq"));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", "RNA"));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrWithKey(scafId, "primary_site")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrWithKey(scafId, "Location")));
+			pathEntriesSample.setPath(sampleCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
 		}
 		
 		// Set it to dataObjectRegistrationRequestDTO
