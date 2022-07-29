@@ -354,7 +354,8 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   private boolean isPipelinerMulti(StatusInfo object) {
 	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/DEG_ALL/RSEM.genes.expected_count.all_samples.txt
 	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/Reports/multiqc_report.html
-    return object.getOriginalFilePath().contains("pipeliner") && !object.getOriginalFilePath().contains("bams");
+	return object.getOriginalFilePath().contains("pipeliner") && !object.getOriginalFilePath().contains("bams")
+			&& !object.getOriginalFilePath().contains(".bam") && !object.getOriginalFilePath().contains(".bai");
   }
   
   @PostConstruct
