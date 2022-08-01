@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -23,11 +24,20 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //NCEP Custom logic for DME path construction and meta data creation
 
+  @Value("${dmesync.additional.metadata.excel:}")
+  private String metadataFile;
+  
+  @Value("${dmesync.doc.name}")
+  private String doc;
+  
   @Override
   public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
     logger.info("[PathMetadataTask] NCEPgetArchivePath called");
 
+    // load the user metadata from the externally placed excel
+ 	threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+ 	 
     //extract the user name from the source Path
     //Example source path - /mnt/NCEP-CryoEM/active/Data/Archive/20200107_1_Glacios/20200107_1_Glacios.tar
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
@@ -88,13 +98,32 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     //key = project_poc, value = Alan Merk (supplied)
     //key = status, value = Active (supplied)
 
+    String path = object.getOriginalFilePath();
     String projectCollectionName = getProjectCollectionName(object);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
     pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEP"));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithKey(path, "project_identifier")));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_identifier", getAttrValueWithKey(path, "project_identifier")));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "project_start_date")));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithKey(path, "project_poc")));
+    pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
+    if(getAttrValueWithKey(path, "electron_detector_model") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("electron_detector_model", getAttrValueWithKey(path, "electron_detector_model")));
+    if(getAttrValueWithKey(path, "accelerating_voltage") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("accelerating_voltage", getAttrValueWithKey(path, "accelerating_voltage")));
+    if(getAttrValueWithKey(path, "electron_source") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("electron_source", getAttrValueWithKey(path, "electron_source")));
+    if(getAttrValueWithKey(path, "illumination_mode") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("illumination_mode", getAttrValueWithKey(path, "illumination_mode")));
+    if(getAttrValueWithKey(path, "microscope_model") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("microscope_model", getAttrValueWithKey(path, "microscope_model")));
+    if(getAttrValueWithKey(path, "em_specimen") != null)
+    	pathEntriesProject.getPathMetadataEntries().add(createPathEntry("em_specimen",getAttrValueWithKey(path, "em_specimen")));
     pathEntriesProject.setPath(projectCollectionPath);
-    hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+    hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
     //Add path metadata entries for "Run_XXX" collection
     //Example row: collectionType - Run, collectionName - 20200107 (derived)
@@ -103,6 +132,8 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
     pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_number", projectCollectionName+"_"+runCollectionName));
+    if(getAttrValueWithKey(path, "project_author") != null)
+    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("project_author",getAttrValueWithKey(path, "project_author")));
     pathEntriesRun.setPath(runCollectionPath);
     hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
@@ -145,11 +176,9 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String projectCollectionName = null;
     //Example: If originalFilePath is /mnt/NCEP-CryoEM/active/Data/Archive/20200107_1_Glacios
     //then the projectDirName will be Glacios
-    String projectDirName = getCollectionNameFromParent(object, "Archive");
-    logger.info("Project Directory Name: {}", projectDirName);
-    if (projectDirName != null) {
-      projectCollectionName = projectDirName.substring(projectDirName.lastIndexOf('_') + 1);
-    }
+    String path = object.getOriginalFilePath();
+    projectCollectionName = getAttrValueWithKey(path, "project_identifier");
+    logger.info("Project collection Name: {}", projectCollectionName);
     if (projectCollectionName == null)
       throw new DmeSyncMappingException(
           "Project collection name can't be derived for " + object.getOriginalFilePath());
@@ -161,14 +190,13 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String runCollectionName = null;
     //Example: If originalFilePath is /mnt/NCEP-CryoEM/active/Data/Archive/20200107_1_Glacios
     //then the runCollectionName will be 20200107
-    String runDirName = getCollectionNameFromParent(object, "Archive");
-    if (runDirName != null) {
-      runCollectionName = runDirName.substring(0, runDirName.indexOf('_'));
-    }
+    String path = object.getOriginalFilePath();
+    runCollectionName = getAttrValueWithKey(path, "sub_project_identifier");
     if (runCollectionName == null)
       throw new DmeSyncMappingException(
           "Run collection name can't be derived for " + object.getOriginalFilePath());
     logger.info("runCollectionName: {}", runCollectionName);
     return runCollectionName;
   }
+  
 }
