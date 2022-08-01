@@ -348,7 +348,8 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   private boolean isPipelinerBam(StatusInfo object) {
 	// /data/LCP_Omics/pilot_project/pipeliner/rna/initialQC/bams/LCP0036_BX1PT1_A.star_rg_added.sorted.dmark.bam
-	return object.getOriginalFilePath().contains("pipeliner") && object.getOriginalFilePath().contains("bams");
+	return object.getOriginalFilePath().contains("pipeliner") && (object.getOriginalFilePath().contains("bams")
+			|| object.getOriginalFilePath().contains(".bam") || object.getOriginalFilePath().contains(".bai"));
   }
   
   private boolean isPipelinerMulti(StatusInfo object) {
