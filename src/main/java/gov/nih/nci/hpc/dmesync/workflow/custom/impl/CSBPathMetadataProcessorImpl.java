@@ -89,7 +89,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// Example row: collectionType - PI, collectionName (derived)
 			// key = data_owner, value = (supplied)
 			// key = affiliation, value = (supplied)
-			// key = data_curator, value = Susan Lea (constant)
+			// key = data_generator, value = Susan Lea (constant)
 
 			String piCollectionName = getPiCollectionName();
 			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
@@ -97,7 +97,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey("run", "ownername")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation", "placeholder for affiliation"));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_curator", "Susan Lea"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator", "Susan Lea"));
 			pathEntriesPI.setPath(piCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 

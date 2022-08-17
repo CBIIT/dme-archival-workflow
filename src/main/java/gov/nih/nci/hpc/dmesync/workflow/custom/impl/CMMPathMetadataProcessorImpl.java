@@ -91,7 +91,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //Example row: collectionType - PI, collectionName - 0022, 
 	  //key = data_owner, value = Richard Wyatt
 	  //key = affiliation, value = TSRI
-      //key = data_curator, value = Weimin Wu
+      //key = data_generator, value = Weimin Wu
       String piCollectionName = getPiCollectionName(object);
       String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
