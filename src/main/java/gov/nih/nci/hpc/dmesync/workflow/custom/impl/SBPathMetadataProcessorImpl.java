@@ -6,6 +6,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
@@ -118,18 +120,27 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			} catch (IOException e) {
 				logger.info("Fastq file not found for {}", object.getOriginalFilePath());
 			}
-		    // Convert patient sample sheet to excel for loading if not already created
-	    	if(!Files.exists(metadataFilePath)) {
-	    		Path path = Paths.get(object.getOriginalFilePath());
-	        	Path sampleSheetPath = Paths.get(path.getParent().getParent().toString(), "successfulRun.txt");
-	        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
-	        	try {
-	        		ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()));
-	        	} catch (IOException e) {
-	        		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
-	        	}
-	            
-	        }
+		    // Convert patient sample sheet to excel for loading if not already created or sample sheet is updated.
+		    Path path = Paths.get(object.getOriginalFilePath());
+    		Path sampleSheetPath = Paths.get(path.getParent().getParent().toString(), "successfulRun.txt");
+    		try {
+	    		BasicFileAttributes sampleSheetAttr = Files.readAttributes(sampleSheetPath, BasicFileAttributes.class);
+	    		FileTime sampleSheetTime = sampleSheetAttr.lastModifiedTime();
+	    		boolean createExcel = true;
+	    		if(Files.exists(metadataFilePath)) {
+	    			BasicFileAttributes metadataFileAttr = Files.readAttributes(metadataFilePath, BasicFileAttributes.class);
+	        		FileTime metadataFileTime = metadataFileAttr.lastModifiedTime();
+	        		//sampleSheet was created before metadataFile so it has not been updated.
+	        		if(sampleSheetTime.compareTo(metadataFileTime) < 0)
+	        			createExcel = false;
+	    		}
+		    	if(createExcel) {
+		        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
+		        	ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()));
+		        }
+    		} catch (IOException e) {
+        		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
+        	}
 	    } else if(object.getOriginalFilePath().contains("fastq_files")) {
 	    	//Set source path to the actual file.
 	    	try {
