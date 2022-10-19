@@ -91,6 +91,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("lcp")
   private DmeSyncPathMetadataProcessor lcpProcessor;
   
+  @Autowired
+  @Qualifier("pcl")
+  private DmeSyncPathMetadataProcessor pclProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -124,14 +128,16 @@ public class DmeSyncPathMetadataProcessorFactory {
         return dcegProcessor;
     } else if ("csb".equals(doc)){
         return csbProcessor;
-    }  else if ("template".equals(doc)){
+    } else if ("template".equals(doc)){
         return templateProcessor;
-    }  else if ("mocha".equals(doc)){
+    } else if ("mocha".equals(doc)){
         return mochaProcessor;
-    }  else if ("scaf".equals(doc)){
+    } else if ("scaf".equals(doc)){
         return scafProcessor;
-    }  else if ("lcp".equals(doc)){
+    } else if ("lcp".equals(doc)){
         return lcpProcessor;
+    } else if ("pcl".equals(doc)){
+        return pclProcessor;
     } else {
         return defaultProcessor;
     }
