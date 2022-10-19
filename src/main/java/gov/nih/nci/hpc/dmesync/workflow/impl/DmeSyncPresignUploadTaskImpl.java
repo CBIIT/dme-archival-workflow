@@ -218,7 +218,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
         //Update DB to completed but if verification fails, it will show up as error in verification
         object.setStatus("COMPLETED");
         object.setUploadEndTimestamp(new Date());
-        object = dmeSyncWorkflowService.saveStatusInfo(object);
+        object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       } else {
         logger.error(
             "[{}] Upload with presign url failed with responseCode {}, requires action!!!", super.getTaskName(),

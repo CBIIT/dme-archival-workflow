@@ -134,7 +134,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                 response.getStatusCode());
         if (fileSystemUpload) {
           //For file system async upload, this means that the registration itself was not successful. Cleanup the tasks to start over.
-          dmeSyncWorkflowService.deleteTaskInfoByObjectId(object.getId());
+          dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(object.getId());
       	  throw new DmeSyncVerificationException("Data object registration not successful");
         }
         throw new DmeSyncWorkflowException("Received bad response from verify dataObject");

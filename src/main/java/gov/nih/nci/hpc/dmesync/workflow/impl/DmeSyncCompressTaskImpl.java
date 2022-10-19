@@ -70,7 +70,7 @@ public class DmeSyncCompressTaskImpl extends AbstractDmeSyncTask implements DmeS
       object.setFilesize(createdCompressedFile.length());
       object.setSourceFileName(compressFileName);
       object.setSourceFilePath(compressFile);
-      object = dmeSyncWorkflowService.saveStatusInfo(object);
+      object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
     } catch (Exception e) {
       logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

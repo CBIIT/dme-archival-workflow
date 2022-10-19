@@ -15,6 +15,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -44,15 +46,16 @@ public class CompassPathMetadataProcessorImplTest {
     compassPathMetadataProcessorImpl.destinationBaseDir = "/Compass_Test_Archive";
     //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB.
 
-    compassPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+    compassPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("Compass");
-    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Compass", "PI_Lab", "compass"))
         .thenReturn(piMapping);
     CollectionNameMapping projectMapping = new CollectionNameMapping();
     projectMapping.setMapValue("Compass");
-    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Compass", "Project", "compass"))
         .thenReturn(projectMapping);
   }
@@ -150,7 +153,7 @@ public class CompassPathMetadataProcessorImplTest {
     List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Compass PI name"));
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "affiliation", "Compass PI_Lab affiliation"));
-    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "compass"))
         .thenReturn(piNameMetaMappings);   
     
@@ -162,13 +165,13 @@ public class CompassPathMetadataProcessorImplTest {
     projectMetaMappings.add(populateMetadataMapping(piCollectionName, "Project", "access", "Placeholder for access"));
     projectMetaMappings.add(populateMetadataMapping(piCollectionName, "Project", "summary_of_samples", "Placeholder for summary_of_samples"));
     projectMetaMappings.add(populateMetadataMapping(piCollectionName, "Project", "source_organism", "Placeholder for source_organism"));
-    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("Project", piCollectionName, "compass"))
         .thenReturn(projectMetaMappings);   
     
     List<MetadataMapping> sampleMetaMappings = new ArrayList<>();
     sampleMetaMappings.add(populateMetadataMapping(piCollectionName, "Sample", "sequencing_application_type", "Placeholder for sequencing_application_type"));
-    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(compassPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("Sample", piCollectionName, "compass"))
         .thenReturn(sampleMetaMappings);   
   }

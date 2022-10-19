@@ -23,13 +23,14 @@ import org.springframework.util.CollectionUtils;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncDataObjectListQuery;
 import gov.nih.nci.hpc.exception.HpcException;
 import gov.nih.nci.hpc.dmesync.DmeSyncApplication;
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -47,8 +48,12 @@ public class DmeSyncScheduler {
 
   @Autowired private DmeSyncProducer sender;
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
 
+  @Value("${dmesync.db.access:local}")
+  private String access;
+  
   @Value("${dmesync.doc.name}")
   private String doc;
   
@@ -97,6 +102,15 @@ public class DmeSyncScheduler {
   @Value("${logging.file}")
   private String logFile;
 
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
+  @Value("${dmesync.source.softlink.file:}")
+  private String sourceSoftlinkFile;
+  
   private String runId;
 
   /**
@@ -105,6 +119,11 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
 
+	if (moveProcessedFiles) {
+		findFilesToMove();
+		return;
+	}
+	
     // Make sure the work dir is different from the source dir so we don't cleanup any original files.
     if ((tar || untar) && (syncWorkDir == null || Paths.get(syncBaseDir).startsWith(syncWorkDir) )){
       logger.error("[Scheduler] work directory must be different from the source dir");
@@ -120,7 +139,7 @@ public class DmeSyncScheduler {
 
     if (shutDownFlag) {
       //check if the one time run has already occurred
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(oneTimeRunId, doc);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(oneTimeRunId, doc);
       //If it has been called already, return
       if (!CollectionUtils.isEmpty(statusInfo)) {
         return;
@@ -129,11 +148,18 @@ public class DmeSyncScheduler {
 
     MDC.put("run.id", runId);
 
-    logger.info(
-        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
-        dateFormat.format(new Date()),
-        runId,
-        syncBaseDir);
+    if(createSoftlink)
+    	 logger.info(
+    		        "[Scheduler] Current time: {} executing Run ID: {} softlink file to read {}",
+    		        dateFormat.format(new Date()),
+    		        runId,
+    		        sourceSoftlinkFile);
+    else
+	    logger.info(
+	        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
+	        dateFormat.format(new Date()),
+	        runId,
+	        syncBaseDir);
 
     // The scheduler will scan through the specified directories to find candidate for archival.
     // Find the eligible file/directory,Include/Exclude or existence of a file, modified date etc.
@@ -141,9 +167,13 @@ public class DmeSyncScheduler {
     // If not, then it inserts the data and sends the details to the message queue for processing.
 
     try {
-
+      List<HpcPathAttributes> paths = null;
+      if(createSoftlink) {
+    	  paths = queryDataObjects();
+      } else {
       // Scan through the specified base directory and find candidates for processing
-      List<HpcPathAttributes> paths = scanDirectory();
+    	  paths = scanDirectory();
+      }
       
       List<HpcPathAttributes> folders = new ArrayList<>();
       List<HpcPathAttributes> files = new ArrayList<>();
@@ -196,6 +226,65 @@ public class DmeSyncScheduler {
     }
   }
 
+  /**
+   * Temporary scheduler to move SB Single Cell fastq from Sample to Run directory
+   */
+  private void findFilesToMove() {
+
+  
+    runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
+
+    if (shutDownFlag) {
+      //check if the one time run has already occurred
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(oneTimeRunId, doc);
+      //If it has been called already, return
+      if (!CollectionUtils.isEmpty(statusInfo)) {
+        return;
+      }
+    }
+
+    MDC.put("run.id", runId);
+
+    logger.info(
+        "[Scheduler] Current time: {} executing Run ID: {} base directory {}, restarting files from DB",
+        dateFormat.format(new Date()),
+        runId,
+        syncBaseDir);
+
+    try {
+
+      List<StatusInfo> statusInfoList =
+                dmeSyncWorkflowService.getService(access).findStatusInfoByDocAndStatus(doc, "COMPLETED");
+      for(StatusInfo statusInfo : statusInfoList) {
+	      if(statusInfo != null) {
+	    	//Update the run_id and reset the retry count and errors
+	    	statusInfo.setRunId(runId);
+	    	statusInfo.setError("");
+	    	statusInfo.setRetryCount(0L);
+	    	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+	    	// Delete the metadata info created for this object ID
+	    	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
+	    	// Send the incomplete objectId to the message queue for processing
+	        DmeSyncMessageDto message = new DmeSyncMessageDto();
+	        message.setObjectId(statusInfo.getId());
+	
+	        sender.send(message, "inbound.queue");
+	      }
+      }
+
+      logger.info(
+          "[Scheduler] Completed restaring files at {} for Run ID: {} base directory to reprocess {}",
+          dateFormat.format(new Date()),
+          runId,
+          syncBaseDir);
+
+    } catch (Exception e) {
+      logger.error("[Scheduler] Failed to restart files, {}", syncBaseDir, e);
+    } finally {
+      MDC.clear();
+      runId = null;
+    }
+  }
   private List<HpcPathAttributes> scanDirectory() throws HpcException {
     
     HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();
@@ -220,6 +309,17 @@ public class DmeSyncScheduler {
               excludePatterns,
               includePatterns,
               tar ? Integer.parseInt(depth) : untar ? Integer.parseInt(depth) + 1 : 0);
+    }
+    return result;
+  }
+  
+  private List<HpcPathAttributes> queryDataObjects() throws HpcException, IOException {
+    List<HpcPathAttributes> result = new ArrayList<>();
+    Path filePath = Paths.get(sourceSoftlinkFile);
+    List<String> lines = Files.readAllLines(filePath);
+    //process each collection
+    for(String collectionPath: lines) {
+      result.addAll(dmeSyncDataObjectListQuery.getPathAttributes(collectionPath));
     }
     return result;
   }
@@ -251,11 +351,11 @@ public class DmeSyncScheduler {
         // Checks the local db to see if it has been completed
         if (untar) {
           statusInfo =
-              dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
+              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
         } else {
           statusInfo =
-              dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathAndStatus(
+              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
                   file.getAbsolutePath(), "COMPLETED");
         }
         if (statusInfo != null) {
@@ -264,16 +364,16 @@ public class DmeSyncScheduler {
           continue;
         } else {
         	statusInfo =
-                    dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+                    dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
                         file.getAbsolutePath());
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
-        	statusInfo = dmeSyncWorkflowService.saveStatusInfo(statusInfo);
+        	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
-        	dmeSyncWorkflowService.deleteMetadataInfoByObjectId(statusInfo.getId());
+        	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
         	// Send the incomplete objectId to the message queue for processing
             DmeSyncMessageDto message = new DmeSyncMessageDto();
             message.setObjectId(statusInfo.getId());
@@ -371,7 +471,7 @@ public class DmeSyncScheduler {
       statusInfo.setStatus("COMPLETED");
       statusInfo.setError("specified file extension doesn't exist in correct depth");
     }
-    statusInfo = dmeSyncWorkflowService.saveStatusInfo(statusInfo);
+    statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
     return statusInfo;
   }
 
@@ -381,12 +481,17 @@ public class DmeSyncScheduler {
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
-      List<StatusInfo> currentRun = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(currentRunId, doc);
+      List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
       if(CollectionUtils.isEmpty(currentRun))
         return;
     } else {
-      //Add base path also to distinguish multiple docs running the workflow.
-      StatusInfo latest = dmeSyncWorkflowService.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir);
+      StatusInfo latest = null;
+      if(createSoftlink) {
+    	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
+      } else {
+	      //Add base path also to distinguish multiple docs running the workflow.
+	      latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir);
+	  }
       if(latest != null)
         currentRunId = latest.getRunId();
     }

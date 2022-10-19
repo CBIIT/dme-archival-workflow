@@ -5,13 +5,18 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -34,6 +39,9 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
   @Value("${dmesync.additional.metadata.excel:}")
   private String metadataFile;
   
+  @Value("${compass.prefix.files:}")
+  private String prefixFiles;
+  
   @Override
   public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
@@ -49,6 +57,11 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // Example row - mapKey - Compass, collectionType - PI_Lab, mapValue - PI_XXX
     // Extract the Project value from the Path
     String projectCollectionName = getProjectCollectionName(object);
+    
+    List<String> prefixFilesList =
+            prefixFiles == null || prefixFiles.isEmpty()
+                ? null
+                : new ArrayList<>(Arrays.asList(prefixFiles.split(",")));
     
     if (projectCollectionName.equals("TSO500v2") && isProcessedResults(object)) {
       archivePath =
@@ -73,6 +86,10 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
               + "/Sequence_Data/"
               + fileName;
     } else if (projectCollectionName.equals("ExomeRNA")) {
+    	String libraryName = getExomeRNALibraryName(object);
+    	if(StringUtils.isNotBlank(libraryName) && !CollectionUtils.isEmpty(prefixFilesList) && prefixFilesList.contains(fileName)) {
+    		fileName = libraryName + "-" + fileName;
+    	}
     	archivePath =
           destinationBaseDir
               + "/PI_"

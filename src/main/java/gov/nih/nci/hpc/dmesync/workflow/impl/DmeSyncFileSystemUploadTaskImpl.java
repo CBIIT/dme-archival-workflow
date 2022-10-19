@@ -119,7 +119,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
           || HttpStatus.CREATED.equals(response.getStatusCode())) {
         logger.info("[{}] File upload successful", super.getTaskName());
         object.setUploadEndTimestamp(new Date());
-        dmeSyncWorkflowService.saveStatusInfo(object);
+        dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       } else {
     	  String json = objectMapper.writeValueAsString(response.getBody());
           errorResponse = objectMapper.readValue(json, HpcExceptionDTO.class);

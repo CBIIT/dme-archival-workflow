@@ -59,7 +59,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
 
     try {
       //Get all permission-bookmark entries that are not yet created
-      List<PermissionBookmarkInfo> entries = dmeSyncWorkflowService.findAllPermissionBookmarkInfoByCreated("N");
+      List<PermissionBookmarkInfo> entries = dmeSyncWorkflowService.getService(access).findAllPermissionBookmarkInfoByCreated("N");
 
       for (PermissionBookmarkInfo entry : entries) {
         //For each entry, check if the entry is a part of our DME path
@@ -96,7 +96,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
           }
 
           //Save entry
-          dmeSyncWorkflowService.savePermissionBookmarkInfo(entry);
+          dmeSyncWorkflowService.getService(access).savePermissionBookmarkInfo(entry);
         }
       }
 

@@ -15,6 +15,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -42,16 +44,17 @@ public class SBPathMetadataProcessorImplTest {
     sbPathMetadataProcessorImpl.destinationBaseDir = "/CCR_SB_Archive";
     //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB.
 
-    sbPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+    sbPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("XXX");
-    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("exome", "PI_Lab", "sb"))
         .thenReturn(piMapping);
 
     CollectionNameMapping userMapping = new CollectionNameMapping();
     userMapping.setMapValue("Surgery_Branch_NGS");
-    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("exome", "Project", "sb"))
         .thenReturn(userMapping);
   }
@@ -172,7 +175,7 @@ public class SBPathMetadataProcessorImplTest {
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Steven A. Rosenberg"));
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "pi_lab", "NCI, CCR"));
 
-    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "sb"))
         .thenReturn(piNameMetaMappings);
 
@@ -185,7 +188,7 @@ public class SBPathMetadataProcessorImplTest {
     projectNameMetaMappings.add(populateMetadataMapping(projectCollectionName, "Project", "bioinformatics_contact", "Jared Gartner"));
     projectNameMetaMappings.add(populateMetadataMapping(projectCollectionName, "Project", "affiliation", "NCI, CCR"));
 
-    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
                 "Project", projectCollectionName, "sb"))
         .thenReturn(projectNameMetaMappings);
@@ -197,7 +200,7 @@ public class SBPathMetadataProcessorImplTest {
     //patientNameMetaMappings.add(populateMetadataMapping(patientCollectionName, "Patient", "patient_sex", "Female"));
     patientNameMetaMappings.add(populateMetadataMapping(patientCollectionName, "Patient", "description", "Sample patient description"));
 
-    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(sbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
                 "Patient", patientCollectionName, "sb"))
         .thenReturn(patientNameMetaMappings);

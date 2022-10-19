@@ -3,18 +3,23 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 public abstract class AbstractDmeSyncTask implements DmeSyncTask {
 
+  @Value("${dmesync.db.access:local}")
+  protected String access;
+
   @Autowired
-  protected DmeSyncWorkflowService dmeSyncWorkflowService;
+  protected DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   private String taskName;
   private boolean checkTaskForCompletion = true;
 
@@ -42,21 +47,21 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
 
   private boolean checkComplete(Long objectId) {
 
-    TaskInfo task = dmeSyncWorkflowService.findFirstTaskInfoByObjectIdAndTaskName(objectId, taskName);
+    TaskInfo task = dmeSyncWorkflowService.getService(access).findFirstTaskInfoByObjectIdAndTaskName(objectId, taskName);
 
     return (checkTaskForCompletion && task != null && task.isCompleted());
   }
 
   private void upsertTask(Long objectId) {
     
-    TaskInfo task = dmeSyncWorkflowService.findFirstTaskInfoByObjectIdAndTaskName(objectId, taskName);
+    TaskInfo task = dmeSyncWorkflowService.getService(access).findFirstTaskInfoByObjectIdAndTaskName(objectId, taskName);
     if (task == null) {
       task = new TaskInfo();
       task.setObjectId(objectId);
       task.setTaskName(taskName);
     }
     task.setCompleted(true);
-    dmeSyncWorkflowService.saveTaskInfo(task);
+    dmeSyncWorkflowService.getService(access).saveTaskInfo(task);
   }
   
   public String getTaskName() {

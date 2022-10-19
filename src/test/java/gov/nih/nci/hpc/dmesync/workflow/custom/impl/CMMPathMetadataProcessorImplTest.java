@@ -15,6 +15,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -75,7 +77,8 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar");
 	  
-	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
 	  
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
@@ -85,7 +88,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Richard Wyatt");
 	  piNameMetaMappings.add(nameMapping);	 
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "PI_Lab", "0022", "cmm")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
@@ -96,7 +99,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  projectNameMapping.setMetaDataKey("project_name");
 	  projectNameMapping.setMetaDataValue("HIV-1 env in complex with bn Abs");
 	  projectNameMetaMappings.add(projectNameMapping);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Project", "HIV_Trimer", "cmm")).thenReturn(projectNameMetaMappings);
 	  
 	 
@@ -178,7 +181,8 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  
 	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
 		
-	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
 	  
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
@@ -188,7 +192,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Wei Yang");
 	  piNameMetaMappings.add(nameMapping);	 
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "PI_Lab", "0010", "cmm")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
@@ -199,7 +203,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  projectNameMapping.setMetaDataKey("project_name");
 	  projectNameMapping.setMetaDataValue("Gp5 DNA polymerase and Gp4 studies");
 	  projectNameMetaMappings.add(projectNameMapping);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Project", "Project-B", "cmm")).thenReturn(projectNameMetaMappings);
 	  
 	 

@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -42,17 +43,18 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
  @Before
  public void init() {
 	 
-	 seerPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
-	
+	 seerPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+
 	 //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB. 
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
 	 piMapping.setMapValue("Alison_Van_Dyke");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "PI_Lab", "seer")).thenReturn(piMapping);
+	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
+	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "PI_Lab", "seer")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping projectMapping = new CollectionNameMapping();
 	 projectMapping.setMapValue("BCT_Pilot");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "Project", "seer")).thenReturn(projectMapping);
+	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "Project", "seer")).thenReturn(projectMapping);
 	 
 	 
      //Create the statusInfo object with the test Path
@@ -167,7 +169,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataValue(affiliation);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
-	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "PI_Lab", piCollectionName, "seer")).thenReturn(piNameMetaMappings);
 	  
 	  //Database entries for Project Collection metadata
@@ -236,7 +238,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  projectNameMapping.setMetaDataValue("VTRBCT");
 	  projectNameMetaMappings.add(projectNameMapping);
 	  
-	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Project", projectCollectionName, "seer")).thenReturn(projectNameMetaMappings);
 	  
   }

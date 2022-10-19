@@ -9,11 +9,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
 
@@ -40,11 +41,19 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncPermissionBookmarkTaskImpl permissionBookmarkTask;
   @Autowired private DmeSyncCleanupTaskImpl cleanupTask;
   @Autowired private DmeSyncCreateChecksumTaskImpl createChecksumTask;
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
+  @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
+  @Autowired private DmeSyncMoveDataObjectTaskImpl moveDataObjectTask;
+  
+  @Value("${dmesync.db.access:local}")
+  private String access;
 
   @Value("${dmesync.tar:false}")
   private boolean tar;
+  
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
 
   @Value("${dmesync.untar:false}")
   private boolean untar;
@@ -61,34 +70,44 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
   @Value("${dmesync.metadata.update.only:false}")
   private boolean metadataUpdateOnly;
+  
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
   
   @PostConstruct
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
-    if (tar) tasks.add(tarTask);
+    if (tar || tarIndividualFiles) tasks.add(tarTask);
     else if (compress) tasks.add(compressTask);
     if (untar) tasks.add(untarTask);
 
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum)
+      if(checksum && !createSoftlink && !moveProcessedFiles)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
       else if (metadataUpdateOnly)
     	  tasks.add(syncUploadTask);
+      else if (createSoftlink)
+    	  tasks.add(createSoftlinkTask);
+      else if (moveProcessedFiles)
+    	  tasks.add(moveDataObjectTask);
       else
     	  tasks.add(presignUploadTask);
-      if(!metadataUpdateOnly) {
+      if(!metadataUpdateOnly && !createSoftlink && !moveProcessedFiles) {
 	      tasks.add(verifyTask);
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)
 	    	  tasks.add(permissionArchiveTask);
-	      if (tar || untar || compress) tasks.add(cleanupTask);
+	      if (tar || tarIndividualFiles || untar || compress) tasks.add(cleanupTask);
       }
     }
     
@@ -109,24 +128,25 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
         statusInfo = task.processTask(statusInfo);
       }
       
-      dmeSyncWorkflowService.completeWorkflow(statusInfo);
+      dmeSyncWorkflowService.getService(access).completeWorkflow(statusInfo);
       logger.info("[Workflow] Completed");
       
     } catch (DmeSyncMappingException | DmeSyncVerificationException  e) {
       
       // In case of mapping or verification exception on async, retry will not help.
-      dmeSyncWorkflowService.recordError(statusInfo, e);
+      statusInfo.setError(e.getMessage());
+      dmeSyncWorkflowService.getService(access).recordError(statusInfo);
       
     } catch (DmeSyncWorkflowException e) {
       
       statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
-      dmeSyncWorkflowService.retryWorkflow(statusInfo, e);
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
       
       throw e;
       
     } catch (Exception e) {
       
-      dmeSyncWorkflowService.retryWorkflow(statusInfo, e);
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
     }
   }
 

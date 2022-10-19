@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -192,8 +193,8 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
   private void setupDataForMetadataJsonTest(String piCollectionName, String piName, String affiliation, String projectCollectionName, String startDate) {
       
-	  ncefPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
-	  
+	  ncefPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setCollectionName(piCollectionName);
@@ -209,7 +210,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  nameMapping.setMetaDataValue(affiliation);
 	  piNameMetaMappings.add(nameMapping);	 
 	  
-	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "PI_Lab", piCollectionName, "ncef")).thenReturn(piNameMetaMappings);
 	  
 	  List<MetadataMapping> projectNameMetaMappings = new ArrayList<>();
@@ -250,7 +251,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
 	  projectNameMetaMappings.add(projectNameMapping);
 	  
 	  
-	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(ncefPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Project", projectCollectionName, "ncef")).thenReturn(projectNameMetaMappings);
 	  
   }

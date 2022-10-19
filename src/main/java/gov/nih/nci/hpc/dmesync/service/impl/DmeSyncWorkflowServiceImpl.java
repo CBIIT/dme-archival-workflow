@@ -20,7 +20,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 
-@Service
+@Service("local")
 @Transactional
 public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
@@ -40,14 +40,14 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
   @Override
   public void retryWorkflow(StatusInfo statusInfo, Exception e) {
-    recordError(statusInfo, e);
+	statusInfo.setError(e.getMessage());
+    recordError(statusInfo);
     // Delete the metadata info created for this object ID
     metadataInfoDao.deleteByObjectId(statusInfo.getId());
   }
 
   @Override
-  public void recordError(StatusInfo info, Exception e) {
-    info.setError(e.getMessage());
+  public void recordError(StatusInfo info) {
     statusInfoDao.saveAndFlush(info);
   }
 
@@ -166,5 +166,15 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
       String originalFilePath) {
     return statusInfoDao.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(originalFilePath);
+  }
+
+  @Override
+  public StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc) {
+	return statusInfoDao.findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
+  }
+
+  @Override
+  public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
+	return statusInfoDao.findStatusInfoByDocAndStatus(doc, status);
   }
 }

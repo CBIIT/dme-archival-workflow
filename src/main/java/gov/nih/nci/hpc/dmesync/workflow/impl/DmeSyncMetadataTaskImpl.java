@@ -43,6 +43,9 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -57,6 +60,8 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
     try {
       DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
       String archivePath = metadataTask.getArchivePath(object);
+      if(moveProcessedFiles)
+    	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());
       object.setFullDestinationPath(archivePath);
       //Save Archive Path in DB
       saveArchivePath(object, archivePath);
@@ -100,7 +105,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   
   public StatusInfo saveArchivePath(StatusInfo object, String archivePath) {
     object.setFullDestinationPath(archivePath);
-    dmeSyncWorkflowService.saveStatusInfo(object);
+    dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
     return object;
   }
   
@@ -111,7 +116,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       metadataInfo.setObjectId(object.getId());
       metadataInfo.setMetaDataKey(entry.getAttribute());
       metadataInfo.setMetaDataValue(entry.getValue());
-      dmeSyncWorkflowService.saveMetadataInfo(metadataInfo);
+      dmeSyncWorkflowService.getService(access).saveMetadataInfo(metadataInfo);
     }
     //Save Extracted Metadata entries
     for(HpcMetadataEntry entry: requestDto.getExtractedMetadataEntries()) {
@@ -119,7 +124,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       metadataInfo.setObjectId(object.getId());
       metadataInfo.setMetaDataKey(entry.getAttribute());
       metadataInfo.setMetaDataValue(entry.getValue());
-      dmeSyncWorkflowService.saveMetadataInfo(metadataInfo);
+      dmeSyncWorkflowService.getService(access).saveMetadataInfo(metadataInfo);
     }
     //Save parent metadata entries
     HpcBulkMetadataEntries entries = requestDto.getParentCollectionsBulkMetadataEntries();
@@ -130,7 +135,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
           metadataInfo.setObjectId(object.getId());
           metadataInfo.setMetaDataKey(entry.getAttribute()); // Might need to append bulkEntry.getPath()
           metadataInfo.setMetaDataValue(entry.getValue());
-          dmeSyncWorkflowService.saveMetadataInfo(metadataInfo);
+          dmeSyncWorkflowService.getService(access).saveMetadataInfo(metadataInfo);
         }
       }
     }

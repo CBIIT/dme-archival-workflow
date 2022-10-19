@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -49,17 +50,18 @@ StatusInfo statusInfo = null;
 	 statusInfo.setOriginalFilePath(sourcePath); 
 	 statusInfo.setSourceFilePath(sourcePath);
 	 
-	 hitifPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+	 hitifPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
 	 
 	 //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB. 
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
 	 piMapping.setMapValue("Tom_Misteli");
-	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "PI_Lab", "hitif")).thenReturn(piMapping);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "PI_Lab", "hitif")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping userMapping = new CollectionNameMapping();
 	 userMapping.setMapValue("Ziad_Jowhar");
-	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "User", "hitif")).thenReturn(userMapping);
+	 when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Ziad", "User", "hitif")).thenReturn(userMapping);
 	 
 	 hitifPathMetadataProcessorImpl.destinationBaseDir = "/HiTIF_Archive";
 	  
@@ -89,7 +91,7 @@ StatusInfo statusInfo = null;
 	  nameMapping.setMetaDataKey("data_owner");
 	  nameMapping.setMetaDataValue("Tom Misteli");
 	  nameMetaMappings.add(nameMapping);	 
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", "Tom_Misteli", "hitif")).thenReturn(nameMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", "Tom_Misteli", "hitif")).thenReturn(nameMetaMappings);
 	  
 	  List<MetadataMapping> userNameMetaMappings = new ArrayList<>();
 	  MetadataMapping userNameMapping = new MetadataMapping();
@@ -98,7 +100,7 @@ StatusInfo statusInfo = null;
 	  userNameMapping.setMetaDataKey("name");
 	  userNameMapping.setMetaDataValue("Ziad Jowhar");
 	  userNameMetaMappings.add(userNameMapping);
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("User", "Ziad_Jowhar", "hitif")).thenReturn(userNameMetaMappings);
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("User", "Ziad_Jowhar", "hitif")).thenReturn(userNameMetaMappings);
 	  
 	  List<MetadataMapping> expMetaMappings = new ArrayList<>();
 	  MetadataMapping expMapping = new MetadataMapping();
@@ -107,7 +109,7 @@ StatusInfo statusInfo = null;
 	  expMapping.setMetaDataKey("experiment_name");
 	  expMapping.setMetaDataValue("180712-U2F-20x-CyclinA488opti-FUCCI-Q670N1-DAPIsat_20180712_142846");
 	  expMetaMappings.add(expMapping);
-	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  when(hitifPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Exp", "180712-U2F-20x-CyclinA488opti-FUCCI-Q670N1-DAPIsat_20180712_142846", "hitif")).thenReturn(expMetaMappings);
 	  
 	  //Execute the method to test

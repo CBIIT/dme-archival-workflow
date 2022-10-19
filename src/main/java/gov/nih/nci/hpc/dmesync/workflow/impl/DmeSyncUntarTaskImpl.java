@@ -62,7 +62,7 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
 
         // Remove any COMPLETED files from the work directory from this tar file for this run
         List<StatusInfo> completedFiles =
-            dmeSyncWorkflowService.findAllStatusInfoByOriginalFilePathAndStatusAndRunId(
+            dmeSyncWorkflowService.getService(access).findAllStatusInfoByOriginalFilePathAndStatusAndRunId(
                 object.getOriginalFilePath(), "COMPLETED", object.getRunId());
         for (StatusInfo completedFile : completedFiles) {
           if(cleanup)
@@ -75,7 +75,7 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
       // Update the record for upload
       object.setSourceFileName(object.getSourceFileName());
       object.setSourceFilePath(sourceFilePath.toString());
-      object = dmeSyncWorkflowService.saveStatusInfo(object);
+      object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
     } catch (Exception e) {
       logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

@@ -64,6 +64,13 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
+   * findTopStatusInfoByDocOrderByStartTimestampDesc
+   * @param doc the doc
+   * @return the StatusInfo object
+   */
+  StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc);
+
+  /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
    *
    * @param originalFilePath the original file path
@@ -160,9 +167,8 @@ public interface DmeSyncWorkflowService {
    * Saves the error
    *
    * @param statusInfo the StatusInfo object
-   * @param e the exception to be recorded
    */
-  public void recordError(StatusInfo statusInfo, Exception e);
+  public void recordError(StatusInfo statusInfo);
 
   /**
    * findStatusInfoById
@@ -216,4 +222,13 @@ public interface DmeSyncWorkflowService {
    * @return the StatusInfo object
    */
   StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(String absolutePath);
+  
+  /**
+   * findStatusInfoByDocAndStatus
+   * 
+   * @param doc the doc
+   * @param status the status
+   * @return the list of StatusInfo objects
+   */
+  List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
 }

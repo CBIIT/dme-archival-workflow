@@ -14,6 +14,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -40,10 +42,11 @@ public class LCBPathMetadataProcessorImplTest {
     lcbPathMetadataProcessorImpl.destinationBaseDir = "/CCR_LCB_SubramaniamLab_Archive";
     //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB.
 
-    lcbPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+    lcbPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("Subramaniam");
-    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Livlab", "PI_Lab", "lcb"))
         .thenReturn(piMapping);
   }
@@ -124,7 +127,7 @@ public class LCBPathMetadataProcessorImplTest {
     List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
     piNameMetaMappings.add(populateMetadataMapping(piCollectionName, "PI_Lab", "data_owner", "Sriram Subramaniam"));
 
-    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService
+    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc("PI_Lab", piCollectionName, "lcb"))
         .thenReturn(piNameMetaMappings);   
   }

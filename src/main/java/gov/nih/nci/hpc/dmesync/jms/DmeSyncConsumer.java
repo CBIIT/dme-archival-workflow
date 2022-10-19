@@ -7,15 +7,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
 
 /**
@@ -28,9 +30,12 @@ public class DmeSyncConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(DmeSyncConsumer.class);
 
+  @Value("${dmesync.db.access:local}")
+  private String access;
+  
   @Autowired private DmeSyncWorkflow dmeSyncWorkflow;
 
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
 
   @JmsListener(destination = "inbound.queue")
   public String receiveMessage(
@@ -45,7 +50,7 @@ public class DmeSyncConsumer {
     try {
 
       // Get StatusInfo from DB
-      Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoById(syncMessage.getObjectId());
+      Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
 
       if(!statusInfo.isPresent()) {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);

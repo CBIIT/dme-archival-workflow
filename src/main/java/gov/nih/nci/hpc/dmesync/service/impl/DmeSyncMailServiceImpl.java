@@ -14,16 +14,20 @@ import org.springframework.mail.MailParseException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 @Service("defaultMailService")
 public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+
+  @Value("${dmesync.db.access:local}")
+  private String access;
 
   @Value("${dmesync.admin.emails}")
   private String adminEmails;
@@ -63,8 +67,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(runId, doc);
-      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndDoc(runId, doc);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 

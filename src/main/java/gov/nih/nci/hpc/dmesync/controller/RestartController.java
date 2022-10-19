@@ -7,14 +7,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import gov.nih.nci.hpc.dmesync.DmeSyncApplication;
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 
 @RestController
 public class RestartController {
 
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired protected DmeSyncMailServiceFactory mailServiceFactory;
 
+  @Value("${dmesync.db.access:local}")
+  private String access;
+  
   @Value("${dmesync.doc.name}")
   private String doc;
   
@@ -30,7 +33,7 @@ public class RestartController {
   public void export(@PathVariable(required = false) String runId) {
     if (runId == null || runId.isEmpty()) {
       //find the latest runId
-      runId = dmeSyncWorkflowService.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir).getRunId();
+      runId = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir).getRunId();
     }
     mailServiceFactory.getService(doc).sendResult(runId);
   }

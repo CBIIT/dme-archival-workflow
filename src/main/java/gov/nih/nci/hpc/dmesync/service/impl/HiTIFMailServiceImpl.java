@@ -18,19 +18,23 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.util.StringUtils;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 @Service("hitifMailService")
 public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
-  @Autowired private DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
 
+  @Value("${dmesync.db.access:local}")
+  private String access;
+  
   @Value("${dmesync.doc.name}")
   private String doc;
   
@@ -84,9 +88,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.findStatusInfoByRunIdAndDoc(runId, doc);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
       if (CollectionUtils.isNotEmpty(statusInfo)) {
-        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndDoc(runId, doc);
+        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
         Path path = Paths.get(logFile);
         String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 
@@ -128,9 +132,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       userPath = StringUtils.substringBefore(userPath, " does not");
       String user = userPath.replace("\\", "/").split("/")[1];
       CollectionNameMapping collectionName =
-          dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(user, "User", doc);
+          dmeSyncWorkflowService.getService(access).findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(user, "User", doc);
       MetadataMapping metadataMapping =
-          dmeSyncWorkflowService
+          dmeSyncWorkflowService.getService(access)
               .findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
                   "User", collectionName.getMapValue(), "email", doc);
       userEmail = metadataMapping.getMetaDataValue();
@@ -150,7 +154,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     String userEmail = null;
     try {
       List<MetadataInfo> metadataInfo =
-          dmeSyncWorkflowService.findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(runId, "email", doc);
+          dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(runId, "email", doc);
       Set<String> set = new HashSet<>();
       for (MetadataInfo user : metadataInfo) {
         set.add(user.getMetaDataValue());

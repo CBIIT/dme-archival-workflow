@@ -30,6 +30,9 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Value("${dmesync.compress:false}")
   private boolean compress;
   
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("CleanupTask");
@@ -42,7 +45,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   public StatusInfo process(StatusInfo object) {
 
     //Cleanup any files from the work directory.
-    if (tar || untar || compress) {
+    if (tar || untar || compress || tarIndividualFiles) {
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
         if(cleanup)
@@ -54,7 +57,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
         logger.error("[{}] Upload successful but failed to remove file", super.getTaskName(), e);
         // Record it in DB as well
         object.setError("Upload successful but failed to remove file");
-        dmeSyncWorkflowService.saveStatusInfo(object);
+        dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       }
     }
 

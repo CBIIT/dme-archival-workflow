@@ -2,6 +2,8 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.when;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -36,7 +40,8 @@ public class LRBGEPathMetadataProcessorImplTest {
   public void init() {
     //Create the statusInfo object with the test Path
     lrbgePathMetadataProcessorImpl.destinationBaseDir = "/CCR_LRBGE_Archive";
-    lrbgePathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+    lrbgePathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+    when(lrbgePathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
   }
 
   private StatusInfo setupStatusInfo(String originalFilePath, String sourceFilePath) {
@@ -83,7 +88,7 @@ public class LRBGEPathMetadataProcessorImplTest {
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<>();
-    dataMap.put("data_curator", "Tatiana Karpova");
+    dataMap.put("data_generator", "Tatiana Karpova");
     dataMap.put("data_owner", "GordonHager");
     dataMap.put("affiliation", "CCR/LRBGE/HAO");
     dataMap.put("user_name", "Diana Stavreva");

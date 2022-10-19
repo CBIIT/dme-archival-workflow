@@ -40,9 +40,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
   @Value("${dmesync.tar.exclude.folder:}")
   private String excludeFolder;
   
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("TarTask");
+    if (tarIndividualFiles)
+    	super.setCheckTaskForCompletion(false);
     return true;
   }
   
@@ -96,7 +101,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
       object.setSourceFileName(tarFileName);
       object.setSourceFilePath(tarFile);
       object.setTarEndTimestamp(new Date());
-      object = dmeSyncWorkflowService.saveStatusInfo(object);
+      object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
     } catch (Exception e) {
       logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

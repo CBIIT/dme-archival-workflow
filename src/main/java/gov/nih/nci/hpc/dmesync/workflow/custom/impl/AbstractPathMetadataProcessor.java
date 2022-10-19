@@ -27,10 +27,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
-import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -40,14 +40,19 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
   protected static final String COLLECTION_TYPE_ATTRIBUTE = "collection_type";
 	
+  @Value("${dmesync.db.access:local}")
+  private String access;
+  
   @Value("${dmesync.doc.name}")
   private String doc;
   
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
 
-  @Autowired DmeSyncWorkflowService dmeSyncWorkflowService;
+  @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
+  Map<String, Map<String, String>> metadataMap = null;
+
   protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
     @Override
     protected HashMap<String, Map<String, String>> initialValue() {
@@ -63,7 +68,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
     //Retrieve collection name mapping for a given key and collection type
     CollectionNameMapping collectionNameMapping =
-        dmeSyncWorkflowService.findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(key, collectionType, doc);
+        dmeSyncWorkflowService.getService(access).findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(key, collectionType, doc);
 
     if (collectionNameMapping == null) {
       String msg =
@@ -84,7 +89,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
     //Retrieve custom metadata mapping if present
     List<MetadataMapping> metadataMappings =
-        dmeSyncWorkflowService.findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(collectionType, collectionName, doc);
+        dmeSyncWorkflowService.getService(access).findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(collectionType, collectionName, doc);
     if (metadataMappings != null && !metadataMappings.isEmpty()) {
       for (MetadataMapping mappingEntry : metadataMappings) {
         bulkMetadataEntry
@@ -100,6 +105,39 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
       logger.info(msg);
     }
 
+    return bulkMetadataEntry;
+  }
+  
+  public HpcBulkMetadataEntry populateTemplateMetadataEntries(
+	      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName) {
+
+    //Retrieve and populate required metadata
+	Map<String, String> mandatoryEntryMap = metadataMap.get(collectionType + "_Required");
+	for(Map.Entry<String, String> entry : mandatoryEntryMap.entrySet()) {
+		if(metadataMap.get(collectionName) != null && metadataMap.get(collectionName).get(entry.getKey()) != null)
+			bulkMetadataEntry
+	        .getPathMetadataEntries()
+	        .add(createPathEntry(entry.getValue(), metadataMap.get(collectionName).get(entry.getKey())));
+		else {
+	      String msg =
+	              "No metadata entries found for CollectionType "
+	                  + collectionType
+	                  + " and CollectionName "
+	                  + collectionName;
+	      logger.error(msg);
+		}
+    }
+	//Retrieve and populate optional metadata
+	Map<String, String> optionalEntryMap = metadataMap.get(collectionType + "_Optional");
+	if(optionalEntryMap != null) {
+		for(Map.Entry<String, String> entry : optionalEntryMap.entrySet()) {
+			if(metadataMap.get(collectionName) != null && metadataMap.get(collectionName).get(entry.getKey()) != null)
+				bulkMetadataEntry
+		        .getPathMetadataEntries()
+		        .add(createPathEntry(entry.getValue(), metadataMap.get(collectionName).get(entry.getKey())));
+	    }
+	}
+    
     return bulkMetadataEntry;
   }
 
@@ -146,7 +184,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
-      return ExcelUtil.parseBulkMatadataEntries(metadataFile, key);
+      return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
   }
   
   public Map<String, Map<String, String>> loadJsonMetadataFile(String metadataFile, String key)
@@ -175,7 +213,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key1, String key2) throws DmeSyncMappingException {
-    return ExcelUtil.parseBulkMatadataEntries(metadataFile, key1, key2);
+    return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
   }
 
   public List<HpcMetadataEntry> extractMetadataFromFile(File dataObjectFile) throws DmeSyncMappingException {

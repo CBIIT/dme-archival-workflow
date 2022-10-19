@@ -37,7 +37,7 @@ public class DmeSyncCreateChecksumTaskImpl extends AbstractDmeSyncTask implement
 
       object.setChecksum(checkSum);
       StatusInfo copy = object;
-      dmeSyncWorkflowService.saveStatusInfo(object);
+      dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       object = copy;
 
     } catch (IOException e) {
