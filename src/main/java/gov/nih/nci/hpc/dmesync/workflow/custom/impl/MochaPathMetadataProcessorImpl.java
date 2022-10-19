@@ -37,6 +37,9 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   @Value("${dmesync.source.base.dir}")
   private String sourceDir;
   
+  @Value("${dmesync.tar:false}")
+  private boolean tar;
+  
   Map<String, Map<String, String>> metadataMap = null;
   
   @Override
@@ -53,19 +56,19 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     if(isBCL(object)) {
     	archivePath =
 	        destinationBaseDir
-	            + "/PI_"
+	            + "/Lab_"
 	            + getPiCollectionName(object)
 	            + "/Platform_"
 	            + getPlatformCollectionName(object)
+	            + "/Run_FC"
 	            + "/Flowcell_"
 	            + getFlowcellId(object)
-	            + "/BCL"
 	            + "/"
-	            + fileName;
+	            + getRunId(object) + ".tar";
     } else {
 	    archivePath =
 	        destinationBaseDir
-	            + "/PI_"
+	            + "/Lab_"
 	            + getPiCollectionName(object)
 	            + "/Platform_"
 	            + getPlatformCollectionName(object)
@@ -91,14 +94,18 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
-    String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+    String fileName = null;
+    if(isBCL(object))
+    	fileName = getRunId(object) + ".tar";
+    else
+    	fileName = Paths.get(object.getSourceFileName()).toFile().getName();
     
     // Add path metadata entries for "PI_XXX" collection
     // Example row: collectionType - PI, collectionName - XXX (derived)
     // key = data_owner, value = Mickey Williams (supplied)
     // key = data_owner_affiliation, value = Molecular Characterization Laboratory, FNLCR (supplied)
     String piCollectionName = getPiCollectionName(object);
-    String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+    String piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
@@ -120,33 +127,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
         .add(pathEntriesPlatform);
-
-    if(isBCL(object)) {
-	    // Add path metadata entries for "Flowcell" collection
-	    // Example row: collectionType - Flowcell
-	    // flowcell_id
-    	String flowcellId = getFlowcellId(object);
-	    String flowcellCollectionPath = platformCollectionPath + "/Flowcell_" + flowcellId;
-	    HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
-	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
-	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object)));
-	    pathEntriesFlowcell.setPath(flowcellCollectionPath);
-	    hpcBulkMetadataEntries
-	        .getPathsMetadataEntries()
-	        .add(pathEntriesFlowcell);
-	    
-	    
-	    String bclCollectionPath = flowcellCollectionPath + "/BCL";
- 	    bclCollectionPath = bclCollectionPath.replace(" ", "_");
- 	    HpcBulkMetadataEntry pathEntriesBCL = new HpcBulkMetadataEntry();
- 	    pathEntriesBCL.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "BCL"));     
- 	    pathEntriesBCL.setPath(bclCollectionPath);
- 	    hpcBulkMetadataEntries
- 	        .getPathsMetadataEntries()
- 	        .add(pathEntriesBCL);
- 	    
-    } else {
+    
+    if(!isBCL(object)) {
     	// Add path metadata entries for "Project" collection
 		// Example row: collectionType - Project, collectionName - Project_PDX
     	// project_id key = Project Name
@@ -165,17 +147,11 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", "placeholder"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", "placeholder"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrWithKey(runId, sampleId, "sequencing_Date"), "yyyyMMdd"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "placeholder"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "placeholder"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", "placeholder"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 		pathEntriesProject.setPath(projectCollectionPath);
-		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
-		
+		hpcBulkMetadataEntries.getPathsMetadataEntries()
+		.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+	    
 	    // Add path metadata entries for "Sample" collection
 	    // Example row: collectionType - Sample, collectionName - Sample_<SampleId>
 	    // sample_id, value = PDA01236 (derived)
@@ -192,11 +168,38 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(runId, sampleId, "Mocha_ID")));
 	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrWithKey(runId, sampleId, "Library_Type")));
 	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(runId, sampleId, "Analyte")));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", getAttrWithKey(runId, sampleId, "Lane")));   
+	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", getAttrWithKey(runId, sampleId, "Lane")));
+	    if(StringUtils.isNotBlank(getAttrWithKey(runId, sampleId, "SubProject")))
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrWithKey(runId, sampleId, "SubProject")));  
 	    pathEntriesSample.setPath(sampleCollectionPath);
 	    hpcBulkMetadataEntries
 	        .getPathsMetadataEntries()
 	        .add(pathEntriesSample);
+    } else  {
+    	//BCL
+	    String runFCCollectionPath = platformCollectionPath + "/Run_FC";
+	    runFCCollectionPath = runFCCollectionPath.replace(" ", "_");
+ 	    HpcBulkMetadataEntry pathEntriesRunFC = new HpcBulkMetadataEntry();
+ 	    pathEntriesRunFC.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run_FC"));     
+ 	    pathEntriesRunFC.setPath(runFCCollectionPath);
+ 	    hpcBulkMetadataEntries
+ 	        .getPathsMetadataEntries()
+ 	        .add(pathEntriesRunFC);
+ 	    
+	    // Add path metadata entries for "Flowcell" collection
+	    // Example row: collectionType - Flowcell
+	    // flowcell_id
+    	String flowcellId = getFlowcellId(object);
+	    String flowcellCollectionPath = runFCCollectionPath + "/Flowcell_" + flowcellId;
+	    HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
+	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
+	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object)));
+	    pathEntriesFlowcell.setPath(flowcellCollectionPath);
+	    hpcBulkMetadataEntries
+	        .getPathsMetadataEntries()
+	        .add(pathEntriesFlowcell);
+ 	    
     }
     
     // Set it to dataObjectRegistrationRequestDTO
@@ -210,7 +213,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Add object metadata
     // key = object_name, value = Sample_RES210195_HKJMGDSX2_R1.fastq.gz (derived)
     // key = file_type, value = fastq, bcl (derived)
-    String fileType = isBCL(object) ? "bcl" : "fastq";
+    String fileType = getFileType(object);
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("object_name", fileName));
@@ -244,7 +247,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
     // then return the mapped PI from /mnt/mocha_static/NovaSeq
     piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab");
-
+    
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
   }
@@ -286,7 +289,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   
   private boolean isBCL(StatusInfo object) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
-	  if (path.contains("BaseCalls")) {
+	  if (tar) {
+		  //BCL files are tarred.
 		  return true;
 	  }
 	  return false;
@@ -334,7 +338,16 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    }
 	    String attrValue = metadataMap.get(key).get(attrKey);
 	    return attrValue;
-}
+ }
+  
+  private String getFileType(StatusInfo object) throws DmeSyncMappingException {
+	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+	  if(isBCL(object))
+	    return "tar";
+	  else if (fileName.contains(".fastq"))
+		return "fastq";
+	  return fileName.substring(fileName.indexOf('.') + 1);
+  }
   
   @PostConstruct
   private void init() {
