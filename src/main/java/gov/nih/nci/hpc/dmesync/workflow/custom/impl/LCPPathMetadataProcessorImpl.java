@@ -101,7 +101,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPI.setPath(dataOwnerCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", dataOwnerCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", dataOwnerCollectionName, "lcp"));
 
     // Add path metadata entries for "Project_XXX" collection
     String projectCollectionName = getProjectCollectionName(object);
@@ -112,7 +112,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
 	    .getPathsMetadataEntries()
-	    .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+	    .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "lcp"));
 
     // Add path metadata entries for "Application_Type_XXX" collection
     String applicationTypeCollectionPath = projectCollectionPath + "/Application_Type_" + getApplicationTypeCollecionName(object);
@@ -236,7 +236,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // Example: If originalFilePath is
     // /data/LCP_Omics/pilot_project/rawdata/exome_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
     // then return the mapped DataOwner from LCP_Omics
-    dataOwnerCollectionName = getCollectionMappingValue("LCP_Omics", "DataOwner_Lab");
+    dataOwnerCollectionName = getCollectionMappingValue("LCP_Omics", "DataOwner_Lab", "lcp");
 
     logger.info("DataOwner Collection Name: {}", dataOwnerCollectionName);
     return dataOwnerCollectionName;
@@ -249,7 +249,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // then return the mapped Project for pilot_project
     // else if data/LCP_Omics/frozen_crc/pipeliner/rna/qc
     // then return the mapped Project for frozen_crc
-    projectCollectionName = getCollectionMappingValue(getCollectionNameFromParent(sourceDir, "LCP_Omics"), "Project");
+    projectCollectionName = getCollectionMappingValue(getCollectionNameFromParent(sourceDir, "LCP_Omics"), "Project", "lcp");
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;

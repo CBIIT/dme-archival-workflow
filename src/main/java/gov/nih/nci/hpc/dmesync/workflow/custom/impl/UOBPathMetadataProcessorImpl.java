@@ -88,7 +88,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "uob"));
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - RNAseq_40_cell_lines (extracted), 
@@ -176,7 +176,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  String piDirName = "UOB_genomics";
 	  logger.info("PI Directory Name: {}", piDirName);
 	
-	  piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab");
+	  piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab", "uob");
 	
 	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;

@@ -57,7 +57,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
   
-  public String getCollectionMappingValue(String key, String collectionType)
+  public String getCollectionMappingValue(String key, String collectionType, String doc)
       throws DmeSyncMappingException {
 
     //Retrieve collection name mapping for a given key and collection type
@@ -79,7 +79,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   }
 
   public HpcBulkMetadataEntry populateStoredMetadataEntries(
-      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName) {
+      HpcBulkMetadataEntry bulkMetadataEntry, String collectionType, String collectionName, String doc) {
 
     //Retrieve custom metadata mapping if present
     List<MetadataMapping> metadataMappings =

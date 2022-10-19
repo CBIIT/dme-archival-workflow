@@ -179,7 +179,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     // Example: If originalFilePath is
     // /mnt/lgcp_images/HudsonAlpha_3680/H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
     // then return the mapped PI from /mnt/lgcp_images
-    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab");
+    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab", "template");
 
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;

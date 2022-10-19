@@ -94,7 +94,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", "andressont@mail.nih.gov"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation", "CCR PCL"));
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
-    		  populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName));
+    		  populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName, "pcl"));
       
       //Add path metadata entries for "Project_XXX" collection
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();

@@ -83,7 +83,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 		pathEntriesPI.setPath(piCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
-				.add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+				.add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "scaf"));
 
 		// Add path metadata entries for "Project" collection
 		// Example row: collectionType - Project, collectionName - CS027118
@@ -96,7 +96,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
-				.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+				.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "scaf"));
 
 		if(!isAggregatedDatasets(object)) {
 			// Add path metadata entries for "Patient" collection
@@ -163,7 +163,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String piCollectionName = null;
-		piCollectionName = getCollectionMappingValue("SCAF", "PI_Lab");
+		piCollectionName = getCollectionMappingValue("SCAF", "PI_Lab", "scaf");
 
 		logger.info("PI Collection Name: {}", piCollectionName);
 		return piCollectionName;

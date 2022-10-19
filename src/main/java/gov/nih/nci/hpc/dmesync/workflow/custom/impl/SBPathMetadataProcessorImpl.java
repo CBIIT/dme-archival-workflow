@@ -178,7 +178,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "sb"));
 
     // Add path metadata entries for "Project_XXX" collection
     // Example row: collectionType - Project, collectionName - Surgery_Branch_NGS
@@ -200,7 +200,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesProject.setPath(projectCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "sb"));
 
     // Add path metadata entries for "Patient_XXX" collection
     // Example row: collectionType - Patient, collectionName - Patient_612161e212
@@ -232,7 +232,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPatient.setPath(patientCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPatient, "Patient", patientId));
+        .add(populateStoredMetadataEntries(pathEntriesPatient, "Patient", patientId, "sb"));
 
     // Add path metadata entries for "Sample" collection
     // Example row: collectionType - Sample, collectionName - Sample_<RunID>
@@ -285,7 +285,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     	
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesRun, "Sample", "Sample"));
+        .add(populateStoredMetadataEntries(pathEntriesRun, "Sample", "Sample", "sb"));
 
     // Set it to dataObjectRegistrationRequestDTO
     dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
@@ -355,7 +355,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/fastq_files/SB_4431Met_Frag1_FrTu_January_26_2021_rnaseq_1.fastq.gz
     // then return the mapped PI from CCRSB2
     String projectDirName = "CCRSB2";
-    piCollectionName = getCollectionMappingValue(projectDirName, "PI_Lab");
+    piCollectionName = getCollectionMappingValue(projectDirName, "PI_Lab", "sb");
 
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
@@ -367,7 +367,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/fastq_files/SB_4431Met_Frag1_FrTu_January_26_2021_rnaseq_1.fastq.gz
     // then return the mapped Project from CCRSB2
     String projectDirName = "CCRSB2";
-    projectCollectionName = getCollectionMappingValue(projectDirName, "Project");
+    projectCollectionName = getCollectionMappingValue(projectDirName, "Project", "sb");
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;

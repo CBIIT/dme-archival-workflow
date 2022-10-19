@@ -84,7 +84,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "ncep"));
 
     //Add path metadata entries for "Project_XXX" collection
     //Example row: collectionType - Project, collectionName - Glacios (derived),

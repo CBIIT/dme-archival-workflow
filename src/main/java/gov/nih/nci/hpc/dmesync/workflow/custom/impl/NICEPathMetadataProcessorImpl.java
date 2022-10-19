@@ -84,7 +84,7 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName.replace(" ", "_")));
+	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName.replace(" ", "_"), "nice"));
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - apof (derived), 

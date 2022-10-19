@@ -69,9 +69,9 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
           destinationBaseDir
               + "/Database_DbGap"
               + "/Study_"
-              + getCollectionMappingValue("refseq", "Project")
+              + getCollectionMappingValue("refseq", "Project", "dbgap")
               + "/Dataset_"
-              + getCollectionMappingValue("refseq", "Dataset")
+              + getCollectionMappingValue("refseq", "Dataset", "dbgap")
               + "/"
               + dataType + "_Data"
               + "/"
@@ -120,7 +120,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         runId = getRunId(fileName);
         projectCollectionName = getProjectCollectionName(runId);
       } else {
-        projectCollectionName = getCollectionMappingValue("refseq", "Project");
+        projectCollectionName = getCollectionMappingValue("refseq", "Project", "dbgap");
       }
       String projectCollectionPath = dbCollectionPath + "/Study_" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
@@ -139,7 +139,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         }
       }
       pathEntriesProject.setPath(projectCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "dbgap"));
       
       
       //Add path metadata entries for "Dataset_XXX" collection
@@ -151,7 +151,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       if(dataType.equals("SRA_Read")) {
         datasetCollectionName = getDatasetCollectionName(runId);
       } else {
-        datasetCollectionName = getCollectionMappingValue("refseq", "Dataset");
+        datasetCollectionName = getCollectionMappingValue("refseq", "Dataset", "dbgap");
       }
       String datasetCollectionPath = projectCollectionPath + "/Dataset_" + datasetCollectionName;
       HpcBulkMetadataEntry pathEntriesDataset = new HpcBulkMetadataEntry();
@@ -169,7 +169,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         }
       }
       pathEntriesDataset.setPath(datasetCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesDataset, "Dataset", datasetCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesDataset, "Dataset", datasetCollectionName, "dbgap"));
       
       //Add path metadata entries for "XXX_Data" collection
       //Example row: collectionType - SRA_Read or Alignment or Trait

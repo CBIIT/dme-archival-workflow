@@ -74,14 +74,14 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.setPath(piCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "lcb"));
         
       String projectCollectionName = getProjectCollectionName(object);
       String projectCollectionPath = piCollectionPath + "/" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
       pathEntriesProject.setPath(projectCollectionPath);
-      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "lcb"));
       
       //Set it to dataObjectRegistrationRequestDTO
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
@@ -104,7 +104,7 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //then the piDirName will be Livlab
 	  String piDirName = "Livlab";
 	  logger.info("PI Directory Name: {}", piDirName);
-	  String piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab");
+	  String piCollectionName = getCollectionMappingValue(piDirName, "PI_Lab", "lcb");
 	  logger.info("PI Collection Name: {}", piCollectionName);
 	  return piCollectionName;
 	  

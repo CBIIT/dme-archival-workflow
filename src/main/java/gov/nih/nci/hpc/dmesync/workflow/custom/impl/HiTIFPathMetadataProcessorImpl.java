@@ -84,7 +84,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String piCollectionName = getPiCollectionName(userId);
       pathEntriesPI.setPath(destinationBaseDir + "/PI_" + piCollectionName);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
-    		  populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+    		  populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "hitif"));
       
       //Add path metadata entries for "USER_XXX" collection
 	  //Example row: collectionType - User, collectionName - Tom_Mistelli, 
@@ -96,7 +96,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String userCollectionName = getUserCollectionName(userId);
       pathEntriesUser.setPath(destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
-    		  populateStoredMetadataEntries(pathEntriesUser, "User", userCollectionName));
+    		  populateStoredMetadataEntries(pathEntriesUser, "User", userCollectionName, "hitif"));
       
       //Add path metadata entries for "EXP_XXX" collection
       HpcBulkMetadataEntry pathEntriesExp = new HpcBulkMetadataEntry();
@@ -133,12 +133,12 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
 
   private String getPiCollectionName(String userId) throws DmeSyncMappingException {
-	  return getCollectionMappingValue(userId, "PI_Lab");
+	  return getCollectionMappingValue(userId, "PI_Lab", "hitif");
   }
 
 
   private String getUserCollectionName(String userId) throws DmeSyncMappingException {
-	  return getCollectionMappingValue(userId, "User");
+	  return getCollectionMappingValue(userId, "User", "hitif");
   }
 
 

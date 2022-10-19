@@ -111,7 +111,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     pathEntriesPI.setPath(piCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName));
+        .add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "mocha"));
 
     // Add path metadata entries for "Platform" collection
     // Example row: collectionType - Platform, collectionName - HiSeq, NovaSeq
@@ -150,7 +150,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
-		.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+		.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "mocha"));
 	    
 	    // Add path metadata entries for "Sample" collection
 	    // Example row: collectionType - Sample, collectionName - Sample_<SampleId>
@@ -246,7 +246,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Example: If originalFilePath is
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
     // then return the mapped PI from /mnt/mocha_static/NovaSeq
-    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab");
+    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab", "mocha");
     
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;

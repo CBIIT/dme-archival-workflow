@@ -66,7 +66,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       archivePath =
           destinationBaseDir
               + "/Study_"
-              + getCollectionMappingValue(datasetId, "Study")
+              + getCollectionMappingValue(datasetId, "Study", "ega")
               + "/Dataset_"
               + datasetId
               + "/"
@@ -116,9 +116,9 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       String runId = getAttrValueWithKey(fileId, "RUN EGA_ID");
       String studyId = getAttrValueWithKey(fileId, "STUDY EGA_ID");
       if (studyId == null) {
-        studyId = getCollectionMappingValue(datasetId, "Study");
+        studyId = getCollectionMappingValue(datasetId, "Study", "ega");
       }
-      String projectCollectionName = getCollectionMappingValue(datasetId, "Study");
+      String projectCollectionName = getCollectionMappingValue(datasetId, "Study", "ega");
       String projectCollectionPath = destinationBaseDir + "/Study_" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       pathEntriesProject
@@ -137,7 +137,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesProject.setPath(projectCollectionPath);
       hpcBulkMetadataEntries
           .getPathsMetadataEntries()
-          .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName));
+          .add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "ega"));
 
       //Add path metadata entries for "Dataset_XXX" collection
       //Example row: collectionType - Dataset, collectionName - EGAD00001004352 (derived),
@@ -153,7 +153,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
       pathEntriesDataset.setPath(datasetCollectionPath);
       hpcBulkMetadataEntries
           .getPathsMetadataEntries()
-          .add(populateStoredMetadataEntries(pathEntriesDataset, "Dataset", datasetCollectionName));
+          .add(populateStoredMetadataEntries(pathEntriesDataset, "Dataset", datasetCollectionName, "ega"));
 
       //Add path metadata entries for "Run_XXX" collection
       //Example row: collectionType - Run, collectionName - EGAF00002167731 (derived)
