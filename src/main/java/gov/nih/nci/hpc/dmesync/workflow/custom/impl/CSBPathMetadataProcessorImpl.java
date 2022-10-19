@@ -34,9 +34,6 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String mappingFile;
 
-	@Autowired
-	private EGAMetadataMapper mapper;
-
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
