@@ -299,11 +299,21 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
 	  String sampleId = null;
+	  // 1) Check if any sample entry for this folder is in the file path.
+	  sampleId = getSampleFromFilePath(path, getRunId(object));
+	  if(StringUtils.isEmpty(sampleId)) {
+		  logger.error("Sample ID can't be extracted for {}", path);
+		  throw new DmeSyncMappingException("Sample ID can't be extracted for " + path);
+	  }
 	// 1) If Sample_xxx folder exists in the path, then use the name after Sample_
-	if (path.contains("Sample_")) {
+	/*if (path.contains("Sample_")) {
 	  sampleId = StringUtils.substringAfter(path, "Sample_");
-	  sampleId = StringUtils.substringBefore(sampleId, "_");
-	}
+	  if(StringUtils.isEmpty(sampleId)) {
+		  logger.error("Sample ID can't be extracted for {}", path);
+		  throw new DmeSyncMappingException("Sample ID can't be extracted for " + path);
+	  }
+	  sampleId = StringUtils.substringBeforeLast(StringUtils.substringBefore(sampleId, "/"), "_");
+	}*/
 	return sampleId;
   }
   
@@ -338,7 +348,26 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    }
 	    String attrValue = metadataMap.get(key).get(attrKey);
 	    return attrValue;
- }
+  }
+  
+  private String getSampleFromFilePath(String path, String folderName) throws DmeSyncMappingException {
+	    String sampleName = null;
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	        if(StringUtils.startsWith(entry.getKey(), folderName)) {
+	        	String sampleEntry = metadataMap.get(entry.getKey()).get("Sample");
+		        if(StringUtils.contains(path, sampleEntry)) {
+		          //Sample is present in the file path
+		          sampleName = sampleEntry;
+		          break;
+		        }
+	        }
+	    }
+	    if(StringUtils.isEmpty(sampleName)) {
+	      logger.error("Can't extract Sample from path {}", path);
+	      throw new DmeSyncMappingException("Can't extract Sample from path " + path);
+	    }
+	    return sampleName;
+  }
   
   private String getFileType(StatusInfo object) throws DmeSyncMappingException {
 	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
