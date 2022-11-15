@@ -74,7 +74,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	            + getPlatformCollectionName(object)
 	            + "/Project_"
 	            + getProjectCollectionName(object)
-	            + "/Sample_"
+	            + "/"
 	            + getSampleCollectionName(object)
 	            + "/"
 	            + fileName;
@@ -158,7 +158,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    // sample_name, value = PDA01236 (derived)
 	    // flowcell_lane = Lane
 	    
-	    String sampleCollectionPath = projectCollectionPath + "/Sample_" + getSampleCollectionName(object);
+	    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object);
 	    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
 	    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
@@ -320,9 +320,10 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getSampleCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String runId = getRunId(object);
 	  String sampleId = getSampleId(object);
+	  String mochaId = getAttrWithKey(runId, sampleId, "Mocha_ID");
 	  String sequencingDate = getAttrWithKey(runId, sampleId, "sequencing_Date");
 	  String flowcellId= getFlowcellId(object);
-	return sampleId + "_" + sequencingDate + "_" + flowcellId;
+	return mochaId + "_" + sequencingDate + "_" + flowcellId;
   }
   
   private String getAttrWithKey(String key1, String key2, String attrKey) {
