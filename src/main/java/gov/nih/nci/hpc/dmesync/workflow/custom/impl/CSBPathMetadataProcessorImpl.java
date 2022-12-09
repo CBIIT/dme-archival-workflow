@@ -53,7 +53,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// load the metadata from the json file
 		String metadataFile;
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath,
-				path -> path.toString().endsWith("archive.json"))) {
+				path -> path.getFileName().toString().equals("archive.json"))) {
 			Iterator<Path> it = stream.iterator();
 			if (it.hasNext()) {
 				metadataFile = it.next().toString();

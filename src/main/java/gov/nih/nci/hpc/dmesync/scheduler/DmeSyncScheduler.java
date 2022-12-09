@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -87,6 +89,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.last.modified.days:}")
   private String lastModfiedDays;
 
+  @Value("${dmesync.tar.file.exist:}")
+  private String checkExistsFile;
+  
   @Value("${dmesync.tar.file.exist.ext:}")
   private String checkExistsFileExt;
   
@@ -393,33 +398,48 @@ public class DmeSyncScheduler {
         continue;
       }
 
-      //If folder does not contain a specified file, skip
-      if (!checkExistsFileUnderBaseDir && checkExistsFileExt != null && !checkExistsFileExt.isEmpty()) {
+		// If folder does not contain a specified file, skip
+		if (!checkExistsFileUnderBaseDir
+					&& (StringUtils.isNotEmpty(checkExistsFileExt) || StringUtils.isNotEmpty(checkExistsFile))) {
 
-        Path folder = Paths.get(file.getAbsolutePath());
+	    Path folder = Paths.get(file.getAbsolutePath());
         if(!tar) {
           folder = Paths.get(file.getAbsolutePath()).getParent();
         }
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder, path -> path.toString().endsWith("." + checkExistsFileExt))) {
-
-          if (!stream.iterator().hasNext()) {
-            String message ="The directory " + file.getAbsolutePath() + " does not contain any " + checkExistsFileExt + " file at depth 0";
-            logger.info(
-              "[Scheduler] Skipping: {} Folder to process does not contain the specified extention {}.",
-              file.getAbsolutePath(),
-              checkExistsFileExt);
-            //Insert record in DB as COMPLETED and send an email.
-            statusInfo = insertRecordDb(file, true);
-            dmeSyncMailServiceFactory.getService(doc).sendMail("WARNING: HPCDME during registration", message);
-            continue;
-          }
-        }  catch (IOException ex) {
-          throw new Exception("Error while listing directory: " + file.getAbsolutePath(), ex);
+        if(StringUtils.isNotEmpty(checkExistsFile)) {
+        	try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder,
+    				path -> path.getFileName().toString().equals(checkExistsFile))) {
+        		if (!stream.iterator().hasNext()) {
+    				logger.info("{} file not found for {}", checkExistsFile, folder.toString());
+    				continue;
+    			}
+        	}  catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + folder.toString(), ex);
+	        }
+        }
+        if(StringUtils.isNotEmpty(checkExistsFileExt)) {
+	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder, path -> path.toString().endsWith("." + checkExistsFileExt))) {
+	
+	          if (!stream.iterator().hasNext()) {
+	            String message ="The directory " + file.getAbsolutePath() + " does not contain any " + checkExistsFileExt + " file at depth 0";
+	            logger.info(
+	              "[Scheduler] Skipping: {} Folder to process does not contain the specified extention {}.",
+	              file.getAbsolutePath(),
+	              checkExistsFileExt);
+	            //Insert record in DB as COMPLETED and send an email.
+	            statusInfo = insertRecordDb(file, true);
+	            dmeSyncMailServiceFactory.getService(doc).sendMail("WARNING: HPCDME during registration", message);
+	            continue;
+	          }
+	        }  catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + file.getAbsolutePath(), ex);
+	        }
         }
       }
       
       //If folder under the base dir does not contain a specified file for both files and tar, skip
-      if (checkExistsFileUnderBaseDir && checkExistsFileExt != null && !checkExistsFileExt.isEmpty()) {
+      if (checkExistsFileUnderBaseDir 
+    		  && (StringUtils.isNotEmpty(checkExistsFileExt) || StringUtils.isNotEmpty(checkExistsFile))) {
         
         //Find the directory being archived under the base dir
         Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -428,17 +448,33 @@ public class DmeSyncScheduler {
         Path subPath1 = relativePath.subpath(0, Integer.parseInt(checkExistsFileUnderBaseDirDepth)+1);
         Path checkExistFilePath = baseDirPath.resolve(subPath1);
         
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.toString().endsWith("." + checkExistsFileExt))) {
-
-          if (!stream.iterator().hasNext()) {
-            logger.info(
-              "[Scheduler] Skipping: {} Folder to process does not contain the specified extention {}.",
-              checkExistFilePath,
-              checkExistsFileExt);
-            continue;
-          }
-        }  catch (IOException ex) {
-          throw new Exception("Error while listing directory: " + checkExistFilePath, ex);
+        if(StringUtils.isNotEmpty(checkExistsFile)) {
+	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.getFileName().toString().equals(checkExistsFile))) {
+	
+	          if (!stream.iterator().hasNext()) {
+	            logger.info(
+	              "[Scheduler] Skipping: {} Folder to process does not contain the specified file {}.",
+	              checkExistFilePath,
+	              checkExistsFile);
+	            continue;
+	          }
+	        }  catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + checkExistFilePath, ex);
+	        }
+        }
+        if(StringUtils.isNotEmpty(checkExistsFileExt)) {
+	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.toString().endsWith("." + checkExistsFileExt))) {
+	
+	          if (!stream.iterator().hasNext()) {
+	            logger.info(
+	              "[Scheduler] Skipping: {} Folder to process does not contain the specified extention {}.",
+	              checkExistFilePath,
+	              checkExistsFileExt);
+	            continue;
+	          }
+	        }  catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + checkExistFilePath, ex);
+	        }
         }
       }
       
