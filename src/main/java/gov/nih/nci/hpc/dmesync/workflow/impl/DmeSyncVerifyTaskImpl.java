@@ -59,10 +59,6 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
 
     //Verify, call GET dataObject and verify file size and checksum against local db.
     try {
-      // Add a delay for this task since DME does not update to ARCHIVED state right away
-      if (!fileSystemUpload)
-    	  Thread.sleep(120000L);
-
       //Call dataObject API
       final URI dataObjectUrl =
           UriComponentsBuilder.fromHttpUrl(serverUrl)

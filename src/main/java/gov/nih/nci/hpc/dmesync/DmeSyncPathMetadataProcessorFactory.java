@@ -95,6 +95,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("pcl")
   private DmeSyncPathMetadataProcessor pclProcessor;
   
+  @Autowired
+  @Qualifier("gb")
+  private DmeSyncPathMetadataProcessor gbProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -138,6 +142,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return lcpProcessor;
     } else if ("pcl".equals(doc)){
         return pclProcessor;
+    } else if ("gb".equals(doc)){
+        return gbProcessor;
     } else {
         return defaultProcessor;
     }

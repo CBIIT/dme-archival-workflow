@@ -573,6 +573,7 @@ public class ExcelUtil {
             attrKey1 = String.format ("%.0f", dv);
           } else
             attrKey1 = currentCell.getStringCellValue();
+          rowMetadata.put(attrName.trim(), attrKey1);
           continue;
         } else if (attrName.equalsIgnoreCase(key2)) {
           if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
@@ -580,6 +581,7 @@ public class ExcelUtil {
             attrKey2 = String.format ("%.0f", dv);
           } else
             attrKey2 = currentCell.getStringCellValue();
+          rowMetadata.put(attrName.trim(), attrKey2);
           continue;
         }
         if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {

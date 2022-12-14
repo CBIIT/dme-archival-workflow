@@ -1,6 +1,5 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -66,18 +65,34 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	            + "/"
 	            + getRunId(object) + ".tar";
     } else {
-	    archivePath =
-	        destinationBaseDir
-	            + "/Lab_"
-	            + getPiCollectionName(object)
-	            + "/Platform_"
-	            + getPlatformCollectionName(object)
-	            + "/Project_"
-	            + getProjectCollectionName(object)
-	            + "/Sample_"
-	            + getSampleCollectionName(object)
-	            + "/"
-	            + fileName;
+        String platform = getPlatformCollectionName(object);
+        String project = getProjectCollectionName(object);
+        if(StringUtils.isBlank(project)) {
+		    archivePath =
+			        destinationBaseDir
+			            + "/Lab_"
+			            + getPiCollectionName(object)
+			            + "/Platform_"
+			            + platform
+			            + "/DME_Unassigned_FASTQ"
+			            + "/"
+			            + getSeqDateFlowcellCollectionName(object)
+			            + "/"
+			            + fileName;
+        } else {
+		    archivePath =
+		        destinationBaseDir
+		            + "/Lab_"
+		            + getPiCollectionName(object)
+		            + "/Platform_"
+		            + platform
+		            + "/Project_"
+		            + project
+		            + "/"
+		            + getSampleCollectionName(object)
+		            + "/"
+		            + fileName;
+        }
     }
 
     // replace spaces with underscore
@@ -129,52 +144,78 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         .add(pathEntriesPlatform);
     
     if(!isBCL(object)) {
-    	// Add path metadata entries for "Project" collection
-		// Example row: collectionType - Project, collectionName - Project_PDX
-    	// project_id key = Project Name
-    	// project_title key = Project Name
-	    // project_description key = Project Description
-    	// project_start_date key = Start Date
-    	// project_status key = Status
-	    // project_poc key = Project POC
-	    // project_poc_affiliation key = POC email
-	    // project_poc_email key = POC email
-    	String flowcellId = getFlowcellId(object);
-	    String sampleId = getSampleId(object);
-	    String runId = getRunId(object);
 		String projectCollectionName = getProjectCollectionName(object);
-		String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName;
-		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
-		pathEntriesProject.setPath(projectCollectionPath);
-		hpcBulkMetadataEntries.getPathsMetadataEntries()
-		.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "mocha"));
-	    
-	    // Add path metadata entries for "Sample" collection
-	    // Example row: collectionType - Sample, collectionName - Sample_<SampleId>
-	    // sample_id, value = PDA01236 (derived)
-	    // sample_name, value = PDA01236 (derived)
-	    // flowcell_lane = Lane
-	    
-	    String sampleCollectionPath = projectCollectionPath + "/Sample_" + getSampleCollectionName(object);
-	    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
-	    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object))); 
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(runId, sampleId, "Mocha_ID")));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrWithKey(runId, sampleId, "Library_Type")));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(runId, sampleId, "Analyte")));
-	    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", getAttrWithKey(runId, sampleId, "Lane")));
-	    if(StringUtils.isNotBlank(getAttrWithKey(runId, sampleId, "SubProject")))
-	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrWithKey(runId, sampleId, "SubProject")));  
-	    pathEntriesSample.setPath(sampleCollectionPath);
-	    hpcBulkMetadataEntries
-	        .getPathsMetadataEntries()
-	        .add(pathEntriesSample);
+        if(StringUtils.isBlank(projectCollectionName)) {
+        	//DME_Unassigned_FASTQ
+    	    String unassignedCollectionPath = platformCollectionPath + "/DME_Unassigned_FASTQ";
+     	    HpcBulkMetadataEntry pathEntriesUnassigned = new HpcBulkMetadataEntry();
+     	    pathEntriesUnassigned.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run_FC"));     
+     	    pathEntriesUnassigned.setPath(unassignedCollectionPath);
+     	    hpcBulkMetadataEntries
+     	        .getPathsMetadataEntries()
+     	        .add(pathEntriesUnassigned);
+     	    
+    	    // Add path metadata entries for "Flowcell" collection
+    	    // Example row: collectionType - Flowcell
+    	    // flowcell_id
+     	    String seqDateFlowcell = getSeqDateFlowcellCollectionName(object);
+        	String flowcellId = StringUtils.substringAfter(seqDateFlowcell, "_");
+    	    String flowcellCollectionPath = unassignedCollectionPath + "/" + seqDateFlowcell;
+    	    HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
+    	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
+    	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+    	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object)));
+    	    pathEntriesFlowcell.setPath(flowcellCollectionPath);
+    	    hpcBulkMetadataEntries
+    	        .getPathsMetadataEntries()
+    	        .add(pathEntriesFlowcell);
+        } else {
+        	// Add path metadata entries for "Project" collection
+    		// Example row: collectionType - Project, collectionName - Project_PDX
+        	// project_id key = Project Name
+        	// project_title key = Project Name
+    	    // project_description key = Project Description
+        	// project_start_date key = Start Date
+        	// project_status key = Status
+    	    // project_poc key = Project POC
+    	    // project_poc_affiliation key = POC email
+    	    // project_poc_email key = POC email
+        	String runId = getRunId(object);
+        	String flowcellId = getFlowcellId(object);
+    	    String sampleId = getSampleId(object);
+			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName;
+			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
+			pathEntriesProject.setPath(projectCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries()
+			.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "mocha"));
+		    
+		    // Add path metadata entries for "Sample" collection
+		    // Example row: collectionType - Sample, collectionName - Sample_<SampleId>
+		    // sample_id, value = PDA01236 (derived)
+		    // sample_name, value = PDA01236 (derived)
+		    // flowcell_lane = Lane
+		    
+		    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object);
+		    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
+		    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object))); 
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(runId, sampleId, "Mocha_ID")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrWithKey(runId, sampleId, "Library_Type")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(runId, sampleId, "Analyte")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", getAttrWithKey(runId, sampleId, "Lane")));
+		    if(StringUtils.isNotBlank(getAttrWithKey(runId, sampleId, "SubProject")))
+		    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrWithKey(runId, sampleId, "SubProject")));  
+		    pathEntriesSample.setPath(sampleCollectionPath);
+		    hpcBulkMetadataEntries
+		        .getPathsMetadataEntries()
+		        .add(pathEntriesSample);
+        }
     } else  {
     	//BCL
 	    String runFCCollectionPath = platformCollectionPath + "/Run_FC";
@@ -255,17 +296,41 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getPlatformCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
 	  String platform = null;
-	  if (path.contains("NovaSeq") || path.contains("BW_transfers")) {
-		  platform = "NovaSeq";
+	  if(isBCL(object)) {
+		  if (path.contains("NovaSeq") || path.contains("BW_transfers")) {
+			  platform = "NovaSeq";
+		  } else {
+			  platform = "HiSeq";
+		  }
 	  } else {
-		  platform = "HiSeq";
+		  // For fastq, get the Platform from the spreadsheet by using only Run_ID
+		  String runId = getRunId(object);
+		  try {
+			  platform = getAttrValueWithParitallyMatchingKey(runId, "Platform");
+		  } catch (DmeSyncMappingException e) {
+			  throw new DmeSyncMappingException("Run ID is missing from spreadsheet. Run_ID: " + runId);
+		  }
+		  if(StringUtils.contains(platform, "HiSeq"))
+			  platform = "HiSeq";
+		  else if (StringUtils.contains(platform, "NovaSeq"))
+			  platform = "NovaSeq";
+		  else
+			  throw new DmeSyncMappingException("Platform cannot be determined from Run_ID " + runId);
 	  }
 	  return platform;
   }
 
   private String getFlowcellId(StatusInfo object) throws DmeSyncMappingException {
+	  String flowcellId = null;
 	  String runId = getRunId(object);
-	return getAttrValueWithParitallyMatchingKey(runId, "Flowcell");
+	  if(isBCL(object)) {
+		  //Get flowcell ID from run ID. (190501_D00719_0157_BHYJTMBCX2 will be HYJTMBCX2)
+		  flowcellId = StringUtils.substringAfterLast(runId, "_");
+		  flowcellId = StringUtils.substring(flowcellId, 1);
+	  } else {
+		  flowcellId = getAttrValueWithParitallyMatchingKey(runId, "Flowcell");
+	  }
+	return flowcellId;
   }
   
   private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
@@ -299,20 +364,39 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
 	  String sampleId = null;
+	  // 1) Check if any sample entry for this folder is in the file path.
+	  sampleId = getSampleFromFilePath(path, getRunId(object));
+	  if(StringUtils.isEmpty(sampleId)) {
+		  logger.error("Sample ID can't be extracted for {}", path);
+	  }
 	// 1) If Sample_xxx folder exists in the path, then use the name after Sample_
-	if (path.contains("Sample_")) {
+	/*if (path.contains("Sample_")) {
 	  sampleId = StringUtils.substringAfter(path, "Sample_");
-	  sampleId = StringUtils.substringBefore(sampleId, "_");
-	}
+	  if(StringUtils.isEmpty(sampleId)) {
+		  logger.error("Sample ID can't be extracted for {}", path);
+		  throw new DmeSyncMappingException("Sample ID can't be extracted for " + path);
+	  }
+	  sampleId = StringUtils.substringBeforeLast(StringUtils.substringBefore(sampleId, "/"), "_");
+	}*/
 	return sampleId;
   }
   
   private String getSampleCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String runId = getRunId(object);
 	  String sampleId = getSampleId(object);
+	  String mochaId = getAttrWithKey(runId, sampleId, "Mocha_ID");
 	  String sequencingDate = getAttrWithKey(runId, sampleId, "sequencing_Date");
 	  String flowcellId= getFlowcellId(object);
-	return sampleId + "_" + sequencingDate + "_" + flowcellId;
+	return mochaId + "_" + sequencingDate + "_" + flowcellId;
+  }
+  
+  private String getSeqDateFlowcellCollectionName(StatusInfo object) throws DmeSyncMappingException {
+	  ////Get SeqDate and Flowcell from Run ID. (190501_D00719_0157_BHYJTMBCX2 will be 20190501_HYJTMBCX2)
+	  String runId = getRunId(object);
+	  String sequencingDate = StringUtils.substringBefore(runId, "_");
+	  String flowcellId = StringUtils.substringAfterLast(runId, "_");
+	  flowcellId = StringUtils.substring(flowcellId, 1);
+	return "20" + sequencingDate + "_" + flowcellId;
   }
   
   private String getAttrWithKey(String key1, String key2, String attrKey) {
@@ -338,7 +422,22 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    }
 	    String attrValue = metadataMap.get(key).get(attrKey);
 	    return attrValue;
- }
+  }
+  
+  private String getSampleFromFilePath(String path, String folderName) {
+	    String sampleName = null;
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	        if(StringUtils.startsWith(entry.getKey(), folderName)) {
+	        	String sampleEntry = metadataMap.get(entry.getKey()).get("Sample");
+		        if(StringUtils.contains(path, sampleEntry)) {
+		          //Sample is present in the file path
+		          sampleName = sampleEntry;
+		          break;
+		        }
+	        }
+	    }
+	    return sampleName;
+  }
   
   private String getFileType(StatusInfo object) throws DmeSyncMappingException {
 	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();

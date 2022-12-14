@@ -13,7 +13,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param status the status
    * @return the StatusInfo object
    */
-  StatusInfo findFirstByOriginalFilePathAndStatus(String originalFilePath, String status);
+  StatusInfo findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(String originalFilePath, String status);
 
   /**
    * findAllByOriginalFilePathAndStatus
