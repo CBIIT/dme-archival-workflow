@@ -66,6 +66,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private DmeSyncDeleteDataObject dmeSyncDeleteDataObject;
 
   @Value("${hpc.server.url}")
   private String serverUrl;
@@ -91,6 +92,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.replace.modified.files:false}")
+  private boolean replaceModifiedFiles;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("UploadTask");
@@ -101,7 +105,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   public StatusInfo process(StatusInfo object)
       throws DmeSyncWorkflowException {
 
-    HpcDataObjectRegistrationResponseDTO serviceResponse;
+    HpcDataObjectRegistrationResponseDTO serviceResponse = null;
     HpcExceptionDTO errorResponse;
     ResponseEntity<Object> response;
 
@@ -156,6 +160,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	  }
       }
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(true);
+      object.getDataObjectRegistrationRequestDTO().setUploadCompletion(true);
       if(multipartUpload) {
     	  object.getDataObjectRegistrationRequestDTO().setUploadParts(parts);
       }
@@ -186,10 +191,15 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
             "[{}] Registration with presign url successful [{}]", super.getTaskName(),
             multipartUpload ? "Multipart upload URLs" : serviceResponse.getUploadRequestURL());
       } else {
-        String json = objectMapper.writeValueAsString(response.getBody());
-        errorResponse = objectMapper.readValue(json, HpcExceptionDTO.class);
-        logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
-        throw new DmeSyncWorkflowException(errorResponse.getMessage());
+    	String json = objectMapper.writeValueAsString(response.getBody());
+	    errorResponse = objectMapper.readValue(json, HpcExceptionDTO.class);
+    	if(replaceModifiedFiles && errorResponse.getMessage().contains("already archived")) {
+    		//Perform soft delete and call registration again.
+    		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath());
+    	}
+	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
+	    throw new DmeSyncWorkflowException(errorResponse.getMessage());
+    	
       }
     } catch (Exception e) {
       logger.error("[{}] Registration with presign url failed", super.getTaskName(), e);
@@ -207,7 +217,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
                   partSize);
       } else {
     	  responseCode =
-          uploadToUrl(
+          uploadToUrl(object,
               serviceResponse.getUploadRequestURL(),
               file,
               object.getDataObjectRegistrationRequestDTO().getChecksum());
@@ -235,7 +245,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     return object;
   }
   
-  private int uploadToUrl(String urlStr, File file, String checksum) throws IOException {
+  private int uploadToUrl(StatusInfo object, String urlStr, File file, String checksum) throws IOException, DmeSyncWorkflowException {
     
     logger.info("[{}] uploadToUrl {}", super.getTaskName(), urlStr);
     logger.info("[{}] checksum {}", super.getTaskName(), checksum);
@@ -276,7 +286,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       // Close the URL connections.
       httpConnection.disconnect();
 
-      return responseCode;
+      return completeMultipartUpload(object, null);
     }
     
   }
@@ -331,7 +341,11 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 			
 			objectMapper.configure(MapperFeature.USE_STD_BEAN_NAMING, true);
 			objectMapper.setPropertyNamingStrategy(new CustomLowerCamelCase());
-			String jsonRequestDto = objectMapper.writeValueAsString(dto);
+			String jsonRequestDto = null;
+			if (dto == null) 
+				jsonRequestDto = "{}";
+			else
+				jsonRequestDto = objectMapper.writeValueAsString(dto);
 					
 			final HttpEntity<String> entity = new HttpEntity<>(jsonRequestDto, header);
 			
