@@ -89,6 +89,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.last.modified.days:}")
   private String lastModfiedDays;
 
+  @Value("${dmesync.replace.modified.files:false}")
+  private boolean replaceModifiedFiles;
+  
   @Value("${dmesync.tar.file.exist:}")
   private String checkExistsFile;
   
@@ -363,7 +366,16 @@ public class DmeSyncScheduler {
         if (statusInfo != null) {
           logger.debug(
               "[Scheduler] File has already been uploaded: {}", statusInfo.getOriginalFilePath());
-          continue;
+          if(!replaceModifiedFiles)
+        	  continue;
+          
+          Date modifiedTimestamp = file.getUpdatedDate();
+          Date uploadedTimestamp = statusInfo.getUploadStartTimestamp();
+          if(uploadedTimestamp.compareTo(modifiedTimestamp) > 0) {
+        	  //Modified is before the last upload
+        	  continue;
+          }
+          //Modified after the last upload, so we need to re-upload
         } else {
         	statusInfo =
                     dmeSyncWorkflowService.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
