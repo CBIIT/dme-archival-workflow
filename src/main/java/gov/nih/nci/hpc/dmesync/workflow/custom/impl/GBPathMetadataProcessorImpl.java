@@ -34,8 +34,8 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath;
-		archivePath = destinationBaseDir + "/PI_" + getPICollectionName() + "/" + getProjectCollectionName() + "/"
-				+ getFolderCollectionName(object) + "/Flowcell_" + getFlowcell(object) + "/" + fileName;
+		archivePath = destinationBaseDir + "/PI_" + getPICollectionName() + "/" + getProjectCollectionName(object) + "/"
+				+ "/Flowcell_" + getFlowcell(object) + "/" + fileName;
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -68,7 +68,7 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 
 		// Add path metadata entries for "Project" collection
 
-		String projectCollectionName = getProjectCollectionName();
+		String projectCollectionName = getProjectCollectionName(object);
 		String projectCollectionPath = piCollectionPath + "/" + projectCollectionName;
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
@@ -78,9 +78,8 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 				.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "gb"));
 
 		// Add path metadata entries for "Flowcell" collection
-		String folderCollectionPath = projectCollectionPath + "/" + getFolderCollectionName(object);
 		String flowcellId = getFlowcell(object);
-		String flowcellCollectionPath = folderCollectionPath + "/Flowcell_" + flowcellId;
+		String flowcellCollectionPath = projectCollectionPath + "/Flowcell_" + flowcellId;
 		HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
 		pathEntriesFlowcell.setPath(flowcellCollectionPath);
 		pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
@@ -105,20 +104,21 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 		return "Paul_Meltzer";
 	}
 
-	private String getProjectCollectionName() {
-		return "Sequencing_Data";
-	}
-
-	private String getFolderCollectionName(StatusInfo object) {
-		return Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
+	private String getProjectCollectionName(StatusInfo object) {
+		String parent = Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
+		String project = null;
+		if (parent.equals("bam")) {
+			project = "Data_BAM";
+		} else if (parent.equals("fastq")) {
+			project = "Data_FASTQ";
+		} else if (parent.equals("sequence")) {
+			project = "Data_BCL";
+		}
+		return project;
 	}
 
 	private String getFlowcell(StatusInfo object) {
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		String flowcellId = StringUtils.substringAfterLast(StringUtils.substringBefore(fileName, "."), "_");
-		if(StringUtils.contains(flowcellId, "-")) {
-			flowcellId = StringUtils.substringAfter(flowcellId, "-");
-		}
-		return flowcellId;
+		return StringUtils.substringAfterLast(StringUtils.substringBefore(fileName, "."), "_");
 	}
 }
