@@ -40,16 +40,9 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] CSB getArchivePath called");
 
-		Path baseDirPath;
-	    try {
-	      baseDirPath = Paths.get(sourceBaseDir).toRealPath();
-	    } catch (IOException e) {
-	      throw new DmeSyncMappingException("source.base.dir does not exist: " + sourceBaseDir, e);
-	    }
 	    Path sourceDirPath = Paths.get(object.getOriginalFilePath());
-	    Path relativePath = baseDirPath.relativize(sourceDirPath);
-        Path subPath1 = relativePath.subpath(0, 1);
-        Path checkExistFilePath = baseDirPath.resolve(subPath1);
+        String dataSet = getCollectionNameFromParent(object, "CSB-CryoEM-raw");
+        Path checkExistFilePath = Paths.get(StringUtils.substringBefore(sourceDirPath.toString(), dataSet) + dataSet);
 		// load the metadata from the json file
 		String metadataFile;
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath,
@@ -68,14 +61,13 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		threadLocalMap.set(loadJsonMetadataFile(metadataFile, "dataset"));
 
-	    String relativePathStr = relativePath.toString().replace("\\", "/");
-	    
 		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Instrument_"
 				+ getInstrumentCollectionName() + "/Date_" + getDateCollectionName() + "/Dataset_" + getDatasetName()
-				+ "/" + StringUtils.substringAfter(relativePathStr, "/");
+				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet);
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
+		archivePath = archivePath.replace("\\", "/");
 
 		logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
@@ -180,6 +172,18 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return dataObjectRegistrationRequestDTO;
 	}
 
+	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
+	    Path fullFilePath = Paths.get(object.getOriginalFilePath());
+	    int count = fullFilePath.getNameCount();
+	    for (int i = 0; i <= count; i++) {
+	      if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+	        return fullFilePath.getFileName().toString();
+	      }
+	      fullFilePath = fullFilePath.getParent();
+	    }
+	    return null;
+	  }
+	
 	private String getPiCollectionName() {
 		String ownername = getAttrValueWithKey("dataset", "ownername");
 		String ownerLastName = StringUtils.substringBefore(ownername, ",");
