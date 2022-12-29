@@ -45,6 +45,8 @@ import gov.nih.nci.hpc.dmesync.CustomLowerCamelCase;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.datatransfer.HpcMultipartUpload;
@@ -103,7 +105,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   
   @Override
   public StatusInfo process(StatusInfo object)
-      throws DmeSyncWorkflowException {
+      throws DmeSyncWorkflowException, DmeSyncVerificationException {
 
     HpcDataObjectRegistrationResponseDTO serviceResponse = null;
     HpcExceptionDTO errorResponse;
@@ -196,11 +198,14 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	if(replaceModifiedFiles && errorResponse.getMessage().contains("already archived")) {
     		//Perform soft delete and call registration again.
     		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath());
+    		throw new DmeSyncWorkflowException(errorResponse.getMessage());
     	}
 	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
-	    throw new DmeSyncWorkflowException(errorResponse.getMessage());
+	    throw new DmeSyncVerificationException(errorResponse.getMessage());
     	
       }
+    } catch (DmeSyncWorkflowException | DmeSyncVerificationException  e) {
+      throw e;
     } catch (Exception e) {
       logger.error("[{}] Registration with presign url failed", super.getTaskName(), e);
       throw new DmeSyncWorkflowException("Registration with presign url failed - " + e.getMessage(), e);

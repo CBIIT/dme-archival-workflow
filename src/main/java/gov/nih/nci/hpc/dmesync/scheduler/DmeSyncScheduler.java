@@ -62,6 +62,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.source.base.dir}")
   private String syncBaseDir;
 
+  @Value("${dmesync.source.base.dir.folders:}")
+  private String syncBaseDirFolders;
+
   @Value("${dmesync.work.base.dir}")
   private String syncWorkDir;
 
@@ -305,18 +308,29 @@ public class DmeSyncScheduler {
         includePattern == null || includePattern.isEmpty()
             ? null
             : new ArrayList<>(Arrays.asList(includePattern.split(",")));
+    List<String> syncBaseDirFolderList =
+    		syncBaseDirFolders == null || syncBaseDirFolders.isEmpty()
+                ? null
+                : new ArrayList<>(Arrays.asList(syncBaseDirFolders.split(",")));
     
     if (syncBaseDir != null) {
-      if(tar && Integer.parseInt(depth) == 0) {
-    	  result = toHpcPathAttribute(syncBaseDir);
-    	  return result;
+      int scanCount = syncBaseDirFolderList == null? 1: syncBaseDirFolderList.size();
+      String scanDir = syncBaseDir;
+      for(int i = 0; i < scanCount; i++) {
+    	  if(scanCount == 0)
+    		  scanDir = syncBaseDir;
+    	  else
+    		  scanDir = syncBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);
+	      if(tar && Integer.parseInt(depth) == 0) {
+	    	  result = toHpcPathAttribute(scanDir);
+	    	  return result;
+	      }
+	      result.addAll(impl.getPathAttributes(
+	        		  scanDir,
+	              excludePatterns,
+	              includePatterns,
+	              tar ? Integer.parseInt(depth) : untar ? Integer.parseInt(depth) + 1 : 0));
       }
-      result = 
-          impl.getPathAttributes(
-              syncBaseDir,
-              excludePatterns,
-              includePatterns,
-              tar ? Integer.parseInt(depth) : untar ? Integer.parseInt(depth) + 1 : 0);
     }
     return result;
   }
