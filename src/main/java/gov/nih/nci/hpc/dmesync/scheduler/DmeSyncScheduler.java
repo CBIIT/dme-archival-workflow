@@ -315,9 +315,9 @@ public class DmeSyncScheduler {
     
     if (syncBaseDir != null) {
       int scanCount = syncBaseDirFolderList == null? 1: syncBaseDirFolderList.size();
-      String scanDir = syncBaseDir;
+      String scanDir = null;
       for(int i = 0; i < scanCount; i++) {
-    	  if(scanCount == 0)
+    	  if(syncBaseDirFolderList == null)
     		  scanDir = syncBaseDir;
     	  else
     		  scanDir = syncBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);

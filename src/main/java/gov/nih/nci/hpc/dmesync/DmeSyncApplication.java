@@ -139,6 +139,8 @@ public class DmeSyncApplication {
       serverUrl = "https://hpcdmeapi.nci.nih.gov:8080";
     } else if ("prod2".equals(env)) {
         serverUrl = "https://fsdmel-dsapi02p.ncifcrf.gov:8080";
+    } else if ("prod3".equals(env)) {
+        serverUrl = "https://fsdmel-dsapi03p.ncifcrf.gov:8080";
     } else {
       System.out.println("Invalid environment: " + env);
     }
