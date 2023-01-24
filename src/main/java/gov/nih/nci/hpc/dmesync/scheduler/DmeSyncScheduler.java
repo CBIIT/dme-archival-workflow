@@ -119,6 +119,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
   
+  @Value("${dmesync.noscan.rerun:false}")
+  private boolean noScanRerun;
+  
   @Value("${dmesync.source.softlink.file:}")
   private String sourceSoftlinkFile;
   
@@ -181,6 +184,15 @@ public class DmeSyncScheduler {
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
     	  paths = queryDataObjects();
+      } else if (noScanRerun) {
+        findFilesToRerun();
+        logger.info(
+            "[Scheduler] Completed restaring files at {} for Run ID: {} base directory to reprocess {}",
+            dateFormat.format(new Date()),
+            runId,
+            syncBaseDir);
+        MDC.clear();
+        return;
       } else {
       // Scan through the specified base directory and find candidates for processing
     	  paths = scanDirectory();
@@ -296,6 +308,50 @@ public class DmeSyncScheduler {
       runId = null;
     }
   }
+  
+  /**
+   * Pickup files to rerun from Database instead of file scan
+   */
+  private void findFilesToRerun() {
+
+    List<String> syncBaseDirFolderList =
+        syncBaseDirFolders == null || syncBaseDirFolders.isEmpty()
+        ? null
+            : new ArrayList<>(Arrays.asList(syncBaseDirFolders.split(",")));
+
+    if (syncBaseDir != null) {
+      int queryCount = syncBaseDirFolderList == null? 1: syncBaseDirFolderList.size();
+      String queryPath = null;
+      for(int i = 0; i < queryCount; i++) {
+        if(syncBaseDirFolderList == null)
+          queryPath = syncBaseDir;
+        else
+          queryPath = syncBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);
+
+        List<StatusInfo> statusInfoList =
+            dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(queryPath+'%');
+
+        for(StatusInfo statusInfo : statusInfoList) {
+          if(statusInfo != null) {
+            //Update the run_id and reset the retry count and errors
+            statusInfo.setRunId(runId);
+            statusInfo.setError("");
+            statusInfo.setRetryCount(0L);
+            statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+            // Delete the metadata info created for this object ID
+            dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
+            // Send the incomplete objectId to the message queue for processing
+            DmeSyncMessageDto message = new DmeSyncMessageDto();
+            message.setObjectId(statusInfo.getId());
+
+            sender.send(message, "inbound.queue");
+          }
+        }
+      }
+    }
+
+  }
+  
   private List<HpcPathAttributes> scanDirectory() throws HpcException {
     
     HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();

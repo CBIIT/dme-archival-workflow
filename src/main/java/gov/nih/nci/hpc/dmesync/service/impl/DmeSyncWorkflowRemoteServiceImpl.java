@@ -79,6 +79,17 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	}
 
 	@Override
+    public List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(String originalFilePath) {
+        final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+                .path("/api/findAllStatusInfoLikeOriginalFilePath")
+                .queryParam("originalFilePath", originalFilePath).build().encode().toUri();
+        ResponseEntity<StatusInfo[]> response = restTemplateFactory
+                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
+        StatusInfo[] statusInfoArray = response.getBody();
+        return new ArrayList<>(Arrays.asList(statusInfoArray));
+    }
+	
+	@Override
 	public List<StatusInfo> findStatusInfoByRunIdAndDoc(String runId, String doc) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl).path("/api/findStatusInfoByRunIdAndDoc")
 				.queryParam("runId", runId).queryParam("doc", doc).build().encode().toUri();

@@ -26,6 +26,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByOriginalFilePathAndStatus(String originalFilePath, String status);
 
   /**
+   * findAllLikeOriginalFilePath
+   * 
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath like ?1 and s.status is null")
+  List<StatusInfo> findAllLikeOriginalFilePath(String originalFilePath);
+
+  /**
    * findByRunId
    * @param runId the runId
    * @param doc the doc
