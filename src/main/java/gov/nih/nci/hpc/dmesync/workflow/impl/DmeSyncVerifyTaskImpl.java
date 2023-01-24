@@ -63,6 +63,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       final URI dataObjectUrl =
           UriComponentsBuilder.fromHttpUrl(serverUrl)
               .path("/dataObject".concat(object.getFullDestinationPath()))
+              .queryParam("excludeNonMetadataAttributes", Boolean.TRUE.toString())
               .build().encode()
               .toUri();
 
