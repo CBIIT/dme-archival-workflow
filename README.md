@@ -5,7 +5,8 @@ be installed and run on any windows/linux client machine where the data to be ar
 The collections and data sets to be archived are uploaded to NCI DME Data Management Environment 
 at a scheduled interval or for a one time archival. Fault tolerance and multi-threading capabilities are built-in to 
 achieve reliability and high throughput. It can be customized to derive the DME archival path and 
-metadata for collection/data object archival based on folder structure and user provided mapping data.
+extract metadata for collection and data object to be supplied to DME based on the folder structure 
+and file naming convention and/or user provided mapping data.
 
 ## Getting Started
 
@@ -48,7 +49,17 @@ Please run the script to generate the token.
 $ sh dme-sync-generate-token.sh
 ```
 You will be prompted for your username and password and which environment you will be running the workflow against.
-* `env=[dev|uat|prod]`
+* `env=[dev|uat|prod|prod2|prod3|prod4|prod_bp]`
+Prod config depends on which DME API server to connect to.
+
+The application uses an oracle database:
+
+```
+To access the database, use tool such as Datagrip
+
+In src/main/resources/application.properties, update the following with the correct password
+spring.datasource.password=<updated here>
+```
 
 Run the application locally:
 
@@ -64,16 +75,6 @@ To verify that the application is running, open the browser and access the defau
 http://localhost:8888/home
 ```
 
-The application uses an embedded h2 database, to access the web console:
-
-```
-http://localhost:8888/h2
-
-Driver: org.h2.Driver
-JDBC URL: jdbc:h2:file:./dme-sync-h2-db
-User Name: sa
-Password: <blank>
-```
 
 ## Deployment
 
@@ -81,17 +82,16 @@ This instruction will cover how to deploy this on a client machine
 
 #### Prerequisites
 
-Before installing it on the remote machine, `application.propterties` and `data.sql` shall be configured properly. 
+Before installing it on the remote machine, `application.propterties` shall be configured properly. 
 See [Customizing the Workflow](#customizing-the-workflow) section.
 
 #### Running on the remote machine
-Upload the jar, bash script, configuration file (application.properties) and data.sql to the client machine:
+Upload the jar, bash script, configuration file (application.properties) to the client machine:
 ```
 $ scp target/dme-sync-<version>.jar user@remotemachine:~/
 $ scp dme-sync-generate-token.sh user@remotemachine:~/
 $ scp dme-sync.sh user@remotemachine:~/
 $ scp application.properties user@remotemachine:~/
-$ scp data.sql user@remotemachine:~/
 ```
 
 Log into the remote machine and start the application
@@ -106,17 +106,16 @@ On your local machine, perfrom the following to tunnel port 8888.
 $ ssh -L 8887:localhost:8888 user@remotemachine
 ```
 
-Now the default app page and the h2 web console can be accessed from your local browser:
+Now the default app page can be accessed from your local browser:
 ```
 http://localhost:8887/home
-http://localhost:8887/h2
 ```
 
 ## Customizing the Workflow
 
 ### Configuration Parameters
 
-These can be set in `application.properties` file:
+The following properties can be set in `application.properties` file:
 
 * `dmesync.source.base.dir=<dir>`
   * The app will scan the directory specified
@@ -243,7 +242,7 @@ Optionally, override system defaults for concurrent file processing with the fol
     ```
 ### Static metadata entries and collection name mapping
 
-The DOC specific metadata entries and collection name mapping can be loaded with `data.sql` file:
+The DOC specific metadata entries and collection name mapping can be inserted into the mapping tables:
 Please see sample `data.sql` provided to supply custom metadata mapping and collection name mapping.
 Refer to [Required mapping for customized DOC](#required-mapping-for-customized-doc) section for further 
 configuration on existing DOCs.
@@ -287,12 +286,6 @@ If the runId is not specified, it will export the latest runId.
 ```
 http://localhost:8888/export
 http://localhost:8888/export/{runId}
-```
-
-Alternatively, from your H2 Web console, you can export any run into a CSV file.
-Log into the H2 Web console and run the following sql. (Append WHERE RUN_ID = <runId> if necessary)
-```
-CALL CSVWRITE('C://dev//output.csv', 'SELECT * FROM STATUS_INFO'); 
 ```
 
 ## Built With
