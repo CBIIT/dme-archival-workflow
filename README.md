@@ -120,6 +120,8 @@ These can be set in `application.properties` file:
 
 * `dmesync.source.base.dir=<dir>`
   * The app will scan the directory specified
+* `dmesync.source.base.dir.folders=<comma separeted list of folders>`
+  * If specified, app will only scan these folders under the base dir.
 * `dmesync.work.base.dir=<dir>`
   * The app will use this as a working directory for tar/untar and compression
 * `dmesync.destination.base.dir=<collection>`
@@ -127,9 +129,14 @@ These can be set in `application.properties` file:
 * `dmesync.doc.name=[hitif|cmm|default]`
   * The doc name used for the custom business logic to build DME path, collection metadata and metadata for the object.
   * Default: `default`
+* `dmesync.noscan.rerun=[true|false]`
+  * If `true`, instead of scanning for files under the base dir, it will reprocess files from the database.
+  * Default: `false`
 * `dmesync.tar=[true|false]`
   * If `true`, it will tar the collection specified by `dmesync.preprocess.depth` from `dmesync.source.base.dir`.
   * Default: `false` 
+* `dmesync.tar.exclude.folder=[folder1,folder2]`
+  * If specified, folders that matches the folder names in a comma separated list will be excluded from the tar ball. 
 * `dmesync.untar=[true|false]`
   * If `true`, it will untar the collection specified by `dmesync.preprocess.depth` from `dmesync.source.base.dir`.
   * Default: `false` 
@@ -179,11 +186,15 @@ These can be set in `application.properties` file:
 * `dmesync.dryrun=[true|false]`
   * If true, only records the files to be processed in the local DB without running the workflow.
   * Default: `false` 
+* `dmesync.cleanup=[true|false]`
+  * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
+  * Default: `false` 
 * `dmesync.verify.prev.upload=[none|local]`
   * If `none`, it does not check whether it has previously been uploaded.
   * If `local`, it will check the local db if it has previously been uploaded, and skip the file.
   * Default: `none`
-* `dmesync.cron.expression=[cron expression]`
+* `dmesync.cron.expression=[cron expression]` 
+  * **This expression is not used if `dmesync.run.once.and.shutdown` flag is `true`**
   * For example:
     ```
     0 0/5 * * * ? //every 5 minutes
@@ -191,21 +202,34 @@ These can be set in `application.properties` file:
     format: Sec Min Hour Day Mon SUN-SUN:0-7
     ```
 * `dmesync.run.once.and.shutdown=[true|false]`
+  * **Also see `dmesync.run.once.run_id`**
   * If `true`, once the run has completed regardless of any failures, the application will shutdown.
   * Default: `false` 
 * `dmesync.run.once.run_id=<run id>`
-  * If `dmesync.run.once.and.shutdown=true`, the user must supply a unique run id for this run.
+  * If `dmesync.run.once.and.shutdown=true`, the user **must** supply a unique run id for this run.
   * Recommended run id example: `Run_YYYYMMDDHHMISS`
 * `dmesync.last.modified.days=[1,2,...]`
   * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
+* `dmesync.replace.modified.files=[true|false]`
+  * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
+* `dmesync.tar.file.exist=<filename>`
+  * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
 * `dmesync.tar.file.exist.ext=<ext>`
   * If specified, it will check whether a file with the specified file extension exists before tar operation is performed.
-* `dmesync.admin.emails=<comma separated email addrresses>`
-  * Once a run completes, the run result will be emailed to this address.
+* `dmesync.file.exist.under.basedir=[true|false]`
+  * Check if the marker file specified in dmesync.tar.file.exist.ext is directly under the base directory.
+* `dmesync.file.exist.under.basedir.depth=[1,2,...]`
+  * If specified, it will check for the file under the specified depth from the basedir.
   
 * `dmesync.admin.emails=<comma separated email addrresses>`
   * Once a run completes, the run result will be emailed to this address.
-  
+
+* `dmesync.additional.metadata.excel=<file path to the metadata file>`
+  * If specified, application will load the custom metadata excel file supplied by the user.
+
+* `spring.main.web-environment=[true|false]`
+  * If `true`, enables the web environment.
+
 Optionally, override system defaults for concurrent file processing with the following parameters.
 
 * Number of threads to process the files concurrently
