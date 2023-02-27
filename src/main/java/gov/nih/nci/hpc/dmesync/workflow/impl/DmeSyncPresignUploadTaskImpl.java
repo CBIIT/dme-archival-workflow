@@ -230,8 +230,6 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
       if (responseCode == 200) {
         logger.debug("[{}] File upload successful", super.getTaskName());
-        //Update DB to completed but if verification fails, it will show up as error in verification
-        object.setStatus("COMPLETED");
         object.setUploadEndTimestamp(new Date());
         object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       } else {

@@ -1,9 +1,12 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -63,6 +66,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       final URI dataObjectUrl =
           UriComponentsBuilder.fromHttpUrl(serverUrl)
               .path("/dataObject".concat(object.getFullDestinationPath()))
+              .queryParam("excludeParentMetadata", Boolean.TRUE.toString())
               .queryParam("excludeNonMetadataAttributes", Boolean.TRUE.toString())
               .build().encode()
               .toUri();
@@ -124,6 +128,12 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           if (fileSystemUpload) {
         	  throw new DmeSyncVerificationException(msg);
           }
+        }
+        if(StringUtils.isEmpty(object.getError())) {
+        	//Update DB to completed but if verification succeeds.
+            object.setStatus("COMPLETED");
+            object.setUploadEndTimestamp(new Date());
+            object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
         }
       } else {
         logger.error(
