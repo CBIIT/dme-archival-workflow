@@ -41,6 +41,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.source.base.dir}")
   private String syncBaseDir;
   
+  @Value("${dmesync.max.recommended.file.size}")
+  private String maxRecommendedFileSize;
+  
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
   
   @Override
@@ -77,8 +80,20 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       helper.setFrom("hpcdme-sync");
       helper.setTo(adminEmails.split(","));
       helper.setSubject("HPCDME Auto Archival Result for " + doc.toUpperCase() + " Run_ID: " + runId + " - Base Path: " + syncBaseDir);
-      helper.setText("Attached results from DME auto archival runId, " + runId + " for " + doc.toUpperCase() + " and base path, " + syncBaseDir);
-
+      String body = "Attached results from DME auto archival runId, " + runId + " for " + doc.toUpperCase() + " and base path, " + syncBaseDir;
+      // Check to see if any files were over the recommended size and flag if it was.
+      boolean exceedsMaxRecommendedFileSize = false;
+      long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+      for (StatusInfo info : statusInfo) {
+    	  if (info.getFilesize() > maxFileSize) {
+    		  exceedsMaxRecommendedFileSize = true;
+    		  break;
+    	  }
+      }
+      if(exceedsMaxRecommendedFileSize)
+    	  body = body.concat("\n\nThere was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true));
+      helper.setText(body);
+      
       FileSystemResource file = new FileSystemResource(excelFile);
       helper.addAttachment(file.getFilename(), file);
       sender.send(message);

@@ -47,6 +47,12 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Value("${logging.file}")
   private String logFile;
   
+  @Value("${dmesync.source.base.dir}")
+  private String syncBaseDir;
+  
+  @Value("${dmesync.max.recommended.file.size}")
+  private String maxRecommendedFileSize;
+  
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
   @Override
@@ -107,9 +113,20 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
           helper.setTo(adminEmails.split(","));
           helper.setSubject("Archival Report for HiTIF - " + runId + " [to: " + allEmails + "]");
         }
-        helper.setText(
-            "Please find attached DME archival report for your data in CV7000_Images folder.");
-
+        String body = "Please find attached DME archival report for your data in " + syncBaseDir + " folder.";
+        // Check to see if any files were over the recommended size and flag if it was.
+        boolean exceedsMaxRecommendedFileSize = false;
+        long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+        for (StatusInfo info : statusInfo) {
+      	  if (info.getFilesize() > maxFileSize) {
+      		  exceedsMaxRecommendedFileSize = true;
+      		  break;
+      	  }
+        }
+        if(exceedsMaxRecommendedFileSize)
+          body = body.concat("\n\nThere was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true));
+        helper.setText(body);
+        
         FileSystemResource file = new FileSystemResource(excelFile);
         helper.addAttachment(file.getFilename(), file);
         sender.send(message);
