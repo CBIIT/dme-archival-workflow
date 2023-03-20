@@ -116,7 +116,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
       //Add object metadata
-      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("experiment_name", object.getOrginalFileName()));
+      dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", object.getOrginalFileName()));
       dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("source_path", object.getOriginalFilePath()));
       
       
