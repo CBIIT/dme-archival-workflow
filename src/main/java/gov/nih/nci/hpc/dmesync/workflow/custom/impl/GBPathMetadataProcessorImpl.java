@@ -119,6 +119,7 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 
 	private String getFlowcell(StatusInfo object) {
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		return StringUtils.substringAfterLast(StringUtils.substringBefore(fileName, "."), "_");
+		String extractedFlowcellId = StringUtils.substringAfterLast(StringUtils.substringBefore(fileName, "."), "_");
+		return StringUtils.length(extractedFlowcellId) > 7 ? extractedFlowcellId: "Other";
 	}
 }
