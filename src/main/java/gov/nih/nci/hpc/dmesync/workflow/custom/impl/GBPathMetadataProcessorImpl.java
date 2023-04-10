@@ -34,7 +34,7 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath;
-		archivePath = destinationBaseDir + "/PI_" + getPICollectionName() + "/" + getProjectCollectionName(object) + "/"
+		archivePath = destinationBaseDir + "/PI_" + getPICollectionName() + "/" + getProjectCollectionName(object)
 				+ "/Flowcell_" + getFlowcell(object) + "/" + fileName;
 
 		// replace spaces with underscore
@@ -92,8 +92,13 @@ public class GBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor i
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
 		// Add object metadata
+		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		String fileType = StringUtils.substringBefore(fileName, ".gz");
+	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-				.add(createPathEntry("object_name", Paths.get(object.getSourceFilePath()).toFile().getName()));
+				.add(createPathEntry("object_name", fileName));
+		dataObjectRegistrationRequestDTO.getMetadataEntries()
+        		.add(createPathEntry("file_type", fileType));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
