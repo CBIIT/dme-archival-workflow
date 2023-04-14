@@ -84,12 +84,21 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       // Check to see if any files were over the recommended size and flag if it was.
       boolean exceedsMaxRecommendedFileSize = false;
       long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+      long processedCount = 0, successCount = 0, failedCount = 0;
       for (StatusInfo info : statusInfo) {
+    	  processedCount ++;
     	  if (info.getFilesize() > maxFileSize) {
     		  exceedsMaxRecommendedFileSize = true;
-    		  break;
     	  }
+    	  if (info.getStatus().equals("COMPLETED"))
+    		  successCount++;
+    	  else
+    		  failedCount++;
       }
+      
+      body = body.concat("\n\nSummary - Total processed: " + processedCount + ", Success: " + successCount + ", Failure: " + failedCount);
+      body = body.concat("\n\nPlease review the attached results for any discrepancies in expected file size, missing or incorrect metadata.");
+      
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("\n\nThere was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true));
       helper.setText(body);
