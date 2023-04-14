@@ -240,9 +240,17 @@ public class DmeSyncScheduler {
           dateFormat.format(new Date()),
           runId,
           syncBaseDir);
-
+      //Check to see if any records are being processed for this run, if not send email
+      List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+      if(CollectionUtils.isEmpty(currentRun))
+    	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
+  				"There were no files/folders found for processing.");
+      
     } catch (Exception e) {
-      logger.error("[Scheduler] Failed to access files in directory, {}", syncBaseDir, e);
+      //Send email notification
+	  logger.error("[Scheduler] Failed to access files in directory, {}", syncBaseDir, e);
+	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Error: " + e.getMessage(),
+				e.getMessage() + "\n\n" + e.getCause().getMessage());
     } finally {
       MDC.clear();
       runId = null;
@@ -444,7 +452,8 @@ public class DmeSyncScheduler {
           
           Date modifiedTimestamp = file.getUpdatedDate();
           Date uploadedTimestamp = statusInfo.getUploadStartTimestamp();
-          if(uploadedTimestamp.compareTo(modifiedTimestamp) > 0) {
+          if(uploadedTimestamp == null || uploadedTimestamp.compareTo(modifiedTimestamp) > 0) {
+        	  //There are some files where uploadedTimestamp is null so ignore these for now.
         	  //Modified is before the last upload
         	  continue;
           }
