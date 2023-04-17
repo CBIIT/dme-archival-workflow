@@ -5,6 +5,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+
+import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,7 +92,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     	  if (info.getFilesize() > maxFileSize) {
     		  exceedsMaxRecommendedFileSize = true;
     	  }
-    	  if (info.getStatus().equals("COMPLETED"))
+    	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
     		  successCount++;
     	  else
     		  failedCount++;
