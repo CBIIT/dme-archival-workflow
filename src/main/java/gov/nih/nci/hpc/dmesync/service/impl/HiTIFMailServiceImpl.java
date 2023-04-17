@@ -123,7 +123,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       	  if (info.getFilesize() > maxFileSize) {
       		  exceedsMaxRecommendedFileSize = true;
       	  }
-      	  if (info.getStatus().equals("COMPLETED"))
+      	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
       		  successCount++;
       	  else
       		  failedCount++;
