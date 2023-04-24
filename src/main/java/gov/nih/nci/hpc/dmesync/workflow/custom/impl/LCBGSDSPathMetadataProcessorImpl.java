@@ -16,7 +16,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 /**
  * LCBG SDS DME Path and Meta-data Processor Implementation
  * 
- * @author menons2
+ * @author dinhys
  *
  */
 @Service("lcbg-sds")

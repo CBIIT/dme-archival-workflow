@@ -15,7 +15,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 /**
  * HiTIF DME Path and Meta-data Processor Implementation
  * 
- * @author menons2
+ * @author dinhys
  *
  */
 @Service("hitif")
