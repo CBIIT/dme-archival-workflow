@@ -103,6 +103,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("lcbg-sds")
   private DmeSyncPathMetadataProcessor lcbgSdsProcessor;
   
+  @Autowired
+  @Qualifier("lp-tns")
+  private DmeSyncPathMetadataProcessor lpTnsProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -150,6 +154,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return gbProcessor;
     } else if ("lcbg-sds".equals(doc)){
         return lcbgSdsProcessor;
+    } else if ("lp-tns".equals(doc)){
+        return lpTnsProcessor;
     } else {
         return defaultProcessor;
     }
