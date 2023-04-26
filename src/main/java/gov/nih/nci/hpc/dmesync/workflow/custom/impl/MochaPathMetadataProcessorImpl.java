@@ -208,7 +208,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(runId, sampleId, "Mocha_ID")));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrWithKey(runId, sampleId, "Library_Type")));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(runId, sampleId, "Analyte")));
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", getAttrWithKey(runId, sampleId, "Lane")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", StringUtils.isBlank(getAttrWithKey(runId, sampleId, "Lane")) ? "N/A" : getAttrWithKey(runId, sampleId, "Lane")));
 		    if(StringUtils.isNotBlank(getAttrWithKey(runId, sampleId, "SubProject")))
 		    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrWithKey(runId, sampleId, "SubProject")));  
 		    pathEntriesSample.setPath(sampleCollectionPath);
