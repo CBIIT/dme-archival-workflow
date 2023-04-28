@@ -1,10 +1,8 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -58,7 +56,7 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
 		// load the user metadata from the externally placed excel
 		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
-		String path = Paths.get(object.getOriginalFilePath()).getParent().toString();
+		String path = "/data/EVset_RNAseq" + StringUtils.substringAfter(object.getOriginalFilePath().replace(File.separatorChar,'/'), "EVset_RNAseq");
 		
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -86,19 +84,32 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithKey(path, "project_title")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "project_start_date"), "MM/dd/yy"));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("platform_name", getAttrValueWithKey(path, "platform_name")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithKey(path, "organism")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithKey(path, "is_cell_line")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "study_disease")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrValueWithKey(path, "study_disease")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "project_status")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", getAttrValueWithKey(path, "project_status")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "project_completed_date")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date", getAttrValueWithKey(path, "project_completed_date"), "MM/dd/yy"));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "collaborators")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collaborators", getAttrValueWithKey(path, "collaborators")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
 		// Add path metadata entries for "Exp_XXX" collection
+		String flowcellId = null;
 		HpcBulkMetadataEntry pathEntriesExp = new HpcBulkMetadataEntry();
 		String expCollectionName = getExpCollectionName(object);
 		String expPath = projectPath + "/" + expCollectionName;
 		pathEntriesExp.setPath(expPath.replace(" ", "_"));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_name", getAttrValueWithKey(path, "experiment_name")));
+		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_type", getAttrValueWithKey(path, "experiment_type")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_id", getAttrValueWithKey(path, "experiment_id")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_date", getAttrValueWithKey(path, "experiment_date")));
+		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("cell_line", getAttrValueWithKey(path, "cell_line")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Experiment"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExp);
 
@@ -109,8 +120,7 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		pathEntriesData.setPath(dataPath.replace(" ", "_"));
 		String collectionType = getCollectionType(dataCollectionName);
 		if(collectionType.equals("Raw_Data")) {
-			String flowcellId = getFlowcellId(dataCollectionName);
-			pathEntriesData.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+			flowcellId = getFlowcellId(object.getOrginalFileName());
 		}
 		pathEntriesData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, collectionType));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesData);
@@ -122,10 +132,18 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
 		// Add object metadata
+		String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
+		String fileType = StringUtils.substringBefore(fileName, ".gz");
+	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-				.add(createPathEntry("object_name", object.getOrginalFileName()));
+				.add(createPathEntry("object_name", fileName));
+		dataObjectRegistrationRequestDTO.getMetadataEntries()
+		.add(createPathEntry("file_type", fileType));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
+		if(StringUtils.isNoneBlank(flowcellId))
+			dataObjectRegistrationRequestDTO.getMetadataEntries()
+			.add(createPathEntry("flowcell_id", flowcellId));
 
 		logger.info("LP TNS custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
@@ -165,14 +183,8 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		return "Raw_Data";
 	}
 	
-	private String getFlowcellId(String collectionName) {
-		String flowcellId = null;
-		Pattern pattern = Pattern.compile("_[0-9]{4}_");
-		Matcher matcher = pattern.matcher(collectionName);
-		if (matcher.find())
-		{
-			flowcellId = StringUtils.substring(collectionName, matcher.end(),  matcher.end() + 10);
-		}
-		return flowcellId;
+	private String getFlowcellId(String fileName) {
+		String flowcellId = StringUtils.substringAfterLast(fileName, "_");
+		return StringUtils.substringBefore(flowcellId, ".");
 	}
 }
