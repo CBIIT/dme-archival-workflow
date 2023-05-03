@@ -146,15 +146,15 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "frame_rate")))
 			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("frame_rate", getAttrValueWithKey(path, "frame_rate")));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "flourescent_protein_1")))
-			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("flourescent_protein_1", getAttrValueWithKey(path, "flourescent_protein_1")));
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("fluorescent_protein_1", getAttrValueWithKey(path, "flourescent_protein_1")));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "flourescent_protein_2")))
-			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("flourescent_protein_2", getAttrValueWithKey(path, "flourescent_protein_2")));
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("fluorescent_protein_2", getAttrValueWithKey(path, "flourescent_protein_2")));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "flourescent_protein_3")))
-			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("flourescent_protein_3", getAttrValueWithKey(path, "flourescent_protein_3")));
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("fluorescent_protein_3", getAttrValueWithKey(path, "flourescent_protein_3")));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "flourescent_protein_4")))
-			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("flourescent_protein_4", getAttrValueWithKey(path, "flourescent_protein_4")));
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("fluorescent_protein_4", getAttrValueWithKey(path, "flourescent_protein_4")));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "flourescent_protein_5")))
-			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("flourescent_protein_5", getAttrValueWithKey(path, "flourescent_protein_5")));
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("fluorescent_protein_5", getAttrValueWithKey(path, "flourescent_protein_5")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Experiment"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExp);
 		
