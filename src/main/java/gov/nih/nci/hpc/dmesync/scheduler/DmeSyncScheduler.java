@@ -25,7 +25,9 @@ import org.springframework.util.CollectionUtils;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncAWSScanDirectory;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncDataObjectListQuery;
+import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncVerifyTaskImpl;
 import gov.nih.nci.hpc.exception.HpcException;
 import gov.nih.nci.hpc.dmesync.DmeSyncApplication;
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
@@ -52,6 +54,8 @@ public class DmeSyncScheduler {
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
+  @Autowired private DmeSyncAWSScanDirectory dmeSyncAWSScanDirectory;
+  @Autowired private DmeSyncVerifyTaskImpl dmeSyncVerifyTaskImpl;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -125,6 +129,21 @@ public class DmeSyncScheduler {
   @Value("${dmesync.source.softlink.file:}")
   private String sourceSoftlinkFile;
   
+  @Value("${dmesync.source.aws:false}")
+  private boolean awsFlag;
+  
+  @Value("${dmesync.source.aws.bucket}")
+  private String awsBucket;
+
+  @Value("${dmesync.source.aws.access.key}")
+  private String awsAccessKey;
+
+  @Value("${dmesync.source.aws.secret.key}")
+  private String awsSecretKey;
+  
+  @Value("${dmesync.source.aws.region}")
+  private String awsRegion;
+  
   private String runId;
 
   /**
@@ -193,6 +212,8 @@ public class DmeSyncScheduler {
             syncBaseDir);
         MDC.clear();
         return;
+      } else if (awsFlag) {
+    	  paths = dmeSyncAWSScanDirectory.getPathAttributes(syncBaseDir);
       } else {
       // Scan through the specified base directory and find candidates for processing
     	  paths = scanDirectory();
@@ -604,6 +625,8 @@ public class DmeSyncScheduler {
 
   @Scheduled(cron = "0 0/1 * * * ?")
   public void checkForCompletedRun() {
+	if(awsFlag) return;
+	
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
@@ -645,6 +668,62 @@ public class DmeSyncScheduler {
     }
   }
 
+  @Scheduled(cron = "0 0/1 * * * ?")
+  public void checkForAWSCompletedRun() {
+	if(!awsFlag) return;
+	
+	boolean completedFlag = true;
+    String currentRunId = null;
+    if (shutDownFlag) {
+      currentRunId = oneTimeRunId;
+      //Check if we have already started the run
+      List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
+      if(CollectionUtils.isEmpty(currentRun))
+        return;
+    } else {
+      StatusInfo latest = null;
+      //Add base path also to distinguish multiple docs running the workflow.
+      latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir);
+
+      if(latest != null)
+        currentRunId = latest.getRunId();
+    }
+
+    //Check to make sure scheduler is completed, run has occurred and the queue is empty
+    if (runId == null
+        && currentRunId != null
+        && !currentRunId.isEmpty()
+        && sender.getQueueCount("inbound.queue") == 0) {
+
+      //check if the latest export file is generated in log directory
+      Path path = Paths.get(logFile);
+      final String fileName = path.getParent().toString() + File.separatorChar + currentRunId + ".xlsx";
+      File excel = new File(fileName);
+      if (!excel.exists()) {
+    	//Check if all the files have been processed by DME
+    	List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
+    	for(StatusInfo statusInfo: currentRun) {
+    		try {
+				dmeSyncVerifyTaskImpl.processTask(statusInfo);
+			} catch (Exception e) {
+				logger.error("[Scheduler] Verify task for AWS completion error " + statusInfo.getSourceFilePath(), e.getMessage());
+			}
+    		if(StringUtils.contains(statusInfo.getError(), "Data_transfer_status is not in ARCHIVED"))
+    			completedFlag = false;
+    	}
+    	
+        //Export and send email for completed run
+        if(completedFlag)
+        	dmeSyncMailServiceFactory.getService(doc).sendResult(currentRunId);
+
+        if (shutDownFlag && completedFlag) {
+          logger.info("[Scheduler] Queue is empty. Shutting down the application.");
+          DmeSyncApplication.shutdown();
+        }
+      }
+    }
+  }
+  
   private int daysBetween(Date d1, Date d2) {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }

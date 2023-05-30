@@ -33,6 +33,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncUploadTaskImpl syncUploadTask;
   @Autowired private DmeSyncPresignUploadTaskImpl presignUploadTask;
   @Autowired private DmeSyncFileSystemUploadTaskImpl fileSystemUploadTask;
+  @Autowired private DmeSyncAWSS3UploadTaskImpl awsS3UploadTask;
   @Autowired private DmeSyncMetadataTaskImpl metadataTask;
   @Autowired private DmeSyncTarTaskImpl tarTask;
   @Autowired private DmeSyncCompressTaskImpl compressTask;
@@ -79,18 +80,23 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
   
+  @Value("${dmesync.source.aws:false}")
+  private boolean awsFlag;
+  
   @PostConstruct
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
-    if (tar || tarIndividualFiles) tasks.add(tarTask);
-    else if (compress) tasks.add(compressTask);
-    if (untar) tasks.add(untarTask);
+    if (!awsFlag) {
+	    if (tar || tarIndividualFiles) tasks.add(tarTask);
+	    else if (compress) tasks.add(compressTask);
+	    if (untar) tasks.add(untarTask);
+    }
 
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum && !createSoftlink && !moveProcessedFiles)
+      if(checksum && !createSoftlink && !moveProcessedFiles && !awsFlag)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
@@ -100,9 +106,11 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     	  tasks.add(createSoftlinkTask);
       else if (moveProcessedFiles)
     	  tasks.add(moveDataObjectTask);
+      else if (awsFlag)
+    	  tasks.add(awsS3UploadTask);
       else
     	  tasks.add(presignUploadTask);
-      if(!metadataUpdateOnly && !createSoftlink && !moveProcessedFiles) {
+      if(!metadataUpdateOnly && !createSoftlink && !moveProcessedFiles && !awsFlag) {
 	      tasks.add(verifyTask);
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)

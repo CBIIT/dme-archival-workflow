@@ -47,6 +47,9 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
+  @Value("${dmesync.source.aws:false}")
+  private boolean awsFlag;
+  
   @Autowired private RestTemplateFactory restTemplateFactory;
   
   @Autowired private ObjectMapper objectMapper;
@@ -100,7 +103,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                 .collect(
                     Collectors.toMap(HpcMetadataEntry::getAttribute, HpcMetadataEntry::getValue));
 
-        if (map.get("source_file_size") != null
+        if (!awsFlag && map.get("source_file_size") != null
             && !map.get("source_file_size").equals(object.getFilesize().toString())) {
           String msg =
               "File size does not match local "
@@ -125,7 +128,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
               "Data_transfer_status is not in ARCHIVED, it is " + map.get("data_transfer_status");
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
-          if (fileSystemUpload) {
+          if (fileSystemUpload || awsFlag) {
         	  throw new DmeSyncVerificationException(msg);
           }
         }

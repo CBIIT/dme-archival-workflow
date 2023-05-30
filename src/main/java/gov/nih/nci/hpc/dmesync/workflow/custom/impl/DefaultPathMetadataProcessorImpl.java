@@ -23,6 +23,9 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
   @Value("${dmesync.source.base.dir}")
   protected String sourceBaseDir;
+  
+  @Value("${dmesync.source.aws:false}")
+  private boolean awsFlag;
 
   //DOC Default logic for DME path construction and meta data creation
 
@@ -31,6 +34,9 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
     
     logger.info("[PathMetadataTask] Default getArchivePath called");
 
+    if(awsFlag) {
+    	return destinationBaseDir + '/' + object.getSourceFilePath();
+    }
     // For now, all files goes directly to base destination dir, under the folders from source path.
     Path baseDirPath;
     try {
