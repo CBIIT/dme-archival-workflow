@@ -48,16 +48,16 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 	@Value("${auth.token}")
 	private String authToken;
 
-	@Value("${dmesync.source.aws.bucket}")
+	@Value("${dmesync.source.aws.bucket:}")
 	private String awsBucket;
 
-	@Value("${dmesync.source.aws.access.key}")
+	@Value("${dmesync.source.aws.access.key:}")
 	private String awsAccessKey;
 
-	@Value("${dmesync.source.aws.secret.key}")
+	@Value("${dmesync.source.aws.secret.key:}")
 	private String awsSecretKey;
 
-	@Value("${dmesync.source.aws.region}")
+	@Value("${dmesync.source.aws.region:}")
 	private String awsRegion;
 
 	@PostConstruct
