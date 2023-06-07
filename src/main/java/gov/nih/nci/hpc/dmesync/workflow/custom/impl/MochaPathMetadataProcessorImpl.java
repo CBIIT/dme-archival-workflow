@@ -49,7 +49,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Example source path -
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
     // /mnt/mocha_scratch/BW_transfers/2022_January/220113_A01063_0058_BHKJMGDSX2/Sample_RES210195_HKJMGDSX2/Sample_RES210195_HKJMGDSX2_R1.fastq.gz
-    String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+    String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
     String archivePath = null;
     
     if(isBCL(object)) {
@@ -63,7 +63,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	            + "/Flowcell_"
 	            + getFlowcellId(object)
 	            + "/"
-	            + getRunId(object) + ".tar";
+	            + (fileName.equals("Reports")||fileName.equals("Stats") ? "FASTQ_Report/" + fileName : getRunId(object)) + ".tar";
     } else {
         String platform = getPlatformCollectionName(object);
         String project = getProjectCollectionName(object);
@@ -109,8 +109,10 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
-    String fileName = null;
-    if(isBCL(object))
+    String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
+    if (fileName.equals("Reports")||fileName.equals("Stats")) {
+    	fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
+    } else if(isBCL(object))
     	fileName = getRunId(object) + ".tar";
     else
     	fileName = Paths.get(object.getSourceFileName()).toFile().getName();
@@ -240,6 +242,14 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    hpcBulkMetadataEntries
 	        .getPathsMetadataEntries()
 	        .add(pathEntriesFlowcell);
+	    
+	    if (fileName.equals("Reports")||fileName.equals("Stats")) {
+	    	String reportCollectionPath = flowcellCollectionPath + "/FASTQ_Report";
+	    	HpcBulkMetadataEntry pathEntriesReport = new HpcBulkMetadataEntry();
+	    	pathEntriesReport.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Report"));
+	    	pathEntriesReport.setPath(reportCollectionPath);
+	    	hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesReport);
+	    }
  	    
     }
     
@@ -429,7 +439,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
 	        if(StringUtils.startsWith(entry.getKey(), folderName)) {
 	        	String sampleEntry = metadataMap.get(entry.getKey()).get("Sample");
-		        if(StringUtils.contains(path, sampleEntry)) {
+		        if(StringUtils.containsIgnoreCase(path, sampleEntry)) {
 		          //Sample is present in the file path
 		          sampleName = sampleEntry;
 		          break;
