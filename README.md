@@ -33,6 +33,7 @@ $ git clone https://github.com/CBIIT/dme-archival-workflow
 ```
 
 ##### Build Your App
+Download ojdbc6 from group com.oracle.database.jdbc (version 11.2.0.4) and install into your local maven repository.
 
 Navigate to the project and build:
 
@@ -63,6 +64,7 @@ spring.datasource.password=<updated here>
 
 Run the application locally:
 
+Check to see if the dme-sync-<verison>.jar entry in dme-sync.sh matches with the version built. If not, update it.
 ```
 $ sh dme-sync.sh
 ```
