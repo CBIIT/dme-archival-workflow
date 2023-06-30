@@ -64,7 +64,7 @@ spring.datasource.password=<updated here>
 
 Run the application locally:
 
-Check to see if the dme-sync-<verison>.jar entry in dme-sync.sh matches with the version built. If not, update it.
+Check if the dme-sync-[verison].jar entry in dme-sync.sh matches with the version built. If not, update it.
 ```
 $ sh dme-sync.sh
 ```
