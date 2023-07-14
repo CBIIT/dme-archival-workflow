@@ -37,8 +37,13 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${logging.file}")
   private String logFile;
   
+  
+  
+  
   @Value("${dmesync.doc.name}")
   private String doc;
+  
+  
   
   @Value("${dmesync.source.base.dir}")
   private String syncBaseDir;
@@ -46,7 +51,12 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.max.recommended.file.size}")
   private String maxRecommendedFileSize;
   
+  @Value("${dmesync.min.tar.file.size:1024}")
+  private String minTarFile;
+  
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
+  
+  
   
   @Override
   public String sendMail(String subject, String text) {
@@ -69,10 +79,13 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Override
   public void sendResult(String runId) {
     MimeMessage message = sender.createMimeMessage();
+    int counting = 0; 
 
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+  
+      
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
@@ -81,25 +94,55 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
       helper.setFrom("hpcdme-sync");
       helper.setTo(adminEmails.split(","));
-      helper.setSubject("HPCDME Auto Archival Result for " + doc.toUpperCase() + " Run_ID: " + runId + " - Base Path: " + syncBaseDir);
-      String body = "Attached results from DME auto archival runId, " + runId + " for " + doc.toUpperCase() + " and base path, " + syncBaseDir;
+        
+      helper.setSubject("DME Auto Archival Result for  " + doc.toUpperCase() + " - Run_ID: " + runId + " - Base Path: [ " + syncBaseDir +"]");
+          
+      
+      String body = "The attached file contains results from DME auto-archive.\n\n";
+          
+      body = body + "Below is the summary:" ;
+              
       // Check to see if any files were over the recommended size and flag if it was.
       boolean exceedsMaxRecommendedFileSize = false;
       long maxFileSize = Long.parseLong(maxRecommendedFileSize);
       long processedCount = 0, successCount = 0, failedCount = 0;
       for (StatusInfo info : statusInfo) {
     	  processedCount ++;
+    	 
     	  if (info.getFilesize() > maxFileSize) {
-    		  exceedsMaxRecommendedFileSize = true;
+    		  
+    		  exceedsMaxRecommendedFileSize = true;	  
+    	     
+    	  } 
+    		  
+    	  
+    	  if (info.getOrginalFileName().contains(".tar")) {
+    		  
+    		  
+	    	  if (info.getFilesize() < Integer.valueOf(minTarFile)) { 
+	    		   
+	    	      counting++;
+	    	
+	    	  }
     	  }
+    	  
+   		      	  
     	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
     		  successCount++;
     	  else
     		  failedCount++;
       }
+   
       
-      body = body.concat("\n\nSummary - Total processed: " + processedCount + ", Success: " + successCount + ", Failure: " + failedCount);
-      body = body.concat("\n\nPlease review the attached results for any discrepancies in expected file size, missing or incorrect metadata.");
+      body = body.concat("\n\n" + "\u2022" + "Total processed: " + processedCount + "\n" + "\u2022" + "Success: " + successCount + "\n" + "\u2022" + "Failure: " + failedCount)+ 
+    		  "\n" + "\u2022" +  "Tar files with sizes smaller than 1KB (1024B):  " + counting ;
+     
+        
+      body = body.concat("\n\n A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
+      		+ " Hence, please review the attached results and reply all to this email to report any discrepancy.");
+      
+      
+      
       
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("\n\nThere was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true));
