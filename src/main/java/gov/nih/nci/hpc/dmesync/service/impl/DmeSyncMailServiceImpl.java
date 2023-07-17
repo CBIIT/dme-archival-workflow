@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.service.impl;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -37,13 +38,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${logging.file}")
   private String logFile;
   
-  
-  
-  
   @Value("${dmesync.doc.name}")
   private String doc;
-  
-  
   
   @Value("${dmesync.source.base.dir}")
   private String syncBaseDir;
@@ -79,30 +75,23 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Override
   public void sendResult(String runId) {
     MimeMessage message = sender.createMimeMessage();
-    int counting = 0; 
+    int minTarFileCount = 0; 
 
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
-  
-      
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
-      
-      //Excel creation
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
-
-      MimeMessageHelper helper = new MimeMessageHelper(message, true);
-
+      
+      MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+        
       helper.setFrom("hpcdme-sync");
       helper.setTo(adminEmails.split(","));
         
-      helper.setSubject("DME Auto Archival Result for  " + doc.toUpperCase() + " - Run_ID: " + runId + " - Base Path: [ " + syncBaseDir +"]");
-          
-      
-      String body = "The attached file contains results from DME auto-archive.\n\n";
-          
-      body = body + "Below is the summary:" ;
+      helper.setSubject("DME Auto Archival Result for  " + doc.toUpperCase() + " - Run_ID: " + runId + " - Base Path:  " + syncBaseDir );             
+      String body = "<p> The attached file contains results from DME auto-archive.</p>";          
+      body = body + "<p>Below is the summary:</p>" ;
               
       // Check to see if any files were over the recommended size and flag if it was.
       boolean exceedsMaxRecommendedFileSize = false;
@@ -116,43 +105,37 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     		  exceedsMaxRecommendedFileSize = true;	  
     	     
     	  } 
-    		  
-    	  
+    		     	  
     	  if (info.getOrginalFileName().contains(".tar")) {
-    		  
-    		  
 	    	  if (info.getFilesize() < Integer.valueOf(minTarFile)) { 
 	    		   
-	    	      counting++;
-	    	
+	    		  minTarFileCount++;	    	
 	    	  }
-    	  }
-    	  
+    	  }   	 
    		      	  
     	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
-    		  successCount++;
-    	  else
+    	  {	  successCount++; }
+    	  else {
     		  failedCount++;
+    	  }
       }
-   
-      
-      body = body.concat("\n\n" + "\u2022" + "Total processed: " + processedCount + "\n" + "\u2022" + "Success: " + successCount + "\n" + "\u2022" + "Failure: " + failedCount)+ 
-    		  "\n" + "\u2022" +  "Tar files with sizes smaller than 1KB (1024B):  " + counting ;
+       
+      body = body.concat("<ul>"
+                                  +  "<li>"+ "Total processed: " + processedCount + "</li>"
+    		                      + "<li>" + "Success: " + successCount +"</li>"
+                                  + "<li>" + "Failure: " + failedCount + "</li>"  
+    		                      + "<li>" + "Tar files with sizes smaller than 1KB (1024B):  " + minTarFileCount +
+    		             "</ul>");
      
         
-      
-      
-      
-      //body = body.concat("\n\n A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
-      	//	+ " Hence, please review the attached results and reply all to this email to report any discrepancy.");
-      
-      body = body.concat("<p> A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
-        		+ " Hence, please review the attached results and reply all to this email to report any discrepancy. </p>");
+      body = body.concat("<p><b><i> A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
+      		+ " Hence, please review the attached results and reply all to this email to report any discrepancy.</i> </b> </p>");
       
       
       if(exceedsMaxRecommendedFileSize)
-    	  body = body.concat("\n\nThere was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true));
-      helper.setText(body);
+    	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
+         
+      helper.setText(body,true);
       
       FileSystemResource file = new FileSystemResource(excelFile);
       helper.addAttachment(file.getFilename(), file);
