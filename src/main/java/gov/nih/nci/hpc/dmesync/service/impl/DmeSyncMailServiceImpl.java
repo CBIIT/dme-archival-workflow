@@ -88,6 +88,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
+      
+      //Excel creation
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 
       MimeMessageHelper helper = new MimeMessageHelper(message, true);
@@ -138,10 +140,14 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     		  "\n" + "\u2022" +  "Tar files with sizes smaller than 1KB (1024B):  " + counting ;
      
         
-      body = body.concat("\n\n A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
-      		+ " Hence, please review the attached results and reply all to this email to report any discrepancy.");
       
       
+      
+      //body = body.concat("\n\n A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
+      	//	+ " Hence, please review the attached results and reply all to this email to report any discrepancy.");
+      
+      body = body.concat("<p> A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
+        		+ " Hence, please review the attached results and reply all to this email to report any discrepancy. </p>");
       
       
       if(exceedsMaxRecommendedFileSize)
