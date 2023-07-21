@@ -124,7 +124,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
                                   +  "<li>"+ "Total processed: " + processedCount + "</li>"
     		                      + "<li>" + "Success: " + successCount +"</li>"
                                   + "<li>" + "Failure: " + failedCount + "</li>"  
-    		                      + "<li>" + "Tar files with sizes smaller than 1KB (1024B):  " + minTarFileCount +
+    		                      + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
     		             "</ul>");
      
         
