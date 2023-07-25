@@ -3,6 +3,8 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 import java.net.URI;
 import java.util.Date;
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -49,6 +51,9 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.metadata.update.only:false}")
   private boolean metadataUpdateOnly;
   
+  @Value("${dmesync.destination.s3.archive.configuration.id:}")
+  private String s3ArchiveConfigurationId;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("UploadTask");
@@ -79,6 +84,10 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       //Include checksum in DataObjectRegistrationRequestDTO
       if(checksum)
     	  object.getDataObjectRegistrationRequestDTO().setChecksum(object.getChecksum());
+      
+      if(StringUtils.isNotBlank(s3ArchiveConfigurationId)) {
+    	  object.getDataObjectRegistrationRequestDTO().setS3ArchiveConfigurationId(s3ArchiveConfigurationId);
+      }
       
       HttpHeaders jsonHeader = new HttpHeaders();
       jsonHeader.setContentType(MediaType.APPLICATION_JSON);
