@@ -153,8 +153,9 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 		pathEntriesSample.setPath(sampleCollectionPath);
 		pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
+		String libraryStrategy = getLibraryStrategy(projectId, instrumentName);
 		pathEntriesSample.getPathMetadataEntries()
-				.add(createPathEntry("library_strategy", getAttrValueWithKey(projectId, "library_strategy")));
+				.add(createPathEntry("library_strategy", libraryStrategy));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(projectId, "analyte_type")))
 			pathEntriesSample.getPathMetadataEntries()
 					.add(createPathEntry("analyte_type", getAttrValueWithKey(projectId, "analyte_type")));
@@ -274,4 +275,17 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return StringUtils.substringAfter(projectCollectionName, "-");
 	}
 
+	private String getLibraryStrategy(String projectId, String instrumentName) throws DmeSyncMappingException {
+		String libraryStrategy = null;
+		if (StringUtils.equals(instrumentName, "Miseq")) {
+			if (instrumentName.toUpperCase().charAt(2) == 'A')
+				libraryStrategy = "Amplicon Sequencing";
+			else if (instrumentName.toUpperCase().charAt(2) == 'S')
+				libraryStrategy = "Metagenomic-seq";
+		}
+
+		if (libraryStrategy == null)
+			libraryStrategy = getAttrValueWithKey(projectId, "library_strategy");
+		return libraryStrategy;
+	}
 }
