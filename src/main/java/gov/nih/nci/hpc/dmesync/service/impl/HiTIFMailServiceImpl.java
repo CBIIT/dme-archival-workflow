@@ -119,8 +119,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
           helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
         }
         
-        String body = "<p> The attached file contains results from DME auto-archive.</p>";          
-        body = body + "<p>Below is the summary:</p>" ;
+        String body = "<p>The attached file contains results from DME auto-archive.</p>";
+        body = body + "<p>Base Path: " + syncBaseDir + "</p>";
+        body = body + "<p>Below is the summary:</p>";
         
         // Check to see if any files were over the recommended size and flag if it was.
         boolean exceedsMaxRecommendedFileSize = false;
