@@ -97,6 +97,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Value("${dmesync.replace.modified.files:false}")
   private boolean replaceModifiedFiles;
   
+  @Value("${dmesync.destination.s3.archive.configuration.id:}")
+  private String s3ArchiveConfigurationId;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("UploadTask");
@@ -160,6 +163,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     		  String md5Checksum = BaseEncoding.base64().encode(Hex.decodeHex(object.getChecksum()));
     		  object.getDataObjectRegistrationRequestDTO().setChecksum(md5Checksum);
     	  }
+      }
+      if(StringUtils.isNotBlank(s3ArchiveConfigurationId)) {
+    	  object.getDataObjectRegistrationRequestDTO().setS3ArchiveConfigurationId(s3ArchiveConfigurationId);
       }
       object.getDataObjectRegistrationRequestDTO().setGenerateUploadRequestURL(true);
       object.getDataObjectRegistrationRequestDTO().setUploadCompletion(true);
