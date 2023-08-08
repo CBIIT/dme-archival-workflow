@@ -113,7 +113,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
         }
-        if (checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
+        if (!awsFlag && checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
           String msg =
               "Checksum does not match local "
                   + object.getChecksum()
@@ -126,11 +126,11 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
             && !map.get("data_transfer_status").equals("ARCHIVED")) {
           String msg =
               "Data_transfer_status is not in ARCHIVED, it is " + map.get("data_transfer_status");
-          logger.error("[{}] {}", super.getTaskName(), msg);
-          object.setError(msg);
           if (fileSystemUpload || awsFlag) {
         	  throw new DmeSyncVerificationException(msg);
           }
+          logger.error("[{}] {}", super.getTaskName(), msg);
+          object.setError(msg);
         }
         if(StringUtils.isEmpty(object.getError())) {
         	//Update DB to completed but if verification succeeds.
