@@ -39,16 +39,16 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example source path:
 		// nanoimaging-data/797/2022/wbg2g22jun22a/frames/rawdata/references
 		// Example dest path:
-		// PI_James_Doroshow/Project_NOX/Year_2022/Session_wbg2g22jun22a/rawdata
+		// PI_James_Doroshow/Project_NOX/Period_2022/Session_wbg2g22jun22a/Rawdata
 		// Example dest path:
-		// PI_James_Doroshow/Project_NOX/Year_2022/Session_wbg2g22jun22a/rawdata/references
+		// PI_James_Doroshow/Project_NOX/Period_2022/Session_wbg2g22jun22a/Rawdata/References
 
 		Path sourceDirPath = Paths.get(object.getOriginalFilePath());
 
 		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Project_"
-				+ getProjectCollectionName(object) + "/Year_" + getYearCollectionName(object) + "/Session_"
+				+ getProjectCollectionName(object) + "/Period_" + getYearCollectionName(object) + "/Session_"
 				+ getSessionId(object)
-				+ (isReferenceFile(object.getOriginalFilePath()) ? "/rawdata/references" : "/rawdata") + "/"
+				+ (isReferenceFile(object.getOriginalFilePath()) ? "/Rawdata/References" : "/Rawdata") + "/"
 				+ sourceDirPath.getFileName().toString();
 
 		// replace spaces with underscore
@@ -109,9 +109,9 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example row: collectionType - Year, collectionName (derived)
 
 		String yearCollectionName = getYearCollectionName(object);
-		String yearCollectionPath = projectCollectionPath + "/Year_" + yearCollectionName;
+		String yearCollectionPath = projectCollectionPath + "/Period_" + yearCollectionName;
 		HpcBulkMetadataEntry pathEntriesYear = new HpcBulkMetadataEntry();
-		pathEntriesYear.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Year"));
+		pathEntriesYear.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Period"));
 		pathEntriesYear.setPath(yearCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesYear);
 
@@ -134,7 +134,7 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesSession.setPath(sessionCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSession);
 
-		String rawDataCollectionPath = sessionCollectionPath + "/rawdata";
+		String rawDataCollectionPath = sessionCollectionPath + "/Rawdata";
 		HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
 		pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
 		pathEntriesRawData.setPath(rawDataCollectionPath);

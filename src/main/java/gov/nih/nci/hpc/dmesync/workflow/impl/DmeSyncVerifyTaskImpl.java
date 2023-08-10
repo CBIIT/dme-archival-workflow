@@ -126,11 +126,11 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
             && !map.get("data_transfer_status").equals("ARCHIVED")) {
           String msg =
               "Data_transfer_status is not in ARCHIVED, it is " + map.get("data_transfer_status");
+          object.setError(msg);
           if (fileSystemUpload || awsFlag) {
         	  throw new DmeSyncVerificationException(msg);
           }
           logger.error("[{}] {}", super.getTaskName(), msg);
-          object.setError(msg);
         }
         if(StringUtils.isEmpty(object.getError())) {
         	//Update DB to completed but if verification succeeds.
