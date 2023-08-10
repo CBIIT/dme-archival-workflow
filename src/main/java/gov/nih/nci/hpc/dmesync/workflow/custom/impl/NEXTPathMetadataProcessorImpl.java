@@ -223,13 +223,13 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getSessionId(StatusInfo object) {
-		String sessionId = getCollectionNameFromParent(object, getYearCollectionName(object));
+		String sessionId = getCollectionNameFromParent(object, getProjectId(object));
 		logger.info("sessionId: {}", sessionId);
 		return sessionId;
 	}
 
 	private String getYearCollectionName(StatusInfo object) {
-		String year = getCollectionNameFromParent(object, getProjectId(object));
+		String year = "20" + StringUtils.substring(getSessionId(object), 5, 7);
 		logger.info("year: {}", year);
 		return year;
 	}
