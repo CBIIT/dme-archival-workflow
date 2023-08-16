@@ -525,7 +525,13 @@ public class DmeSyncScheduler {
         	try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder,
     				path -> path.getFileName().toString().equals(checkExistsFile))) {
         		if (!stream.iterator().hasNext()) {
-    				logger.info("{} file not found for {}", checkExistsFile, folder.toString());
+    				String message ="The directory " + folder.toString() + " does not contain file " + checkExistsFile;
+    	            logger.info(
+    	              "[Scheduler] Skipping: {} folder which does not contain the specified file {}.",
+    	              folder.toString(),
+    	              checkExistsFile);
+    	            //TBD: Check if we need to insert record in DB as COMPLETED before sending an email.
+    	            dmeSyncMailServiceFactory.getService(doc).sendMail("WARNING: HPCDME during registration", message);
     				continue;
     			}
         	}  catch (IOException ex) {
