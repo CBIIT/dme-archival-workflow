@@ -183,7 +183,9 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// for 1k = "1st krios"
 		String microscopeName = StringUtils.substring(sessionId, 3, 5);
 		logger.info("microscopeName: {}", microscopeName);
-		if (StringUtils.equalsIgnoreCase("2g", microscopeName)) {
+		if (StringUtils.equalsIgnoreCase("1g", microscopeName)) {
+			microscopeName = "1st glacios";
+		} else if (StringUtils.equalsIgnoreCase("2g", microscopeName)) {
 			microscopeName = "2nd glacios";
 		} else if (StringUtils.equalsIgnoreCase("1k", microscopeName)) {
 			microscopeName = "1st krios";
