@@ -84,8 +84,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + getProjectCollectionName(object)
             + "/Patient_"
             + patientId
-            + (isSingleCell() ? "/Run_" : "/Sample_")
-            + (isSingleCell() ? getRunId(object): getSampleId(object))
+            + (isSingleCell() ? "/Run_" + getRunId(object) : "")
+            + "/Sample_"
+            + getSampleId(object)
             + "/"
             + fileName;
 
@@ -232,7 +233,23 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     pathEntriesPatient.setPath(patientCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesPatient, "Patient", patientId, "sb"));
+        .add(pathEntriesPatient);
+
+    // Add path metadata entries for "Run" collection for Single Cell fastq files
+    String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
+    String runId = getRunId(object);
+    String runCollectionPath = null;
+    if(isSingleCell()) {
+    	runCollectionPath = patientCollectionPath + "/Run_" + runId;
+        HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
+        pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
+        pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_id", runId));
+        pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDateFromPath(object)));
+        pathEntriesRun.setPath(runCollectionPath);
+        hpcBulkMetadataEntries
+        .getPathsMetadataEntries()
+        .add(pathEntriesRun);
+    }
 
     // Add path metadata entries for "Sample" collection
     // Example row: collectionType - Sample, collectionName - Sample_<RunID>
@@ -246,46 +263,44 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // key = metastasis_site, value = Metastasis, Primary, Other "Met" (derived)
     // key = tissue_type, value = FrTu,FFPE,Xeno,TC (derived)
     // key = resection_date, value = 9/28/1980 (derived)
-    String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
-    String runId = getRunId(object);
     String sampleId = getSampleId(object);
-    String runCollectionPath = patientCollectionPath + (isSingleCell() ? "/Run_" + runId : "/Sample_" + sampleId);
-    HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_id", runId));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("run_date", getRunDateFromPath(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("analyte_type", getSampleType(object)));
+    String sampleCollectionPath =  (isSingleCell() ? runCollectionPath : patientCollectionPath) +  "/Sample_" + sampleId;
+    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", runId));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_date", getRunDateFromPath(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getSampleType(object)));
     String sequencer = getSequencer(object);
     if (StringUtils.isNotEmpty(sequencer))
-      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequencer", sequencer));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sequencer", sequencer));
     String kitUsed = getKitUsed(object);
     if (StringUtils.isNotEmpty(kitUsed))
-      pathEntriesRun.getPathMetadataEntries().add(createPathEntry("kit_used", kitUsed));
-    pathEntriesRun.setPath(runCollectionPath);
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("kit_used", kitUsed));
     if (StringUtils.isNotEmpty(getSampleInfo(object)))
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_info", getSampleInfo(object)));
     if (StringUtils.isNotEmpty(getTissueType(object)))
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue_type", getTissueType(object)));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getTissueType(object)));
     if (StringUtils.isNotEmpty(getResectionDate(object)))
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("resection_date", getResectionDate(object)));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("resection_date", getResectionDate(object)));
     if (StringUtils.isNotEmpty(getMatchedNormal(object)))
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("matched_normal", getMatchedNormal(object)));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("matched_normal", getMatchedNormal(object)));
     if (StringUtils.isNotEmpty(getMatchedRnaseq(object)))
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("matched_rnaseq", getMatchedRnaseq(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("library_strategy", getLibraryType(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("tissue", "NOS"));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("sequenced_material", getSequencedMaterial(object)));//is_cell_line
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("strain", getStrain(object)));
-    pathEntriesRun.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("matched_rnaseq", getMatchedRnaseq(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getLibraryType(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", "NOS"));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sequenced_material", getSequencedMaterial(object)));//is_cell_line
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("disease_type", getHistology(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("strain", getStrain(object)));
+    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age", "Unknown"));
     if(isSingleCell() && getAttrWithKey(runId, object.getOrginalFileName(), "Comment") != null)
-    	pathEntriesRun.getPathMetadataEntries().add(createPathEntry("comment", getAttrWithKey(runId, object.getOrginalFileName(), "Comment")));
-    	
+    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("comment", getAttrWithKey(runId, object.getOrginalFileName(), "Comment")));
+  
+    pathEntriesSample.setPath(sampleCollectionPath);
     hpcBulkMetadataEntries
         .getPathsMetadataEntries()
-        .add(populateStoredMetadataEntries(pathEntriesRun, "Sample", "Sample", "sb"));
+        .add(pathEntriesSample);
 
     // Set it to dataObjectRegistrationRequestDTO
     dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
