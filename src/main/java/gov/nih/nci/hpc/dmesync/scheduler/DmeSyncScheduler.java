@@ -306,7 +306,7 @@ public class DmeSyncScheduler {
     try {
 
       List<StatusInfo> statusInfoList =
-                dmeSyncWorkflowService.getService(access).findStatusInfoByDocAndStatus(doc, "COMPLETED");
+                dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
       for(StatusInfo statusInfo : statusInfoList) {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors

@@ -66,6 +66,7 @@ public class DmeSyncMoveDataObjectTaskImpl extends AbstractDmeSyncTask implement
     	  final URI collectionUrl =
     	          UriComponentsBuilder.fromHttpUrl(serverUrl)
     	              .path("/collection".concat(entry.getPath()))
+    	              .queryParam("alignArchivePath", Boolean.FALSE.toString())
     	              .build().encode()
     	              .toUri();
 
