@@ -118,10 +118,12 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("instrument_name", instrumentName));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object), "yyyyMMdd"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectId));
-		pathEntriesProject.getPathMetadataEntries()
+		if (StringUtils.isNotBlank(getAttrValueWithKey(projectId, "project_title")))
+			pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_title", getAttrValueWithKey(projectId, "project_title")));
-		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_description", getAttrValueWithKey(projectId, "project_title")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(projectId, "project_description")))
+			pathEntriesProject.getPathMetadataEntries()
+				.add(createPathEntry("project_description", getAttrValueWithKey(projectId, "project_description")));
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_poc", getAttrValueWithKey(projectId, "project_poc")));
 		pathEntriesProject.getPathMetadataEntries()
