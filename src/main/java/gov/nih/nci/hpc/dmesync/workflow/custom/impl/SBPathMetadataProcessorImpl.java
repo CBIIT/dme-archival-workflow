@@ -92,6 +92,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
     // replace spaces with underscore
     archivePath = archivePath.replace(" ", "_");
+    
+    // replace "select" with "Select"
+    archivePath = archivePath.replace("select", "Select");
 
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
     
