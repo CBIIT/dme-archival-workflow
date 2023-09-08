@@ -109,7 +109,8 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_type", getAttrValueWithKey(path, "experiment_type")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_id", getAttrValueWithKey(path, "experiment_id")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_date", getAttrValueWithKey(path, "experiment_date")));
-		pathEntriesExp.getPathMetadataEntries().add(createPathEntry("cell_line", getAttrValueWithKey(path, "cell_line")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "cell_line")))
+			pathEntriesExp.getPathMetadataEntries().add(createPathEntry("cell_line", getAttrValueWithKey(path, "cell_line")));
 		pathEntriesExp.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Experiment"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExp);
 
