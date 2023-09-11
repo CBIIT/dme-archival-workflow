@@ -230,7 +230,8 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getInstrumentName(String instrumentId) throws DmeSyncMappingException {
 		String instrumentName = null;
 		if (StringUtils.equals(instrumentId, "M3213") || StringUtils.equals(instrumentId, "M03213") ||
-				StringUtils.equals(instrumentId, "M5276") || StringUtils.equals(instrumentId, "M05276")) {
+				StringUtils.equals(instrumentId, "M5276") || StringUtils.equals(instrumentId, "M05276") ||
+				StringUtils.equals(instrumentId, "M0313") || StringUtils.equals(instrumentId, "M05726")) {
 			instrumentName = "Miseq";
 		} else if (StringUtils.equals(instrumentId, "NB501046")) {
 			instrumentName = "NextSeq500";
