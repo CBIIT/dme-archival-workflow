@@ -397,7 +397,10 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // /data/CCRSB2/pipelineData/612161e212/Bams/SB_4431Met_Frag13_FrTu_December_15_2020_exome_recal.bam
     // then the patientCollectionName will be 612161e212
     if (isSingleCell()) {
-    	return getAttrWithKey(getRunId(object), object.getOrginalFileName(), "PatientID");
+    	patientId = getAttrWithKey(getRunId(object), object.getOrginalFileName(), "PatientID");
+    	if(patientId == null)
+    		throw new DmeSyncMappingException("Metadata entry not found for runId: " + getRunId(object) + "file: " + object.getOrginalFileName());
+    	return patientId;
     }
     	
     try {
