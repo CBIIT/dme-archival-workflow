@@ -399,7 +399,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     if (isSingleCell()) {
     	patientId = getAttrWithKey(getRunId(object), object.getOrginalFileName(), "PatientID");
     	if(patientId == null)
-    		throw new DmeSyncMappingException("Metadata entry not found for runId: " + getRunId(object) + "file: " + object.getOrginalFileName());
+    		throw new DmeSyncMappingException("Metadata entry not found for RunID: " + getRunId(object) + " Fastq: " + object.getOrginalFileName());
     	return patientId;
     }
     	
