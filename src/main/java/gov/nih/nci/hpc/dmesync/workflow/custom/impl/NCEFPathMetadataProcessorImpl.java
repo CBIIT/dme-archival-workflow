@@ -215,7 +215,8 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  int startIndex = projectDirName.indexOf("NCEF");
 		  if(startIndex != -1) {
 			  //return NCEF-033-007
-			  projectCollectionName =  projectDirName.substring(startIndex, startIndex + 12);
+			  int endIndex = projectDirName.lastIndexOf('-');
+			  projectCollectionName =  projectDirName.substring(startIndex, endIndex);
 		  } else {
 			  projectCollectionName =  getCollectionMappingValue(getUserId(object), "Project", "ncef");
 		  }
@@ -238,7 +239,8 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  String runDirName = Paths.get(object.getSourceFilePath()).toFile().getName();
 	  logger.info("Run Directory Name: {}", runDirName);
 	  if(runDirName != null) {
-		  int startIndex = runDirName.indexOf("NCEF") + 12;
+		  String projectDirName = getCollectionNameFromParent(object, "Archive_Staging");
+		  int startIndex = projectDirName.lastIndexOf('-');
 		  if(startIndex != -1) {
 			  //returns 10031-A
 			  runCollectionName =  runDirName.substring(startIndex + 1, runDirName.indexOf(".tar"));
