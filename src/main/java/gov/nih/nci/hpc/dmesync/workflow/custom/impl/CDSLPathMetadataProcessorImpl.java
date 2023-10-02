@@ -209,15 +209,16 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease",             getAttrValueWith_Key( key2 , "study_disease")));
 		
 		//defaults
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc",               "Kolmogorov"    )); 
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",   "Kolmogorov"   )); 
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc",               "Mikhail Kolmogorov"    )); 
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",   "Mikhail Kolmogorov"   )); 
+		
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email"      ,   "mikhail.kolmogorov@nih.gov"   ));		
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",    "2021-08-18"   ));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status",            "Active "));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years",            "7"    ));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access",                    "Controlled Access"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",   "NIH CARD"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator",           "Kolmogorov" ));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator",           "Mikhail Kolmogorov" ));
 				
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 		
@@ -257,14 +258,18 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 									
 				HpcBulkMetadataEntry pathEntries____RAW_DATA = new HpcBulkMetadataEntry();	
 								
-				//pathEntries____RAW_DATA.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "fast5")); 
-				pathEntries____RAW_DATA.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data")); 
+				pathEntries____RAW_DATA.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "fast5")); 
+				//pathEntries____RAW_DATA.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data")); 
 				pathEntries____RAW_DATA.setPath(rawDATA__CollectionPath); 
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntries____RAW_DATA);
 		}
 		else {			   
 				HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();					
-				pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));      			
+				//pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));  
+		
+				
+				pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sequencing_Reports"));
+				
 				pathEntriesAnalysis.setPath(analysisCollectionPath);
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);	
 		}	
@@ -316,6 +321,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		
 		return lastStr;		
 	}
+	
 	
 	
   public String getAttrValueWith_Key(String rowKey, String attrKey) {
