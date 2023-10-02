@@ -204,6 +204,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title",             getAttrValueWith_Key( key2 , "project_title")));			
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description",       getAttrValueWith_Key( key2 , "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date" ,       createDate   ));		
+	
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism",                  getAttrValueWith_Key( key2 , "organism")));		
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("is_cell_line",              getAttrValueWith_Key( key2 , "is_cell_line")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease",             getAttrValueWith_Key( key2 , "study_disease")));
