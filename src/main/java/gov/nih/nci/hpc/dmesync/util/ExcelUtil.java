@@ -269,7 +269,7 @@ public class ExcelUtil {
     return metadataMap;
   }
   
-	public static void convertTextToExcel(File textFile, File excelFile) throws IOException {
+	public static void convertTextToExcel(File textFile, File excelFile, String delimiter) throws IOException {
 
 		// Sets up the Workbook and gets the 1st (0) sheet.
 		HSSFWorkbook workbook = new HSSFWorkbook();
@@ -285,7 +285,7 @@ public class ExcelUtil {
 			HSSFRow tempRow = sheet.createRow(rowNo);
 
 			Scanner lineScanner = new Scanner(line);
-			lineScanner.useDelimiter("\t");
+			lineScanner.useDelimiter(delimiter);
 			// While there is more text to get it will loop.
 			while (lineScanner.hasNext()) {
 				// Creates the cell in that row.

@@ -111,6 +111,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("mgc")
   private DmeSyncPathMetadataProcessor mgcProcessor;
   
+  @Autowired
+  @Qualifier("cdsl")
+  private DmeSyncPathMetadataProcessor cdslProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -162,6 +166,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return lpTnsProcessor;
     } else if ("mgc".equals(doc)){
         return mgcProcessor;
+    } else if ("cdsl".equals(doc)){
+        return cdslProcessor;
     } else {
         return defaultProcessor;
     }
