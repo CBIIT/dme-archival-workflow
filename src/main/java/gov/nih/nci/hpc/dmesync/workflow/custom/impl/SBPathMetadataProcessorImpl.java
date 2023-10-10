@@ -140,7 +140,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    		}
 		    	if(createExcel) {
 		        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
-		        	ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()));
+		        	ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()),"\t");
 		        }
     		} catch (IOException e) {
         		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
@@ -686,7 +686,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	if("sb".equalsIgnoreCase(doc) && isSingleCell()) {
     	Path excelFilePath = Paths.get(workDir, "10XMetaForUpload.xls");
     	try {
-    		ExcelUtil.convertTextToExcel(new File(metadataFile), new File(excelFilePath.toString()));
+    		ExcelUtil.convertTextToExcel(new File(metadataFile), new File(excelFilePath.toString()), "\t");
     	} catch (IOException e) {
     		throw new DmeSyncMappingException("Can't convert 10XMetaForUpload.txt file to excel", e);
     	}
