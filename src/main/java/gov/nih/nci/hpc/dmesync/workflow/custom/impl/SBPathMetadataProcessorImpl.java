@@ -8,7 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -332,6 +335,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("file_type", fileType));
+    dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("creation_date", getCreationDate(object)));
+    dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("modified_date", getModifiedDate(object)));
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("source_path",  object.getOriginalFilePath().contains("Bams") ? object.getOriginalFilePath(): object.getSourceFilePath()));
@@ -344,6 +349,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("data_compression_status", dataCompressionStatus));
+  } catch (IOException e){
+	 throw new DmeSyncMappingException(e);
   } finally {
 	if (!isSingleCell())
 	  threadLocalMap.remove();
@@ -681,6 +688,38 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return baseDir.contains("10X_Fastqs");
   }
 
+  private String getModifiedDate(StatusInfo object) throws IOException {
+      //Return the modified_date of the file/folder
+      File file = new File(object.getOriginalFilePath());
+      
+      Path path = file.toPath();
+      BasicFileAttributes fileAttribute = Files.readAttributes(path,
+              BasicFileAttributes.class);
+      
+      long lastChanged = fileAttribute.lastModifiedTime().toMillis();
+      DateFormat sdf = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss"); 
+      String lastUpdated = sdf.format(new Date(lastChanged));
+      logger.info("file {} was last updated at {}",
+          file.getName(), lastUpdated);
+	  return lastUpdated;
+  }
+  
+  private String getCreationDate(StatusInfo object) throws IOException {
+	//Return the creation_date of the file/folder
+      File file = new File(object.getOriginalFilePath());
+      
+      Path path = file.toPath();
+      BasicFileAttributes fileAttribute = Files.readAttributes(path,
+              BasicFileAttributes.class);
+      
+      long created = fileAttribute.creationTime().toMillis();
+      DateFormat sdf = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss"); 
+      String createdDate = sdf.format(new Date(created));
+      logger.info("file {} was created at {}",
+          file.getName(), createdDate);
+	  return createdDate;
+  }
+  
   @PostConstruct
   private void init() throws DmeSyncMappingException {
 	if("sb".equalsIgnoreCase(doc) && isSingleCell()) {
