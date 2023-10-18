@@ -2,6 +2,10 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -396,6 +400,17 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  String sampleId = getSampleId(object);
 	  String mochaId = getAttrWithKey(runId, sampleId, "Mocha_ID");
 	  String sequencingDate = getAttrWithKey(runId, sampleId, "sequencing_Date");
+	  if(sequencingDate.contains("/")) {
+		  DateFormat outputFormatter = new SimpleDateFormat("yyyyMMdd");
+		  SimpleDateFormat inputFormatter = new SimpleDateFormat("MM/dd/yy");
+		  Date date = null;
+		  try {
+				date = inputFormatter.parse(sequencingDate);
+		  } catch (ParseException e) {
+				throw new DmeSyncMappingException(e);
+		  }
+		  sequencingDate = outputFormatter.format(date);
+	  }
 	  String flowcellId= getFlowcellId(object);
 	return mochaId + "_" + sequencingDate + "_" + flowcellId;
   }
