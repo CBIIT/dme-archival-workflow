@@ -58,8 +58,8 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 		String archivePath = null;
 
-		archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/POC_" + getPOCCollectionName(object) + "/Project_"
-				+ getProjectId(object) + "/Experiment_" + getExperimentType(object) + "/Instrument_" + getInstrumentType(object) 
+		archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
+				+ getProjectCollectionName(object) + "/Experiment_" + getExperimentType(object) + "/Instrument_" + getInstrumentType(object) 
 				+ (object.getOriginalFilePath().contains("Raw")? "/Data_Raw" : "/Data_Processed") + "/" + fileName;
 
 		// replace spaces with underscore
@@ -110,13 +110,13 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// key = researcher, value = (user metadata)
 		// key = researcher_email, value = (user metadata)
 		String pocCollectionName = getPOCCollectionName(object);
-		String pocCollectionPath = piCollectionPath + "/POC_" + pocCollectionName;
+		String pocCollectionPath = piCollectionPath + "/" + pocCollectionName;
 		pocCollectionPath = pocCollectionPath.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesPOC = new HpcBulkMetadataEntry();
 		pathEntriesPOC.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "POC"));
 		pathEntriesPOC.setPath(pocCollectionPath);
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("researcher", pocCollectionName));
+				.add(createPathEntry("researcher", getResearcher(object)));
 		pathEntriesPOC.getPathMetadataEntries()
 				.add(createPathEntry("researcher_email", getAttrValueWithKey(projectCollectionName, "researcher_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPOC);
@@ -131,7 +131,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// project_title, value = (user metadata)
 		// project_description, value = (user metadata)
 
-		String projectCollectionPath = pocCollectionPath + "/Project_" + projectId;
+		String projectCollectionPath = pocCollectionPath + "/Project_" + projectCollectionName;
 		projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
@@ -254,9 +254,16 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	
 	private String getPOCCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String pocCollectionName = null;
-		pocCollectionName = getAttrValueWithKey(getProjectCollectionName(object), "researcher");
+		pocCollectionName = getCollectionNameFromParent(object, "DCTD_PCL_Tara_Hiltke");
 		logger.info("PI Collection Name: {}", pocCollectionName);
 		return pocCollectionName;
+	}
+	
+	private String getResearcher(StatusInfo object) throws DmeSyncMappingException {
+		String researcher = null;
+		researcher = getAttrValueWithKey(getProjectCollectionName(object), "researcher");
+		logger.info("Researcher Name: {}", researcher);
+		return researcher;
 	}
 
 	private String getProjectId(StatusInfo object) throws DmeSyncMappingException {
