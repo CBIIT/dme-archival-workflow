@@ -269,6 +269,8 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getPOCCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String pocCollectionName = null;
 		pocCollectionName = getCollectionNameFromParent(object, "DCTD_PCL_Tara_Hiltke");
+		if(StringUtils.isEmpty(pocCollectionName.substring(pocCollectionName.length()-1)));
+			pocCollectionName = pocCollectionName.substring(0, pocCollectionName.length()-1);
 		logger.info("PI Collection Name: {}", pocCollectionName);
 		return pocCollectionName;
 	}
@@ -276,6 +278,8 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getResearcher(StatusInfo object) throws DmeSyncMappingException {
 		String researcher = null;
 		researcher = getAttrValueWithKey(getProjectCollectionName(object), "researcher");
+		if(StringUtils.isEmpty(researcher.substring(researcher.length()-1)));
+		researcher = researcher.substring(0, researcher.length()-1);
 		logger.info("Researcher Name: {}", researcher);
 		return researcher;
 	}
