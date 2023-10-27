@@ -1,11 +1,15 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,10 +31,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	// MicrobiomeCore DME path construction and meta data creation
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
+	// DCTD OCCPR PCL DME path construction and meta data creation
 
 	@Value("${dmesync.doc.name}")
 	private String doc;
@@ -43,18 +44,31 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		logger.info("[PathMetadataTask] DCTD OCCPR PCL getArchivePath called");
 
-		// load the user metadata from the externally placed excel
+		// load the user metadata from the POC folder placed excel
+		Path excelPath = Paths.get(StringUtils.substringBefore(object.getOriginalFilePath(), getPOCCollectionName(object)) + getPOCCollectionName(object));
+		String metadataFile = "";
+		// load the metadata from the excel file
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(excelPath,
+				path -> path.getFileName().toString().endsWith(".xlsx"))) {
+			Iterator<Path> it = stream.iterator();
+			if (it.hasNext()) {
+				metadataFile = it.next().toString();
+			} else {
+				logger.error("Metadata excel file not found for {}", object.getOriginalFilePath());
+				throw new DmeSyncMappingException("Metadata excel file not found for " + object.getOriginalFilePath());
+			}
+		} catch (IOException e) {
+			logger.error("Metadata excel file not found for {}", object.getOriginalFilePath());
+			throw new DmeSyncMappingException("Metadata excel file not found for " + object.getOriginalFilePath());
+		}
 		threadLocalMap.set(loadMetadataFile(metadataFile, "folder"));
 
 		// Example source path -
-		// /mnt/OCCPR_ACL_Archive/0_Data_archive/DCTD_PCL_Tara_Hiltke/TargetedProteomics_Chelsea Boo \
-		//    /PCLT001_Altis_MRM_Benchmark/Data_Raw/20230425_400ngFFPE_0amolH_1fmolL_a.raw
+		// /mnt/OCCPR_ACL_Archive/0_Data_archive/DCTD_PCL_Tara_Hiltke/ComprehensiveProteomics_Maggie Ma \​
+		//    /PCLC000c_ICPC_NCI7/Data_Raw/20220629_140min_TMT10plex_ICPC_set1_run5.raw
 		// Example destination path -
-		// /DCTD_OCCPR_PCL_Archive/PI_Tara_Hiltke/POC_Chelsea_Boo/Project_PCLT001 \
-		//    /Experiment_MRM/Instrument_Altis/Data_Raw/20230425_400ngFFPE_0amolH_1fmolL_a.raw
-		// OR
-		// /DCTD_OCCPR_PCL_Archive/DCTD_PCL_Tara_Hiltke/TargetedProteomics_Chelsea_Boo/PCLT001_Altis_MRM_Benchmark \
-		//     /Experiment_MRM/Instrument_Altis/Data_Raw/20230425_400ngFFPE_0amolH_1fmolL_a.raw
+		// /DCTD_OCCPR_PCL_Archive/PI_Tara_Hiltke/ComprehensiveProteomics_Maggie_Ma/Project_PCLC000c_ICPC_NCI7 \
+		//    /Experiment_TMT10/Instrument_Eclipse/Data_Raw/20230425_400ngFFPE_0amolH_1fmolL_a.raw
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 		String archivePath = null;
 
