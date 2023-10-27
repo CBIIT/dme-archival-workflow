@@ -45,7 +45,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		logger.info("[PathMetadataTask] DCTD OCCPR PCL getArchivePath called");
 
 		// load the user metadata from the POC folder placed excel
-		Path excelPath = Paths.get(StringUtils.substringBefore(object.getOriginalFilePath(), getPOCCollectionName(object)) + getPOCCollectionName(object));
+		Path excelPath = Paths.get(StringUtils.substringBefore(object.getOriginalFilePath(), getPOCCollectionName(object)) + getCollectionNameFromParent(object, "DCTD_PCL_Tara_Hiltke"));
 		String metadataFile = "";
 		// load the metadata from the excel file
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(excelPath,
