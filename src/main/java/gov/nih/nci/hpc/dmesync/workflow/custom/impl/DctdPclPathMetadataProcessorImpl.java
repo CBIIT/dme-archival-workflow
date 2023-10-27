@@ -149,7 +149,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				createPathEntry("project_poc_affiliation", getAttrValueWithKey(projectCollectionName, "project_poc_affiliation")));
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_start_date", getProjectDate(object, "project_start_date")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "project_completed_date")))
 			pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_completed_date", getProjectDate(object, "project_completed_date")));
@@ -188,9 +188,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		HpcBulkMetadataEntry pathEntriesInstrument = new HpcBulkMetadataEntry();
 		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Instrument"));
 		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_type", instrumentType));
-		if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "instrument_id")))
-			pathEntriesExperiment.getPathMetadataEntries()
-					.add(createPathEntry("instrument_id", getAttrValueWithKey(projectCollectionName, "instrument_id")));
+		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_id", getInstrumentId(instrumentType)));
 		pathEntriesInstrument.setPath(instrumentCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesInstrument);
 		
@@ -249,6 +247,8 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String piCollectionName = null;
 		piCollectionName = getAttrValueWithKey(getProjectCollectionName(object), "data_owner");
 		logger.info("PI Collection Name: {}", piCollectionName);
+		if(StringUtils.isEmpty(piCollectionName.substring(piCollectionName.length()-1)));
+			piCollectionName = piCollectionName.substring(0, piCollectionName.length()-1);
 		return piCollectionName;
 	}
 	
@@ -309,6 +309,18 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			instrumentType = "Eclipse";
 		}
 		return instrumentType;
+	}
+	
+	private String getInstrumentId(String instrumentType) throws DmeSyncMappingException {
+		String instrumentId = null;
+		if (StringUtils.equals(instrumentType, "Altis")) {
+			instrumentId = "TSQ-A-10869/C141935";
+		} else if (StringUtils.equals(instrumentType, "Sciex")) {
+			instrumentId = "FA222292203/C142401";
+		} else if (StringUtils.equals(instrumentType, "Eclipse")) {
+			instrumentId = "FSN40342/C141597";
+		}
+		return instrumentId;
 	}
 
 }
