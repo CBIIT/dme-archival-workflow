@@ -272,7 +272,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String piCollectionName = null;
 		piCollectionName = getAttrValueWithKey(getProjectCollectionName(object), "data_owner");
 		logger.info("PI Collection Name: {}", piCollectionName);
-		if(StringUtils.isEmpty(piCollectionName.substring(piCollectionName.length()-1)))
+		if(isTrimmable(piCollectionName.charAt(piCollectionName.length()-1)))
 			piCollectionName = piCollectionName.substring(0, piCollectionName.length()-1);
 		return piCollectionName;
 	}
@@ -280,7 +280,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getPOCCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String pocCollectionName = null;
 		pocCollectionName = getCollectionNameFromParent(object, "DCTD_PCL_Tara_Hiltke");
-		if(StringUtils.isEmpty(pocCollectionName.substring(pocCollectionName.length()-1)))
+		if(isTrimmable(pocCollectionName.charAt(pocCollectionName.length()-1)))
 			pocCollectionName = pocCollectionName.substring(0, pocCollectionName.length()-1);
 		logger.info("PI Collection Name: {}", pocCollectionName);
 		return pocCollectionName;
@@ -289,7 +289,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getResearcher(StatusInfo object) throws DmeSyncMappingException {
 		String researcher = null;
 		researcher = getAttrValueWithKey(getProjectCollectionName(object), "researcher");
-		if(StringUtils.isEmpty(researcher.substring(researcher.length()-1)))
+		if(isTrimmable(researcher.charAt(researcher.length()-1)))
 			researcher = researcher.substring(0, researcher.length()-1);
 		logger.info("Researcher Name: {}", researcher);
 		return researcher;
@@ -352,4 +352,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return instrumentId;
 	}
 
+	private static boolean isTrimmable(char c) {
+	    return Character.isWhitespace(c) || c == '\u200B';
+	}
 }
