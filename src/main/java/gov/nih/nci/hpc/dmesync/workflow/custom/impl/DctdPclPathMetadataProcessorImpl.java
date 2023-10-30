@@ -69,12 +69,20 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// Example destination path -
 		// /DCTD_OCCPR_PCL_Archive/PI_Tara_Hiltke/ComprehensiveProteomics_Maggie_Ma/Project_PCLC000c_ICPC_NCI7 \
 		//    /Experiment_TMT10/Instrument_Eclipse/Data_Raw/20230425_400ngFFPE_0amolH_1fmolL_a.raw
-		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+		Path filePath = Paths.get(object.getSourceFilePath());
+		String fileName = filePath.toFile().getName();
+		
 		String archivePath = null;
 
-		archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
+		// If there are files directly under the Project folder, archive it under the project
+		if (StringUtils.equals(filePath.getParent().getFileName().toString(), getProjectCollectionName(object))) {
+			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
+				+ getProjectCollectionName(object) + "/" + fileName;
+		} else {
+			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object) + "/Experiment_" + getExperimentType(object) + "/Instrument_" + getInstrumentType(object) 
 				+ (object.getOriginalFilePath().contains("Raw")? "/Data_Raw" : "/Data_Processed") + "/" + fileName;
+		}
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -90,6 +98,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
+		Path filePath = Paths.get(object.getSourceFilePath());
 
 		// Add path metadata entries for "PI_XXX" collection
 		// Example row: collectionType - DataOwner_Lab, collectionName - XXX (user metadata)
@@ -172,46 +181,48 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				.add(createPathEntry("project_status", getAttrValueWithKey(projectCollectionName, "project_status")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
-		// Add path metadata entries for "Experiment" collection
-		// Example row: collectionType - Experiment, collectionName - Experiment_<experiment_type>
-		// experiment_id, value = (user metadata)
-		// experiment_type, value = (user metadata)
-		// experiment_date, value = (user metadata)
-		String experimentType = getExperimentType(object);
-		String experimentCollectionPath = projectCollectionPath + "/Experiment_" + experimentType;
-		experimentCollectionPath = experimentCollectionPath.replace(" ", "_");
-		HpcBulkMetadataEntry pathEntriesExperiment = new HpcBulkMetadataEntry();
-		pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Experiment"));
-		pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry("experiment_type", experimentType));
-		if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "experiment_id")))
-			pathEntriesExperiment.getPathMetadataEntries()
-					.add(createPathEntry("experiment_id", getAttrValueWithKey(projectCollectionName, "experiment_id")));
-		if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "experiment_date")))
-			pathEntriesExperiment.getPathMetadataEntries()
-					.add(createPathEntry("experiment_date", getAttrValueWithKey(projectCollectionName, "experiment_date")));
-		pathEntriesExperiment.setPath(experimentCollectionPath);
-		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExperiment);
-
-		// Add path metadata entries for "Instrument" collection
-		// Example row: collectionType - Instrument, collectionName - Instrument_<instrument_type>
-		// instrument_id, value = (user metadata)
-		// instrument_type, value = (user metadata)
-		String instrumentType = getInstrumentType(object);
-		String instrumentCollectionPath = experimentCollectionPath + "/Instrument_" + instrumentType;
-		instrumentCollectionPath = instrumentCollectionPath.replace(" ", "_");
-		HpcBulkMetadataEntry pathEntriesInstrument = new HpcBulkMetadataEntry();
-		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Instrument"));
-		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_type", instrumentType));
-		pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_id", getInstrumentId(instrumentType)));
-		pathEntriesInstrument.setPath(instrumentCollectionPath);
-		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesInstrument);
-		
-		// Add collection type "Raw_Data" or "Processed_Data"
-		String dataPath = instrumentCollectionPath + (object.getOriginalFilePath().contains("Raw")? "/Data_Raw" : "/Data_Processed");
-		HpcBulkMetadataEntry pathEntriesData = new HpcBulkMetadataEntry();
-		pathEntriesData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (object.getOriginalFilePath().contains("Raw")? "Raw_Data" : "Processed_Data")));
-		pathEntriesData.setPath(dataPath);
-		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesData);
+		if (!StringUtils.equals(filePath.getParent().getFileName().toString(), getProjectCollectionName(object))) {
+			// Add path metadata entries for "Experiment" collection
+			// Example row: collectionType - Experiment, collectionName - Experiment_<experiment_type>
+			// experiment_id, value = (user metadata)
+			// experiment_type, value = (user metadata)
+			// experiment_date, value = (user metadata)
+			String experimentType = getExperimentType(object);
+			String experimentCollectionPath = projectCollectionPath + "/Experiment_" + experimentType;
+			experimentCollectionPath = experimentCollectionPath.replace(" ", "_");
+			HpcBulkMetadataEntry pathEntriesExperiment = new HpcBulkMetadataEntry();
+			pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Experiment"));
+			pathEntriesExperiment.getPathMetadataEntries().add(createPathEntry("experiment_type", experimentType));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "experiment_id")))
+				pathEntriesExperiment.getPathMetadataEntries()
+						.add(createPathEntry("experiment_id", getAttrValueWithKey(projectCollectionName, "experiment_id")));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(projectCollectionName, "experiment_date")))
+				pathEntriesExperiment.getPathMetadataEntries()
+						.add(createPathEntry("experiment_date", getAttrValueWithKey(projectCollectionName, "experiment_date")));
+			pathEntriesExperiment.setPath(experimentCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExperiment);
+	
+			// Add path metadata entries for "Instrument" collection
+			// Example row: collectionType - Instrument, collectionName - Instrument_<instrument_type>
+			// instrument_id, value = (user metadata)
+			// instrument_type, value = (user metadata)
+			String instrumentType = getInstrumentType(object);
+			String instrumentCollectionPath = experimentCollectionPath + "/Instrument_" + instrumentType;
+			instrumentCollectionPath = instrumentCollectionPath.replace(" ", "_");
+			HpcBulkMetadataEntry pathEntriesInstrument = new HpcBulkMetadataEntry();
+			pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Instrument"));
+			pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_type", instrumentType));
+			pathEntriesInstrument.getPathMetadataEntries().add(createPathEntry("instrument_id", getInstrumentId(instrumentType)));
+			pathEntriesInstrument.setPath(instrumentCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesInstrument);
+			
+			// Add collection type "Raw_Data" or "Processed_Data"
+			String dataPath = instrumentCollectionPath + (object.getOriginalFilePath().contains("Raw")? "/Data_Raw" : "/Data_Processed");
+			HpcBulkMetadataEntry pathEntriesData = new HpcBulkMetadataEntry();
+			pathEntriesData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (object.getOriginalFilePath().contains("Raw")? "Raw_Data" : "Processed_Data")));
+			pathEntriesData.setPath(dataPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesData);
+		}
 		
 		// Set it to dataObjectRegistrationRequestDTO
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
@@ -261,7 +272,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String piCollectionName = null;
 		piCollectionName = getAttrValueWithKey(getProjectCollectionName(object), "data_owner");
 		logger.info("PI Collection Name: {}", piCollectionName);
-		if(StringUtils.isEmpty(piCollectionName.substring(piCollectionName.length()-1)));
+		if(Character.isWhitespace(piCollectionName.charAt(piCollectionName.length()-1)))
 			piCollectionName = piCollectionName.substring(0, piCollectionName.length()-1);
 		return piCollectionName;
 	}
@@ -269,7 +280,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getPOCCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String pocCollectionName = null;
 		pocCollectionName = getCollectionNameFromParent(object, "DCTD_PCL_Tara_Hiltke");
-		if(StringUtils.isEmpty(pocCollectionName.substring(pocCollectionName.length()-1)));
+		if(Character.isWhitespace(pocCollectionName.charAt(pocCollectionName.length()-1)))
 			pocCollectionName = pocCollectionName.substring(0, pocCollectionName.length()-1);
 		logger.info("PI Collection Name: {}", pocCollectionName);
 		return pocCollectionName;
@@ -278,8 +289,8 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getResearcher(StatusInfo object) throws DmeSyncMappingException {
 		String researcher = null;
 		researcher = getAttrValueWithKey(getProjectCollectionName(object), "researcher");
-		if(StringUtils.isEmpty(researcher.substring(researcher.length()-1)));
-		researcher = researcher.substring(0, researcher.length()-1);
+		if(Character.isWhitespace(researcher.charAt(researcher.length()-1)))
+			researcher = researcher.substring(0, researcher.length()-1);
 		logger.info("Researcher Name: {}", researcher);
 		return researcher;
 	}
