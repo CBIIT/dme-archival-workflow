@@ -143,6 +143,8 @@ public class DmeSyncApplication {
         serverUrl = "https://fsdmel-dsapi03p.ncifcrf.gov:8080";
     } else if ("prod4".equals(env)) {
         serverUrl = "https://fsdmel-dsapi04p.ncifcrf.gov:8080";
+    } else if ("prod7".equals(env)) {
+        serverUrl = "https://fsdsgl-dmeap07p.ncifcrf.gov:8080";
     } else if ("prod_bp".equals(env)) {
         serverUrl = "https://fsdmel-apibp01p.ncifcrf.gov:8080";
     } else {
