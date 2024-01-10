@@ -271,6 +271,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // key = resection_date, value = 9/28/1980 (derived)
     String sampleId = getSampleId(object);
     String sampleCollectionPath =  (isSingleCell() ? runCollectionPath : patientCollectionPath) +  "/Sample_" + sampleId;
+    sampleCollectionPath = sampleCollectionPath.replace("select", "Select");
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
     pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
     pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sequencing_center", getSequencingCenter(object)));
