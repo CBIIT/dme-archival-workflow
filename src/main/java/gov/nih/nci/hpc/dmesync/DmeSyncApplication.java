@@ -132,19 +132,21 @@ public class DmeSyncApplication {
       serverUrl = "https://localhost:7738/hpc-server";
 
     } else if ("dev".equals(env)) {
-      serverUrl = "https://fsdmel-dsapi01d.ncifcrf.gov:7738/hpc-server";
+      serverUrl = "https://fsdsgl-dmeap01d.ncifcrf.gov:7738/hpc-server";
     } else if ("uat".equals(env)) {
-      serverUrl = "https://fsdmel-dsapi01t.ncifcrf.gov:7738/hpc-server";
+      serverUrl = "https://fsdsgl-dmeap01t.ncifcrf.gov:7738/hpc-server";
     } else if ("prod".equals(env)) {
       serverUrl = "https://hpcdmeapi.nci.nih.gov:8080";
     } else if ("prod2".equals(env)) {
-        serverUrl = "https://fsdmel-dsapi02p.ncifcrf.gov:8080";
+        serverUrl = "https://fsdsgl-dmeap02p.ncifcrf.gov:8080";
     } else if ("prod3".equals(env)) {
         serverUrl = "https://fsdmel-dsapi03p.ncifcrf.gov:8080";
     } else if ("prod4".equals(env)) {
         serverUrl = "https://fsdmel-dsapi04p.ncifcrf.gov:8080";
+    } else if ("prod7".equals(env)) {
+        serverUrl = "https://fsdsgl-dmeap07p.ncifcrf.gov:8080";
     } else if ("prod_bp".equals(env)) {
-        serverUrl = "https://fsdmel-apibp01p.ncifcrf.gov:8080";
+        serverUrl = "https://fsdmel-dsapi06p.ncifcrf.gov:8080";
     } else {
       System.out.println("Invalid environment: " + env);
     }

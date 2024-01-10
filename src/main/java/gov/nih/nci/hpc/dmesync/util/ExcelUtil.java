@@ -368,7 +368,7 @@ public class ExcelUtil {
         counter++;
         if (currentCell == null) continue;
         if (attrName.equalsIgnoreCase(key)) {
-          attrKey = currentCell.getStringCellValue();
+          attrKey = currentCell.getStringCellValue().trim();
           continue;
         }
         if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
@@ -390,7 +390,7 @@ public class ExcelUtil {
         } else {
           if (currentCell.getStringCellValue() != null
               && !currentCell.getStringCellValue().isEmpty())
-            rowMetadata.put(attrName.trim(), currentCell.getStringCellValue());
+            rowMetadata.put(attrName.trim(), currentCell.getStringCellValue().trim());
         }
       }
       if(StringUtils.isNotBlank(attrKey))

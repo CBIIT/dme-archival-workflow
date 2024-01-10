@@ -119,6 +119,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("cdsl")
   private DmeSyncPathMetadataProcessor cdslProcessor;
   
+  @Autowired
+  @Qualifier("dctd-pcl")
+  private DmeSyncPathMetadataProcessor dctdPclProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -174,6 +178,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return cdslProcessor;
     } else if ("next".equals(doc)){
         return nextProcessor;
+    } else if ("dctd-pcl".equals(doc)){
+        return dctdPclProcessor;
     } else {
         return defaultProcessor;
     }
