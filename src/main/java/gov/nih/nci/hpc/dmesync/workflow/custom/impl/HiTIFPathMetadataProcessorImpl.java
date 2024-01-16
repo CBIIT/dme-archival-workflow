@@ -54,6 +54,9 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     //replace spaces with underscore
     archivePath = archivePath.replace(" ", "_");
     
+    // replace "select" with "Select"
+    archivePath = archivePath.replace("select", "Select");
+    
     logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
 
     return archivePath;
@@ -104,6 +107,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       String expCollectionName = getExpCollectionName(object);
       logger.debug("exp_collection_name = {}", expCollectionName);
       String expPath = destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName + "/Exp_" + expCollectionName;
+      expPath = expPath.replace("select", "Select");
       pathEntriesExp.setPath(expPath.replace(" ", "_"));
       pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_name", expCollectionName));
       pathEntriesExp.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Exp"));
