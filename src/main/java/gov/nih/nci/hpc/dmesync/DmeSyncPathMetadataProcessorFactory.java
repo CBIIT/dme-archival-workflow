@@ -99,6 +99,11 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("gb")
   private DmeSyncPathMetadataProcessor gbProcessor;
   
+
+  @Autowired
+  @Qualifier("gb-ngs")
+  private DmeSyncPathMetadataProcessor gbNgsProcessor;
+  
   @Autowired
   @Qualifier("lcbg-sds")
   private DmeSyncPathMetadataProcessor lcbgSdsProcessor;
@@ -168,7 +173,9 @@ public class DmeSyncPathMetadataProcessorFactory {
         return pclProcessor;
     } else if ("gb".equals(doc)){
         return gbProcessor;
-    } else if ("lcbg-sds".equals(doc)){
+    }else if ("gb-ngs".equals(doc)){
+        return gbNgsProcessor;
+    }else if ("lcbg-sds".equals(doc)){
         return lcbgSdsProcessor;
     } else if ("lp-tns".equals(doc)){
         return lpTnsProcessor;
