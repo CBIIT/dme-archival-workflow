@@ -3,9 +3,9 @@
 	xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>gov.nih.nci.hpc</groupId>
+	<groupId>gov.nih.nci.hpc</groupId>ss
 	<artifactId>dme-sync</artifactId>
-	<version>2.3.3</version>
+	<version>2.4.0</version>
 	<name>dme-sync</name>
 	<packaging>jar</packaging>
 	<description>DME Auto-archival Workflow Application</description>
