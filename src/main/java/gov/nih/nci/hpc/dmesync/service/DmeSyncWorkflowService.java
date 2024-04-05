@@ -73,11 +73,29 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
+   * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
+   * @param doc the doc
+   * @param baseDir the base directory
+   * @return the StatusInfo object
+   */
+  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByTarEndTimestampDesc(String doc, String baseDir);
+
+  /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc
    * @param doc the doc
    * @return the StatusInfo object
    */
   StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc);
+  
+  /**
+   * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
+   *
+   * @param sourceFilepath
+   * @param runId the runId
+   * @return the StatusInfo object
+   */
+  
+   StatusInfo findTopBySourceFilePathAndRunId( String originalFilePath,  String runId);
 
   /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId

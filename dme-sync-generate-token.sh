@@ -13,7 +13,7 @@ if [ "$env" == "local" ]
         server="https://fsdmel-dsapi01d.ncifcrf.gov:7738/hpc-server"
     elif [ "$env" == "uat" ]
     then
-        server="https://fsdmel-dsapi01t.ncifcrf.gov:7738/hpc-server"
+        server="https://fsdsgl-dmeap01t.ncifcrf.gov:7738/hpc-server"
 	elif [ "$env" == "prod" ]
     then
         server="https://hpcdmeapi.nci.nih.gov:8080"

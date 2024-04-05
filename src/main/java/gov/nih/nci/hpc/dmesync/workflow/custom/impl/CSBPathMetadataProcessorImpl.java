@@ -67,7 +67,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Instrument_"
 				+ getInstrumentCollectionName() + "/Date_" + getDateCollectionName() + "/Dataset_" + getDatasetName()
-				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet);
+				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet)+ "/"+object.getSourceFileName();
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -167,7 +167,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("object_name", Paths.get(object.getSourceFilePath()).toFile().getName()));
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("source_path", object.getOriginalFilePath()));
+					.add(createPathEntry("source_path", object.getSourceFilePath()));
 
 		} finally {
 			threadLocalMap.remove();

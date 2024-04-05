@@ -291,6 +291,23 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	}
 
 	@Override
+	  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByTarEndTimestampDesc(String doc, String baseDir) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findTopStatusInfoByDocOrderByStartTimestampDesc")
+				.queryParam("doc", doc).build().encode().toUri();
+		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
+				StatusInfo.class);	  }
+	
+	
+	@Override
+	  public StatusInfo findTopBySourceFilePathAndRunId(String doc, String baseDir) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findTopStatusInfoByDocOrderByStartTimestampDesc")
+				.queryParam("doc", doc).build().encode().toUri();
+		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
+				StatusInfo.class);	  }
+	
+	@Override
 	public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
 				.path("/api/findStatusInfoByDocAndStatus")

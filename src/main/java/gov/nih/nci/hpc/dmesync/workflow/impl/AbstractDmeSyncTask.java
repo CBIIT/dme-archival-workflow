@@ -52,7 +52,7 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
     return (checkTaskForCompletion && task != null && task.isCompleted());
   }
 
-  private void upsertTask(Long objectId) {
+  protected void upsertTask(Long objectId) {
     
     TaskInfo task = dmeSyncWorkflowService.getService(access).findFirstTaskInfoByObjectIdAndTaskName(objectId, taskName);
     if (task == null) {
