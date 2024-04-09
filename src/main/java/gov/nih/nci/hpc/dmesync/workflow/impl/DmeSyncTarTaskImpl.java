@@ -22,6 +22,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -40,6 +43,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Autowired
 	private DmeSyncProducer sender;
+	
+	@Autowired 
+	private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
+	
+	@Value("${dmesync.doc.name}")
+	private String doc;
+
 
 	@Value("${dmesync.compress:false}")
 	private boolean compress;
@@ -92,10 +102,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 			// if this property is set performing multiple tars based on the number of files
 			// in each tier
-			if (filesPerTar > 0) {
-
-				if (multpleTarsFolders != null
-						&& StringUtils.contains(object.getOrginalFileName(), multpleTarsFolders)) {
+			if (filesPerTar > 0 && multpleTarsFolders != null
+						&& StringUtils.contains( multpleTarsFolders, object.getOrginalFileName())) {
+			try {
 
 					// using this map and notes file for tar tracking.
 					Map<String, List<String>> tarFilesTracking = new HashMap<>();
@@ -213,7 +222,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							}
 
 						}
-					}
+					
 					notesWriter.close();
 
 					// update the current statusInfo row with the TarMaapingNotesFile
@@ -222,8 +231,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					object.setSourceFilePath(tarMappingFile.getAbsolutePath());
 					object.setTarStartTimestamp(null);
 					object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-
 				}
+			} catch(Exception e) {
+				
+				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
+
+			}
+				
 			} else {
 				String tarFileName = object.getOrginalFileName() + ".tar";
 				String tarFile = tarWorkDir + File.separatorChar + tarFileName;
