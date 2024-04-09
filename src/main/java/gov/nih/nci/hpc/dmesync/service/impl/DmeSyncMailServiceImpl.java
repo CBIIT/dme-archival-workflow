@@ -76,6 +76,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   public void sendResult(String runId) {
     MimeMessage message = sender.createMimeMessage();
     int minTarFileCount = 0; 
+    String subject;
 
     try {
 
@@ -85,11 +86,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
       
       MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
-        
       helper.setFrom("hpcdme-sync");
       helper.setTo(adminEmails.split(","));
         
-      helper.setSubject("DME Auto Archival Result for  " + doc.toUpperCase() + " - Run_ID: " + runId + " - Base Path:  " + syncBaseDir );             
       String body = "<p>The attached file contains results from DME auto-archive.</p>";
       body = body + "<p>Base Path: " + syncBaseDir + "</p>";
       body = body + "<p>Below is the summary:</p>";
@@ -135,7 +134,11 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
-         
+      
+	  subject = (failedCount > 0) ? "Failed " : "Completed ";
+	  helper.setSubject("DME Auto Archival " + subject + "for  " + doc.toUpperCase() + " - Run_ID: " + runId
+				+ " - Base Path:  " + syncBaseDir);
+
       helper.setText(body,true);
       
       FileSystemResource file = new FileSystemResource(excelFile);
