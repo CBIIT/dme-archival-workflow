@@ -37,7 +37,8 @@ CREATE TABLE DME_WFLOW_DB.STATUS_INFO
     TAR_START_TIMESTAMP    TIMESTAMP,
     TAR_END_TIMESTAMP      TIMESTAMP,
     RETRY_COUNT            NUMBER(10),
-    DOC                    VARCHAR(255)
+    DOC                    VARCHAR(255),
+    TAR_CONTENTS_COUNT     NUMBER(10)
 );
 --) TABLESPACE dmewflowdev;
 

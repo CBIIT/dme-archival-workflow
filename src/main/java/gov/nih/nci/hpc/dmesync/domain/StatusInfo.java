@@ -28,6 +28,7 @@ public class StatusInfo {
   private Long retryCount = 0L;
   private String error;
   private String moveDataObjectOrignalPath;
+  private Integer tarContentsCount;
   private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
   private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
 
@@ -182,8 +183,17 @@ public class StatusInfo {
   public void setError(String error) {
     this.error = error;
   }
+  
 
-  @Transient
+	public Integer getTarContentsCount() {
+		return tarContentsCount;
+	}
+
+	public void setTarContentsCount(Integer tarContentsCount) {
+		this.tarContentsCount = tarContentsCount;
+	}
+
+@Transient
   public String getMoveDataObjectOrignalPath() {
 	return moveDataObjectOrignalPath;
   }
@@ -248,6 +258,8 @@ public class StatusInfo {
         + tarStartTimestamp
         + ", tarEndTimestamp="
         + tarEndTimestamp
+        + ", tarContentsCount="
+        + tarContentsCount
         + ", retryCount="
         + retryCount
         + ", error="

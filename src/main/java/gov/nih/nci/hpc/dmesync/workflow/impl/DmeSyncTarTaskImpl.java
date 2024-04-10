@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -100,19 +101,23 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			Path tarWorkDirPath = Paths.get(tarWorkDir);
 			Files.createDirectories(tarWorkDirPath);
 
-			// if this property is set performing multiple tars based on the number of files
+			// if this property is set perform multiple tars based on the number of files
 			// in each tier
 			if (filesPerTar > 0 && multpleTarsFolders != null
 						&& StringUtils.contains( multpleTarsFolders, object.getOrginalFileName())) {
 			try {
 
+				
+				   String tarFileFormat = sourceDirPath.getParent().getFileName().toString()+ "_"+ object.getOrginalFileName() ;
+
 					// using this map and notes file for tar tracking.
 					Map<String, List<String>> tarFilesTracking = new HashMap<>();
-					File tarMappingFile = new File(syncWorkDir, object.getOrginalFileName() + "_TarMappingNotes.txt");
+					File tarMappingFile = new File(syncWorkDir, (tarFileFormat+"_TarMappingNotes.txt"));
 					BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 
 					File directory = new File(object.getOriginalFilePath());
 					File[] files = directory.listFiles();
+					
 
 					// Check directory permission
 					if (!Files.isReadable(Paths.get(object.getOriginalFilePath()))) {
@@ -138,7 +143,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							int end = Math.min(start + filesPerTar, fileList.size());
 							List<File> subList = fileList.subList(start, end);
 							// int tarNumber = i + 1;
-							String tarFileName = object.getOrginalFileName() + "_" + multipleTarFileExtension + (i + 1)
+							String tarFileName = tarFileFormat+ "_" + multipleTarFileExtension + (i + 1)
 									+ ".tar";
 							String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 							tarFile = Paths.get(tarFile).normalize().toString();
@@ -156,14 +161,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							for (File ft : subList) {
 								if (!ft.canRead()) {
 									
-									  object.setFilesize(tarMappingFile.length());
+									 /* object.setFilesize(tarMappingFile.length());
 									  object.setError("No Read permission to " + ft.getAbsolutePath());
 									  object.setSourceFileName(tarMappingFile.getName());
 									  object.setSourceFilePath(tarMappingFile.getAbsolutePath());
 									  object.setTarStartTimestamp(null); 
 									  object =
 									  dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-									  upsertTask(object.getId());
+									  upsertTask(object.getId()); */
 									 
 									throw new Exception("No Read permission to " + ft.getAbsolutePath());
 								}
@@ -235,6 +240,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			} catch(Exception e) {
 				
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
+				
+				throw new  DmeSyncMappingException ("Error occurred during tar. " +
+						 e.getMessage(), e);
 
 			}
 				
@@ -271,14 +279,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object.setFilesize(createdTarFile.length());
 				object.setSourceFileName(tarFileName);
 				object.setSourceFilePath(tarFile);
-				// object.setTarEndTimestamp(new Date());
+				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 			}
 		} catch (Exception e) {
 
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			// throw new DmeSyncWorkflowException("Error occurred during tar. " +
-			// e.getMessage(), e);
+			throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			 e.getMessage(), e);
 		}
 
 		return object;
@@ -308,7 +316,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	}
 	
-	private StatusInfo insertNewRowforTar(StatusInfo object, String tarFileName, String tarFile) {
+	private StatusInfo insertNewRowforTar(StatusInfo object, String tarFileName, String tarFile) throws IOException {
 		
 		File createdTarFile = new File(tarFile);
 
@@ -323,7 +331,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		statusInfo.setTarStartTimestamp(new Date());
 		statusInfo.setTarEndTimestamp(new Date());
 		statusInfo.setDoc(object.getDoc());
-
+		statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		
 		return statusInfo;

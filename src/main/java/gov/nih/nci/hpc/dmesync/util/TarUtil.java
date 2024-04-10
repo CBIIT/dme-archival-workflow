@@ -159,6 +159,32 @@ public class TarUtil {
     }
     return entries;
   }
+  
+  /**
+   * count the files  under the tar folder.
+   *
+   * @param name the tar file name
+   * @return number of files in tar
+   * @throws IOException on IO error
+   */
+  public static int countFilesinTar(String name) throws IOException {
+    List<HpcPathAttributes> entries = new ArrayList<>();
+    int numFiles = 0;
+    try (FileInputStream fis = new FileInputStream(name);
+            TarArchiveInputStream tais = new TarArchiveInputStream(fis)) {
+      // Iterate over each entry in the tar archive
+      TarArchiveEntry entry;
+      while ((entry = tais.getNextTarEntry()) != null) {
+          if (!entry.isDirectory()) {
+              numFiles++;
+          }
+      }
+    }
+    return numFiles;
+  }
+  
+  
+  
 
   /**
    * Compress a file
