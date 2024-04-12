@@ -201,6 +201,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					if (checkForUploadedTar == null) {
 						Path checkForTarinTemp = Paths.get(tarFile);						  
 						if (!Files.exists(checkForTarinTemp)) {
+							logger.info("[{}] No  tar file found in work Directory or completed status in the Db row {} , {}", super.getTaskName(), checkForTarinTemp.toString(), tarFile);		
 							logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);							
 							File[] filesArray = new File[subList.size()];
 							subList.toArray(filesArray);
@@ -238,7 +239,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(statusInfo.getId());
 							sender.send(message, "inbound.queue");
-							logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
+							//logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
 						} else {
 							upsertTask(recordForTarfile.getId());
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
@@ -246,7 +247,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							sender.send(message, "inbound.queue");
 						}
 					} else {
-						logger.info("[{}] Not Creating tar file in since this is already got uploaded {}",
+						logger.info("[{}] Skipping the Creation of tar file in since this is already got uploaded {} {}",
 								super.getTaskName(), tarFile, checkForUploadedTar.getId() , checkForUploadedTar.getStatus());
 					}					
 					/*
