@@ -89,6 +89,17 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
         return new ArrayList<>(Arrays.asList(statusInfoArray));
     }
 	
+	
+	@Override
+    public Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath) {
+        final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+                .path("/api/totalFilesinAllTarsForOriginalFilePath")
+                .queryParam("originalFilePath", originalFilePath).build().encode().toUri();
+        ResponseEntity<Long> response = restTemplateFactory
+                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, Long.class);
+        Long totalCount = response.getBody();
+        return totalCount;
+    }
 	 @Override
 	  public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
 		 final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)

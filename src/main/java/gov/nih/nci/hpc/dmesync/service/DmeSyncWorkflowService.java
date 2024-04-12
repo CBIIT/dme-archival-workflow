@@ -116,6 +116,15 @@ public interface DmeSyncWorkflowService {
    */
   List<StatusInfo> findAllStatusInfoByOriginalFilePathAndStatusAndRunId(
       String originalFilePath, String status, String runId);
+  
+  /**
+   * CountOfFilesinAllTarsForOriginalFilePathAndRunId
+   *
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  Long totalFilesinAllTarsForOriginalFilePath(
+      String originalFilePath);
 
   /**
    * findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc

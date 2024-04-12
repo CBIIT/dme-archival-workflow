@@ -469,12 +469,14 @@ public class DmeSyncScheduler {
 			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
 			if (!statusInfoList.isEmpty()) {
+				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
 						.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc,
 								file.getAbsolutePath());
 				List<StatusInfo> statusInfoNotCompletedList = statusInfoList.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty()) {
+					// use the same status Info rows with new Run Id for reupload
 					for (StatusInfo object : statusInfoNotCompletedList) {
 						if (object != null) {
 							// Update the run_id and reset the retry count and errors

@@ -103,6 +103,13 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
+  public Long totalFilesinAllTarsForOriginalFilePath(
+	      String originalFilePath){
+	  return statusInfoDao.totalFilesinAllTarsForOriginalFilePath(originalFilePath);
+  }
+
+  
+  @Override
   public StatusInfo findTopBySourceFilePathAndRunId(
       String originalFilePath, String runId) {
     return statusInfoDao.findTopBySourceFilePathAndRunId(

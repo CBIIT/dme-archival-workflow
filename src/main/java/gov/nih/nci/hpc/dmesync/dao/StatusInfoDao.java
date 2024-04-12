@@ -45,6 +45,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String Doc,String originalFilePath);
 
   /**
+   * totalFilesinAllTarsForOriginalFilePathAndRunId
+   * 
+   * @param originalFilePath the original file path
+   * @return the sum of tarContentsCount for the records.
+   */
+  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1")
+  Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath );
+  
+  /**
    * findByRunId
    * @param runId the runId
    * @param doc the doc

@@ -171,11 +171,11 @@ public class TarUtil {
     List<HpcPathAttributes> entries = new ArrayList<>();
     int numFiles = 0;
     try (FileInputStream fis = new FileInputStream(name);
-            TarArchiveInputStream tais = new TarArchiveInputStream(fis)) {
+        TarArchiveInputStream tais = new TarArchiveInputStream(fis)) {
       // Iterate over each entry in the tar archive
       TarArchiveEntry entry;
-      while ((entry = tais.getNextTarEntry()) != null) {
-          if (!entry.isDirectory()) {
+      while (null != (entry = tais.getNextTarEntry())) {
+    	  if (!entry.isDirectory()) {
               numFiles++;
           }
       }
