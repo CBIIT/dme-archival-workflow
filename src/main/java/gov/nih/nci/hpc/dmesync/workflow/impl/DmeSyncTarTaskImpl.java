@@ -151,8 +151,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} catch (Exception e) {
 
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			throw new DmeSyncWorkflowException("Error occurred during tar. " +
-			 e.getMessage(), e);
+			//throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			// e.getMessage(), e);
 		}
 
 		return object;
@@ -207,8 +207,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							subList.toArray(filesArray);
 							for (File ft : subList) {
 								if (!ft.canRead()) {
-									//object.setError("No Read permission to " + ft.getAbsolutePath());
-									//dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+									object.setError("No Read permission to " + ft.getAbsolutePath());
+									dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 									throw new Exception("No Read permission to " + ft.getAbsolutePath());
 								}
 							}
@@ -239,12 +239,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(statusInfo.getId());
 							sender.send(message, "inbound.queue");
-							//logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
+							logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
 						} else {
 							upsertTask(recordForTarfile.getId());
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(recordForTarfile.getId());
 							sender.send(message, "inbound.queue");
+							logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
 						}
 					} else {
 						logger.info("[{}] Skipping the Creation of tar file in since this is already got uploaded {} {}",
@@ -272,7 +273,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-
+			object.setError(e.getMessage());
+			dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 		}
 		return object;
 	}
@@ -317,7 +319,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		statusInfo.setTarStartTimestamp(tarStartedTimeStamp);
 		statusInfo.setTarEndTimestamp(new Date());
 		statusInfo.setDoc(object.getDoc());
-		statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
+		//statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		
 		return statusInfo;
