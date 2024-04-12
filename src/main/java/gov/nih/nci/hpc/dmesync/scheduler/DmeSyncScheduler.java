@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
@@ -89,6 +90,9 @@ public class DmeSyncScheduler {
 
   @Value("${dmesync.preprocess.depth:0}")
   private String depth;
+  
+  @Value("${dmesync.multiple.tars.files.count:0}")
+  private Integer filesPerTar;
 
   @Value("${dmesync.run.once.and.shutdown:false}")
   private boolean shutDownFlag;
@@ -460,7 +464,46 @@ public class DmeSyncScheduler {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
-        } else {
+		} else if (tar && filesPerTar > 0) {
+			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
+					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
+			if (!statusInfoList.isEmpty()) {
+				statusInfo = dmeSyncWorkflowService.getService(access)
+						.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc,
+								file.getAbsolutePath());
+				List<StatusInfo> statusInfoNotCompletedList = statusInfoList.stream().filter(c -> c.getStatus() == null)
+						.collect(Collectors.toList());
+				if (!statusInfoNotCompletedList.isEmpty()) {
+					for (StatusInfo object : statusInfoNotCompletedList) {
+						if (object != null) {
+							// Update the run_id and reset the retry count and errors
+							object.setRunId(runId);
+							object.setError("");
+							object.setRetryCount(0L);
+							object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+							// Delete the metadata info created for this object ID
+							dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(object.getId());
+						}
+					}
+					// if all the records are not completed send the original Folder object Id to JMS queue.
+					dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(statusInfo.getId());
+					// Send the incomplete objectId to the message queue for processing
+					DmeSyncMessageDto message = new DmeSyncMessageDto();
+					message.setObjectId(statusInfo.getId());
+					sender.send(message, "inbound.queue");
+					continue;
+
+				} else {
+					// if all the records are completed no rerun needed.
+					statusInfo = dmeSyncWorkflowService.getService(access)
+							.findFirstStatusInfoByOriginalFilePathAndStatus(file.getAbsolutePath(), "COMPLETED");
+				}
+			// no records for tar folder set status Info to null
+			} else {
+				statusInfo = null;
+			}
+
+		}else {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
                   file.getAbsolutePath(), "COMPLETED");
@@ -732,5 +775,26 @@ public class DmeSyncScheduler {
   
   private int daysBetween(Date d1, Date d2) {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+  }
+  
+  // This method checks if all the Multiple tars got uploaded in the folder.
+  private boolean checkAllMultipleTarsGotCompleted(HpcPathAttributes file) {
+	  
+		List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
+				.findAllStatusInfoLikeOriginalFilePath(file.getAbsolutePath() + '%');
+		statusInfoList = statusInfoList.stream().filter(c -> c.getStatus() == null).collect(Collectors.toList());
+		for (StatusInfo object : statusInfoList) {
+			if (object != null) {
+				// Update the run_id and reset the retry count and errors
+				object.setRunId(runId);
+				object.setError("");
+				object.setRetryCount(0L);
+				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				// Delete the metadata info created for this object ID
+				dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(object.getId());
+			}
+		}
+		boolean statusInfocheck = statusInfoList.isEmpty()?true: false;
+		return statusInfocheck;
   }
 }

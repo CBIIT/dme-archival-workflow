@@ -89,6 +89,17 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
         return new ArrayList<>(Arrays.asList(statusInfoArray));
     }
 	
+	 @Override
+	  public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
+		 final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+	                .path("/api/findAllByDocAndLikeOriginalFilePath")
+	                .queryParam("doc", doc).queryParam("originalFilePath", originalFilePath).build().encode().toUri();
+	        ResponseEntity<StatusInfo[]> response = restTemplateFactory
+	                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
+	        StatusInfo[] statusInfoArray = response.getBody();
+	        return new ArrayList<>(Arrays.asList(statusInfoArray));
+	 }
+	
 	@Override
 	public List<StatusInfo> findStatusInfoByRunIdAndDoc(String runId, String doc) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl).path("/api/findStatusInfoByRunIdAndDoc")
@@ -291,7 +302,7 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	}
 
 	@Override
-	  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByTarEndTimestampDesc(String doc, String baseDir) {
+	  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
 				.path("/api/findTopStatusInfoByDocOrderByStartTimestampDesc")
 				.queryParam("doc", doc).build().encode().toUri();

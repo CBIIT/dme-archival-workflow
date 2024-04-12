@@ -43,6 +43,15 @@ public interface DmeSyncWorkflowService {
    */
   List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(
       String originalFilePath);
+  
+  /**
+   * findAllStatusInfoLikeOriginalFilePathandDoc
+   * @param doc
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  
+  public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath);
 
   /**
    * findStatusInfoByRunIdAndDoc
@@ -73,12 +82,12 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
+   * findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNotNull
    * @param doc the doc
    * @param baseDir the base directory
    * @return the StatusInfo object
    */
-  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByTarEndTimestampDesc(String doc, String baseDir);
+  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc

@@ -33,6 +33,16 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   @Query("select s from StatusInfo s where s.originalFilePath like ?1 and s.status is null")
   List<StatusInfo> findAllLikeOriginalFilePath(String originalFilePath);
+  
+  /**
+   * findAllLikeOriginalFilePath
+   * 
+   * @param originalFilePath the original file path
+   * @param doc the docName
+   * @return the list of StatusInfo objects
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath like ?2 and s.doc =?1")
+  List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String Doc,String originalFilePath);
 
   /**
    * findByRunId
@@ -66,7 +76,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param baseDir the base directory
    * @return the StatusInfo object
    */
-  StatusInfo findTopStatusInfoByDocAndTarEndTimestampNotNullAndOriginalFilePathStartsWithAndStatusOrderByTarEndTimestampDesc(String doc, String baseDir, String status);
+  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc
