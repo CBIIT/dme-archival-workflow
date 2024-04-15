@@ -163,7 +163,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		try {
 
 			String tarFileNameFormat = sourceDirPath.getParent().getFileName().toString() + "_"
-					+ object.getOrginalFileName() +"s";
+					+ object.getOrginalFileName() +"ss";
 			File tarMappingFile = new File(syncWorkDir, (tarFileNameFormat + "_TarMappingNotes.txt"));
 			BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 			File directory = new File(object.getOriginalFilePath());
