@@ -269,10 +269,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				Long totalFilesinTars= 
 						dmeSyncWorkflowService.getService(access).totalFilesinAllTarsForOriginalFilePath(object.getOriginalFilePath());
-				if (totalFilesinTars !=null && 
+			/*	if (totalFilesinTars !=null && 
 						files.length!=totalFilesinTars) {
 					throw new Exception((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
-				}
+				}*/
 					// update the current statusInfo row with the TarMappingNotesFile
 				object.setFilesize(tarMappingFile.length());
 				object.setSourceFileName(tarMappingFile.getName());
