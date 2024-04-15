@@ -107,6 +107,7 @@ public class ExcelUtil {
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarStartTimestamp()));
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarEndTimestamp()));
         } else {
+		  row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
         }
