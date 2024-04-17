@@ -161,9 +161,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private StatusInfo createMultipleTars(StatusInfo object, Path sourceDirPath, String tarWorkDir ) throws Exception {
 		
 		try {
+			
+			logger.info("[{}] started Multiple tar creations in {}", super.getTaskName());							
 
 			String tarFileNameFormat = sourceDirPath.getParent().getFileName().toString() + "_"
-					+ object.getOrginalFileName() +"ss";
+					+ object.getOrginalFileName() +"sss";
 			File tarMappingFile = new File(syncWorkDir, (tarFileNameFormat + "_TarMappingNotes.txt"));
 			BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 			File directory = new File(object.getOriginalFilePath());
@@ -199,6 +201,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					StatusInfo checkForUploadedTar = dmeSyncWorkflowService.getService(access)
 							.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
 									object.getOriginalFilePath(), tarFileName, "COMPLETED");
+					logger.info("[{}] checking the tar in Db {}", super.getTaskName(), tarFile);							
                     // check if tar already got uploaded to DME from local DB
 					if (checkForUploadedTar == null) {
 						Path checkForTarinTemp = Paths.get(tarFile);	
@@ -242,13 +245,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(statusInfo.getId());
 							sender.send(message, "inbound.queue");
-							logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
 						} else {
 							upsertTask(recordForTarfile.getId());
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(recordForTarfile.getId());
 							sender.send(message, "inbound.queue");
-							logger.info("get queue count"+ sender.getQueueCount("inbound.queue"));							
 						}
 					} else {
 						logger.info("[{}] Skipping the Creation of tar file in since this is already got uploaded {} {}",
@@ -266,6 +267,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				}
 				
 				notesWriter.close();
+				logger.info("[{}] Ended Multiple tar creations in {}", super.getTaskName());							
 
 				Long totalFilesinTars= 
 						dmeSyncWorkflowService.getService(access).totalFilesinAllTarsForOriginalFilePath(object.getOriginalFilePath());
@@ -305,7 +307,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		statusInfo.setTarStartTimestamp(tarStartedTimeStamp);
 		statusInfo.setTarEndTimestamp(new Date());
 		statusInfo.setDoc(object.getDoc());
-		statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
+		//statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		
 		return statusInfo;

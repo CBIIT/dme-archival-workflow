@@ -53,11 +53,14 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void targz(String name, List<String> excludeFolders, File... files) throws Exception {
+		logger.info(" Tar File Creation started ");							
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders);
       }
     }
+	logger.info(" Tar File Creation ended ");							
+
   }
 
   /**

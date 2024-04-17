@@ -208,7 +208,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}*/
 	
 	private String getInstrumentCollectionName() {
-	String instrumentCollectionName = "Talos_Arctica_K3 ";
+	String instrumentCollectionName = "Talos_Arctica_K1";
 	instrumentCollectionName = instrumentCollectionName.replace(" ", "_");
 	return instrumentCollectionName;
     }
