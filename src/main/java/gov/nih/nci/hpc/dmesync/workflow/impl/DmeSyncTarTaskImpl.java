@@ -165,7 +165,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] started Multiple tar creations in {}", super.getTaskName());							
 
 			String tarFileNameFormat = sourceDirPath.getParent().getFileName().toString() + "_"
-					+ object.getOrginalFileName() +"sssss";
+					+ object.getOrginalFileName() +"ssssss";
 			File tarMappingFile = new File(syncWorkDir, (tarFileNameFormat + "_TarMappingNotes.txt"));
 			BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 			File directory = new File(object.getOriginalFilePath());
@@ -309,7 +309,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		statusInfo.setTarStartTimestamp(tarStartedTimeStamp);
 		statusInfo.setTarEndTimestamp(new Date());
 		statusInfo.setDoc(object.getDoc());
-		//statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
+		statusInfo.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		
 		return statusInfo;

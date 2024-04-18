@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.util;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.tar.TarFile;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
@@ -171,7 +172,7 @@ public class TarUtil {
    * @throws IOException on IO error
    */
   public static int countFilesinTar(String name) throws IOException {
-    List<HpcPathAttributes> entries = new ArrayList<>();
+    /*List<HpcPathAttributes> entries = new ArrayList<>();
     int numFiles = 0;
     try (FileInputStream fis = new FileInputStream(name);
         TarArchiveInputStream tais = new TarArchiveInputStream(fis)) {
@@ -183,9 +184,11 @@ public class TarUtil {
           }
       }
     }
-    return numFiles;
+    return numFiles;*/
+	  try (TarFile tarFile = new TarFile(new File(name))) {
+          return tarFile.getEntries().size();     
+	  }
   }
-  
   
   
 
