@@ -45,7 +45,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String Doc,String originalFilePath);
 
   /**
-   * totalFilesinAllTarsForOriginalFilePathAndRunId
+   * totalFilesinAllTarsForOriginalFilePath
    * 
    * @param originalFilePath the original file path
    * @return the sum of tarContentsCount for the records.
@@ -80,10 +80,10 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
+   * findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull
    * @param doc the doc
    * @param baseDir the base directory
-   * @return the StatusInfo object
+   * @return the original StatusInfo object for multiple tars 
    */
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
 
@@ -106,12 +106,11 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
       String originalFilePath, String status, String runId);
   
   /**
-   * findAllByOriginalFilePathAndStatusAndRunId
+   * findTopBySourceFilePathAndRunId
    * 
    * @param originalFilePath the original file path
-   * @param status the status
    * @param runId the runId
-   * @return  the list of StatusInfo objects
+   * @return  the StatusInfo object
    */
   StatusInfo findTopBySourceFilePathAndRunId(
       String originalFilePath, String runId);

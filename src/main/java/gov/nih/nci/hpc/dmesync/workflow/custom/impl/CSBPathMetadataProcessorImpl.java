@@ -200,19 +200,11 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return piCollectionName.replace(" ", "_");
 	}
 
-	// TODO: Revert these changes once testing is done
-	/*private String getInstrumentCollectionName() {
+	private String getInstrumentCollectionName() {
 		String instrumentCollectionName = getAttrValueWithKey("dataset", "datasource");
 		instrumentCollectionName = instrumentCollectionName.replace(" ", "_");
 		return instrumentCollectionName;
-	}*/
-	
-	private String getInstrumentCollectionName() {
-	String instrumentCollectionName = "Talos_Arctica_K15";
-	instrumentCollectionName = instrumentCollectionName.replace(" ", "_");
-	return instrumentCollectionName;
-    }
-	
+	}	
 	
 	private String getDatasetName() {
 		String datasetName = getAttrValueWithKey("dataset", "datasetname");

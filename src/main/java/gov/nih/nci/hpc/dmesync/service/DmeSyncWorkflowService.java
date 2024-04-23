@@ -45,7 +45,7 @@ public interface DmeSyncWorkflowService {
       String originalFilePath);
   
   /**
-   * findAllStatusInfoLikeOriginalFilePathandDoc
+   * findAllByDocAndLikeOriginalFilePath
    * @param doc
    * @param originalFilePath the original file path
    * @return the list of StatusInfo objects
@@ -97,7 +97,7 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc);
   
   /**
-   * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
+   * findTopBySourceFilePathAndRunId
    *
    * @param sourceFilepath
    * @param runId the runId

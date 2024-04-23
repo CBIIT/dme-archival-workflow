@@ -498,8 +498,9 @@ public class DmeSyncScheduler {
 
 				} else {
 					// if all the records are completed no rerun needed.
-					statusInfo = dmeSyncWorkflowService.getService(access)
-							.findFirstStatusInfoByOriginalFilePathAndStatus(file.getAbsolutePath(), "COMPLETED");
+					logger.info(
+				            "[Scheduler] All the Multiple tar files for the folder got uploaded",
+				            file.getAbsolutePath());
 				}
 			// no records for tar folder set status Info to null
 			} else {
@@ -780,24 +781,4 @@ public class DmeSyncScheduler {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
   
-  // This method checks if all the Multiple tars got uploaded in the folder.
-  private boolean checkAllMultipleTarsGotCompleted(HpcPathAttributes file) {
-	  
-		List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
-				.findAllStatusInfoLikeOriginalFilePath(file.getAbsolutePath() + '%');
-		statusInfoList = statusInfoList.stream().filter(c -> c.getStatus() == null).collect(Collectors.toList());
-		for (StatusInfo object : statusInfoList) {
-			if (object != null) {
-				// Update the run_id and reset the retry count and errors
-				object.setRunId(runId);
-				object.setError("");
-				object.setRetryCount(0L);
-				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-				// Delete the metadata info created for this object ID
-				dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(object.getId());
-			}
-		}
-		boolean statusInfocheck = statusInfoList.isEmpty()?true: false;
-		return statusInfocheck;
-  }
 }

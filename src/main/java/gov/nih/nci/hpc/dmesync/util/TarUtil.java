@@ -54,14 +54,11 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void targz(String name, List<String> excludeFolders, File... files) throws Exception {
-		logger.info(" Tar File Creation started ");							
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders);
       }
     }
-	logger.info(" Tar File Creation ended ");							
-
   }
 
   /**
@@ -167,26 +164,13 @@ public class TarUtil {
   /**
    * count the files  under the tar folder.
    *
-   * @param name the tar file name
+   * @param path of the tar file name
    * @return number of files in tar
    * @throws IOException on IO error
    */
   public static int countFilesinTar(String name) throws IOException {
-    /*List<HpcPathAttributes> entries = new ArrayList<>();
-    int numFiles = 0;
-    try (FileInputStream fis = new FileInputStream(name);
-        TarArchiveInputStream tais = new TarArchiveInputStream(fis)) {
-      // Iterate over each entry in the tar archive
-      TarArchiveEntry entry;
-      while (null != (entry = tais.getNextTarEntry())) {
-    	  if (!entry.isDirectory()) {
-              numFiles++;
-          }
-      }
-    }
-    return numFiles;*/
 	  try (TarFile tarFile = new TarFile(new File(name))) {
-          return tarFile.getEntries().size();     
+          return tarFile!=null?tarFile.getEntries().size():0;     
 	  }
   }
   

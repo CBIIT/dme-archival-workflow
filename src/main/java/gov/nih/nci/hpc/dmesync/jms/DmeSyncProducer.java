@@ -26,7 +26,7 @@ public class DmeSyncProducer {
 
   public void send(DmeSyncMessageDto message, String queue) {
     log.debug("[JMS Producer] Sending message <{}>", message);
-    jmsTemplate.setSessionTransacted(false);
+    jmsTemplate.setSessionTransacted(transactionalState);
     jmsTemplate.convertAndSend(queue, message);
    
   }

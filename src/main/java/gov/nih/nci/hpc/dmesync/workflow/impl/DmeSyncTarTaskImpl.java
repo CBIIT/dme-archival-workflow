@@ -11,12 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -24,7 +19,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -80,7 +74,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
 	
-	private static final String multipleTarFileExtension = "part_";
 
 	@PostConstruct
 	public boolean init() {
@@ -165,32 +158,29 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] started Multiple tar creations in {}", super.getTaskName());							
 
 			String tarFileNameFormat = sourceDirPath.getParent().getFileName().toString() + "_"
-					+ object.getOrginalFileName() +"es";
+					+ object.getOrginalFileName();
 			File tarMappingFile = new File(syncWorkDir, (tarFileNameFormat + "_TarMappingNotes.txt"));
 			BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 			File directory = new File(object.getOriginalFilePath());
 			File[] files = directory.listFiles();
-			object.setTarContentsCount(0);
 			// Check directory permission
 			if (!Files.isReadable(Paths.get(object.getOriginalFilePath()))) {
 				throw new Exception("No Read permission to " + object.getOriginalFilePath());
 			}
 			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
-
 			if (files != null) {
 				// sorting the files based on the lastModified in asc, so every rerun we get them in same order.
 				Arrays.sort(files, Comparator.comparing(File::lastModified));
 				List<File> fileList = new ArrayList<>(Arrays.asList(files));
 				int tarLoopCount = (fileList.size() + filesPerTar - 1) / filesPerTar;
-				int loopStart = 0;
-				for (int i = loopStart; i < tarLoopCount; i++) {
+				for (int i = 0; i < tarLoopCount; i++) {
 					Date tarStartedTimeStamp= new Date();
 					int start = i * filesPerTar;
 					int end = Math.min(start + filesPerTar, fileList.size());
 					int totalFiles = end-start;
 					List<File> subList = fileList.subList(start, end);
-					String tarFileName = tarFileNameFormat + "_" + multipleTarFileExtension + (i + 1) + ".tar";
+					String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
 					String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 					tarFile = Paths.get(tarFile).normalize().toString();
 					/*
@@ -201,7 +191,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					StatusInfo checkForUploadedTar = dmeSyncWorkflowService.getService(access)
 							.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
 									object.getOriginalFilePath(), tarFileName, "COMPLETED");
-					logger.info("[{}] checking the tar in Db {}", super.getTaskName(), tarFile);							
                     // check if tar already got uploaded to DME from local DB
 					if (checkForUploadedTar == null) {
 						Path checkForTarinTemp = Paths.get(tarFile);	
@@ -209,17 +198,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 						if (Files.exists(checkForTarinTemp) && totalFiles == TarUtil.countFilesinTar(checkForTarinTemp.toString())) {
 							logger.info("[{}] Retrieving the tar file from work Directory instead of creating again {} , {}", super.getTaskName(), checkForTarinTemp.toString(), tarFile);		
 						}else {
-							logger.info("[{}] No  tar file found in work Directory or completed status in the Db row {} , {}", super.getTaskName(), checkForTarinTemp.toString(), tarFile);		
+							logger.info("[{}] No  tar file found in work Directory or completed status in the Db row {} , {}", super.getTaskName(), tarFile);		
 							logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);							
 							File[] filesArray = new File[subList.size()];
 							subList.toArray(filesArray);
-							/*for (File ft : subList) {
-								if (!ft.canRead()) {
-									object.setError("No Read permission to " + ft.getAbsolutePath());
-									dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-									throw new Exception("No Read permission to " + ft.getAbsolutePath());
-								}
-							}*/
 							if (compress) {
 								tarFile = tarFile + ".gz";
 								tarFileName = tarFileName + ".gz";
@@ -273,16 +255,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				Long totalFilesinTars= 
 						dmeSyncWorkflowService.getService(access).totalFilesinAllTarsForOriginalFilePath(object.getOriginalFilePath());
-			/*	if (totalFilesinTars !=null && 
+			   if (totalFilesinTars !=null && 
 						files.length!=totalFilesinTars) {
 					throw new Exception((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
-				}*/
+				}
 					// update the current statusInfo row with the TarMappingNotesFile
 				object.setFilesize(tarMappingFile.length());
 				object.setSourceFileName(tarMappingFile.getName());
 				object.setSourceFilePath(tarMappingFile.getAbsolutePath());
 				object.setTarStartTimestamp(null);
-				object.setTarContentsCount(totalFilesinTars!=null ? totalFilesinTars.intValue() : 0);
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);				
 			}
 		} catch (Exception e) {
