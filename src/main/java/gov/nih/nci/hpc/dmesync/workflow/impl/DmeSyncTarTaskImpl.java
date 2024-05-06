@@ -245,7 +245,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					
 					notesWriter.write("Tar File: " + tarFileName + "\n");
 					for (File fileName : subList) {
-						notesWriter.write(" - " + fileName.getName() + "\n");
+						notesWriter.write(tarFileName+ " " + fileName.getName() + "\n");
 					}
 					notesWriter.write("\n");
 				}
