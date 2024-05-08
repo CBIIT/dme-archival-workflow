@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -87,7 +91,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Construct location of excel file in work dir
 	    Path baseDirPath;
 	    Path workDirPath;
-	    Path ownerMetadataExcelFile;
+	    /*Path ownerMetadataExcelFile;
 	    Path projectMetadataExcelFile;
 	    Path sampleMetadataExcelFile;
 	    
@@ -115,7 +119,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		
 		createExcelFile(ownerMetadataCsvFile, ownerMetadataExcelFile.toString());
 		createExcelFile(projectMetadataCsvFile, projectMetadataExcelFile.toString());
-		createExcelFile(sampleMetadataCsvFile, sampleMetadataExcelFile.toString());
+		createExcelFile(sampleMetadataCsvFile, sampleMetadataExcelFile.toString()); */
 
 		// Add path metadata entries for DataOwner_Lab collection
 		String piCollectionPath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner");
@@ -123,7 +127,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		pathEntriesPI.setPath(piCollectionPath);
-		threadLocalMap.set(loadMetadataFile(ownerMetadataExcelFile.toString(), "data_owner"));
+		threadLocalMap.set(loadCsvMetadataFile(ownerMetadataCsvFile.toString(), "data_owner"));
 		String dataOwnerKey = "KolmogorovLab";
 		pathEntriesPI.getPathMetadataEntries()
 				.add(createPathEntry("data_owner", getPiCollectionName(filePath, "DataOwner")));
@@ -138,7 +142,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.setPath(projectCollectionPath);
-		threadLocalMap.set(loadMetadataFile(projectMetadataExcelFile.toString(), "project_id"));
+		threadLocalMap.set(loadCsvMetadataFile(projectMetadataCsvFile.toString(), "project_id"));
 
 		String projectKey = getFolderNameFromPathContaining(filePath, "Project");
 		String dateEntry = getAttrValueWithKey(projectKey, "project_start_date");
@@ -170,7 +174,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 		pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 		pathEntriesSample.setPath(sampleCollectionPath);
-		threadLocalMap.set(loadMetadataFile(sampleMetadataExcelFile.toString(), "sample_id"));
+		threadLocalMap.set(loadCsvMetadataFile(sampleMetadataCsvFile.toString(), "sample_id"));
 		String sampleKey = getFolderNameFromPathContaining(filePath, "Sample");
 		String partKey[] = sampleKey.split("_");
 		sampleKey = partKey[1];

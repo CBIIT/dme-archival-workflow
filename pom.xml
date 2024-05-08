@@ -124,6 +124,7 @@
 		    <version>3.17</version>
 		</dependency>
 		
+		
 		<!-- Metadata extraction -->
 		<dependency>
    			<groupId>org.apache.tika</groupId>
@@ -134,6 +135,11 @@
    			<groupId>org.apache.tika</groupId>
     		<artifactId>tika-parsers</artifactId>
     		<version>1.24.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>5.5.1</version>
 		</dependency>
 	</dependencies>
 
