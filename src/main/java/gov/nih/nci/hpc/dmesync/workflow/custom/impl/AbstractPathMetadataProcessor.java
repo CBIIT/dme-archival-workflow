@@ -31,6 +31,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
+import gov.nih.nci.hpc.dmesync.util.CsvFileUtil;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -185,6 +186,10 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
       return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
+  }
+  
+  public Map<String, Map<String, String>> loadCsvMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
+      return CsvFileUtil.parseBulkMetadataEntries(metadataFile, key);
   }
   
   public Map<String, Map<String, String>> loadJsonMetadataFile(String metadataFile, String key)
