@@ -109,6 +109,12 @@ public class DmeSyncScheduler {
   @Value("${dmesync.tar.file.exist:}")
   private String checkExistsFile;
   
+  @Value("${dmesync.file.noArchive.exist:}")
+  private String checkNoArchiveExistsFile;
+  
+  @Value("${dmesync.file.archive.exist:}")
+  private String checkArchiveExistsFile;
+  
   @Value("${dmesync.tar.file.exist.ext:}")
   private String checkExistsFileExt;
   
@@ -646,6 +652,53 @@ public class DmeSyncScheduler {
         }
       }
       
+      //If folder under the base dir does contain a non_Archived specified file for both files and tar, skip
+      if (checkExistsFileUnderBaseDir 
+    		  && (StringUtils.isNotEmpty(checkNoArchiveExistsFile) && StringUtils.isNotEmpty(checkArchiveExistsFile))) {
+        
+        //Find the directory being archived under the base dir
+        Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
+        Path filePath = Paths.get(file.getAbsolutePath());
+        Path relativePath = baseDirPath.relativize(filePath);
+        Path subPath1 = relativePath.subpath(0, Integer.parseInt(checkExistsFileUnderBaseDirDepth)+1);
+        Path checkExistFilePath = baseDirPath.resolve(subPath1);
+        
+        if(StringUtils.isNotEmpty(checkNoArchiveExistsFile)) {
+	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.getFileName().toString().equals(checkNoArchiveExistsFile))) {
+	
+	          if (stream.iterator().hasNext()) {
+	        	  
+		        String message ="The directory " + file.getAbsolutePath() + " does contain any " + checkNoArchiveExistsFile  + "file";
+	            logger.info(
+	              "[Scheduler] Skipping: {} Folder to process does contain the specified file {}.",
+	              checkExistFilePath,
+	              checkNoArchiveExistsFile
+	              );
+	            dmeSyncMailServiceFactory.getService(doc).sendMail("WARNING: HPCDME during registration", message);
+
+	            continue;
+	          }else {
+	        	  try (DirectoryStream<Path> streamCheck = Files.newDirectoryStream(checkExistFilePath, path -> path.getFileName().toString().equals(checkArchiveExistsFile))) {
+	  		          String message ="The directory " + file.getAbsolutePath() + " does not contain any " + checkArchiveExistsFile + "file" ;	
+	    	          if (!streamCheck.iterator().hasNext()) {
+	    	            logger.info(
+	    	              "[Scheduler] Skipping: {} Folder to process does contain the specified file {}.",
+	    	              checkExistFilePath,
+	    	              checkArchiveExistsFile);
+	    	            dmeSyncMailServiceFactory.getService(doc).sendMail("WARNING: HPCDME during registration", message);
+	    	            continue;
+	        	  
+	          }
+	        }  catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + checkExistFilePath, ex);
+	        }
+        }
+      
+        }catch (IOException ex) {
+	          throw new Exception("Error while listing directory: " + checkExistFilePath, ex);
+	        }
+      }
+      }
       // Insert the record in local DB
       logger.info("[Scheduler] Including: {}", file.getAbsolutePath());
       statusInfo = insertRecordDb(file, false);
