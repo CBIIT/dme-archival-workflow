@@ -118,6 +118,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.tar.file.exist.ext:}")
   private String checkExistsFileExt;
   
+  @Value("${dmesync.multiple.tars.dir.folders:}")
+  private String multpleTarsFolders;
+  
   @Value("${dmesync.file.exist.under.basedir:false}")
   private boolean checkExistsFileUnderBaseDir;
   
@@ -470,7 +473,8 @@ public class DmeSyncScheduler {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
-		} else if (tar && filesPerTar > 0) {
+		} else if (tar && filesPerTar > 0  && multpleTarsFolders != null
+				&& StringUtils.contains( multpleTarsFolders, file.getName())) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",filesPerTar);
 			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
