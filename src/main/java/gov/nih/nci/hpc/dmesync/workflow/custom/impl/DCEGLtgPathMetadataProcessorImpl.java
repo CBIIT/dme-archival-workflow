@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -48,15 +50,30 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
 		logger.info("[PathMetadataTask] DCEG LTG getArchivePath called");
+		
+		// Get all the metadata and projectIds, FlowcellIds from excel sheet
 
-		// Get the PI collection name from the PI column from metadata file using path
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-
+		String archivePath;
 		// load the user metadata from the externally placed excel
 		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
 
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
-				+ getProjectCollectionName(object) + "/Flowcell_" + getFlowCellId(object) + "/" + fileName;
+		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
+
+			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+					+ getProjectCollectionName(object) + "/Aligned_Data" + "/" + fileName;
+
+		} else {
+
+			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+					+ getProjectCollectionName(object) + "/Flowcell_" + getFlowCellId(object) + "/";
+			if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+				archivePath = archivePath + "Sample_" + getSampleId(object);
+			} else {
+				archivePath = archivePath + fileName;
+			}
+
+		}
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -91,7 +108,8 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", "Amundadottir, Laufey "));
 			pathEntriesPI.getPathMetadataEntries()
 					.add(createPathEntry("data_owner_email", "amundadottirl@mail.nih.gov"));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation", "DCEG LTG"));
+			pathEntriesPI.getPathMetadataEntries()
+					.add(createPathEntry("data_owner_affiliation", "Laboratory of Translational Genomics, DCEG"));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 			// Add path metadata entries for "Project_XXX" collection
@@ -129,25 +147,55 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					.add(createPathEntry("study_disease", getAttrValueWithKey(path, "study_disease")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "Jason Hoskins"));
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "DCEG LTG"));
+			pathEntriesProject.getPathMetadataEntries()
+					.add(createPathEntry("project_poc_affiliation", "Laboratory of Translational Genomics, DCEG"));
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("project_poc_email", "jason.hoskins@nih.gov"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years", "7"));
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility", " "));
+			pathEntriesProject.getPathMetadataEntries()
+					.add(createPathEntry("data_generating_facility", "Laboratory of Translational Genomics, DCEG"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Completed"));
+			// pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
+			// new Date()));
 
 			pathEntriesProject.setPath(projectCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
-			// Add path metadata entries for "Flowcell" collection
-			// Example row: collectionType - Flowcell, FlowcellID - 20191101 (derived)
-			String flowcellId = getFlowCellId(object);
-			String flowcellCollectionPath = projectCollectionPath + "/Flowcell_" + flowcellId;
-			HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
-			pathEntriesFlowcell.setPath(flowcellCollectionPath);
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
+			if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
 
+				String flowcellIds = getFlowCellId(object);
+				String mergedDataCollectionPath = projectCollectionPath + "/Aligned_Data";
+				HpcBulkMetadataEntry pathEntriesAlignedData = new HpcBulkMetadataEntry();
+				pathEntriesAlignedData.setPath(mergedDataCollectionPath);
+				pathEntriesAlignedData.getPathMetadataEntries()
+						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Merged_Data"));
+				pathEntriesAlignedData.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellIds));
+				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAlignedData);
+
+			} else {
+				// Add path metadata entries for "Flowcell" collection
+				// Example row: collectionType - Flowcell, FlowcellID - 20191101 (derived)
+				String flowcellId = getFlowCellId(object);
+				String flowcellCollectionPath = projectCollectionPath + "/Flowcell_" + flowcellId;
+				HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
+				pathEntriesFlowcell.setPath(flowcellCollectionPath);
+				pathEntriesFlowcell.getPathMetadataEntries()
+						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
+				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
+
+				if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+					String sampleId = getSampleId(object);
+					String sampleCollectionPath = flowcellCollectionPath + "/" + "Sample_" + sampleId;
+					HpcBulkMetadataEntry pathEntriesSampleData = new HpcBulkMetadataEntry();
+
+					pathEntriesSampleData.getPathMetadataEntries()
+							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+					pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
+					pathEntriesSampleData.setPath(sampleCollectionPath);
+					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSampleData);
+				}
+			}
 			// Set it to dataObjectRegistrationRequestDTO
 			dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
 			dataObjectRegistrationRequestDTO.setGenerateUploadRequestURL(true);
@@ -201,6 +249,17 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		flowCellId = getAttrValueWithKey(path, "Flowcell");
 		logger.info("FlowCell Id: {}", flowCellId);
 		return flowCellId;
+	}
+
+	private String getSampleId(StatusInfo object) {
+
+		// Get the sampleId from the Path folder Name Sample_43 Sample_44
+		String sampleId = null;
+		String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+		sampleId = path.substring(path.indexOf("Sample_") + "Sample_".length(),
+				path.indexOf(File.separator, path.indexOf("Sample_")));
+		logger.info("Sample Id: {}", sampleId);
+		return sampleId;
 	}
 
 }
