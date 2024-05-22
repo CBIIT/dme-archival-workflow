@@ -7,13 +7,20 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
@@ -43,6 +50,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
   @Value("${dmesync.file.tar:false}")
   private boolean tarIndividualFiles;
   
+  @Value("${dmesync.tar.filename.excel.exist:false}")
+  private boolean tarNameinExcelFile;
+  
+  @Value("${dmesync.additional.metadata.excel:}")
+  private String metadataFile;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("TarTask");
@@ -50,6 +63,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
     	super.setCheckTaskForCompletion(false);
     return true;
   }
+  
+  protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
+	    @Override
+	    protected HashMap<String, Map<String, String>> initialValue() {
+	        return new HashMap<>();
+	    }
+	  };
   
   @Override
   public StatusInfo process(StatusInfo object)
@@ -67,7 +87,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
       Path tarWorkDirPath = Paths.get(tarWorkDir);
       Files.createDirectories(tarWorkDirPath);
       
-      String tarFileName = object.getOrginalFileName() + ".tar";
+      String tarFileName;
+      if (tarNameinExcelFile) {
+    	  threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
+  		  String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+    	  tarFileName = getAttrValueWithKey(path,"tar_name");
+      }else {
+       tarFileName = object.getOrginalFileName() + ".tar";
+      }
       String tarFile = tarWorkDir + File.separatorChar + tarFileName;
       tarFile = Paths.get(tarFile).normalize().toString();
       File directory = new File(object.getOriginalFilePath());
@@ -106,8 +133,33 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
     } catch (Exception e) {
       logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
       throw new DmeSyncWorkflowException("Error occurred during tar. " + e.getMessage(), e);
+    }finally {
+    	threadLocalMap.remove();
     }
 
     return object;
   }
+  
+	public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key)
+			throws DmeSyncMappingException {
+		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
+	}
+
+	public String getAttrValueWithKey(String rowKey, String attrKey) throws Exception {
+		String key = null;
+		if (threadLocalMap.get() == null)
+			return null;
+		for (String partialKey : threadLocalMap.get().keySet()) {
+			if (StringUtils.contains(rowKey, partialKey)) {
+				key = partialKey;
+				break;
+			}
+		}
+		if (StringUtils.isEmpty(key)) {
+			logger.error("Excel mapping not found for {}", rowKey);
+			throw new Exception("Excel mapping not found for {} " + rowKey);
+		}
+		return (threadLocalMap.get().get(key) == null ? null : threadLocalMap.get().get(key).get(attrKey));
+	}
+
 }

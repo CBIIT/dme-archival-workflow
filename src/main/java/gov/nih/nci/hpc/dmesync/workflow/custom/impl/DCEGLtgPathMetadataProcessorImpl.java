@@ -56,7 +56,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath;
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+		threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
 
 		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
 
@@ -103,7 +103,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String piCollectionName = getPiCollectionName(object);
 			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", "Amundadottir, Laufey "));
 			pathEntriesPI.getPathMetadataEntries()
@@ -134,6 +134,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 			pathEntriesProject.getPathMetadataEntries().add(
 					createPathEntry("project_start_date", getAttrValueWithKey(path, "project_start_date"), "MM/dd/yy"));
@@ -145,7 +146,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					.add(createPathEntry("is_cell_line", getAttrValueWithKey(path, "is_cell_line")));
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("study_disease", getAttrValueWithKey(path, "study_disease")));
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "Jason Hoskins"));
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("project_poc_affiliation", "Laboratory of Translational Genomics, DCEG"));
@@ -210,7 +211,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		} finally {
 			threadLocalMap.remove();
 		}
-		logger.info("NICE custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
+		logger.info("DCEG LTG custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
 	}
 
