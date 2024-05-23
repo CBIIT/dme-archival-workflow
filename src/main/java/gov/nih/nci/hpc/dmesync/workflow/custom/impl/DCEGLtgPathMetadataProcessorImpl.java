@@ -59,18 +59,17 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
 
 		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
-
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
-					+ getProjectCollectionName(object) + "/Aligned_Data" + "/" + fileName;
-
+					+ getProjectCollectionName(object, object.getOriginalFilePath()+"/") + "/Aligned_Data" + "/" + fileName;
 		} else {
-
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
-					+ getProjectCollectionName(object) + "/Flowcell_" + getFlowCellId(object) + "/";
 			if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
-				archivePath = archivePath + "Sample_" + getSampleId(object);
+				String samplePath = getSampleParentPath(object, "Sample") + "/";
+				archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+						+ getProjectCollectionName(object, samplePath) + "/Flowcell_" + getFlowCellId(object, samplePath) + "/Sample_" + getSampleId(object) + "/" + fileName;
 			} else {
-				archivePath = archivePath + fileName;
+				String path= object.getOriginalFilePath()+"/";
+				archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+						+ getProjectCollectionName(object, path) + "/Flowcell_" + getFlowCellId(object, path) + "/" + fileName;
 			}
 
 		}
@@ -89,7 +88,16 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
-			String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+			
+			String path="";
+
+			if(StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")){
+				String samplePath = getSampleParentPath(object, "Sample")+"/";
+				path= FilenameUtils.separatorsToUnix(samplePath);
+			}else {
+				path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath()+"/");
+				
+			}
 
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -129,8 +137,9 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// key = data_generating_facility (?)
 			// key = summary_of_samples, value = (supplied)
 			// key = organism, value = (supplied)
-
-			String projectCollectionName = getProjectCollectionName(object);
+			
+			
+			String projectCollectionName = getProjectCollectionName(object, path);
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
@@ -164,19 +173,19 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 			if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
 
-				String flowcellIds = getFlowCellId(object);
+				String flowcellIds = getFlowCellId(object, path);
 				String mergedDataCollectionPath = projectCollectionPath + "/Aligned_Data";
 				HpcBulkMetadataEntry pathEntriesAlignedData = new HpcBulkMetadataEntry();
 				pathEntriesAlignedData.setPath(mergedDataCollectionPath);
 				pathEntriesAlignedData.getPathMetadataEntries()
-						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Merged_Data"));
+						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Processed_Data"));
 				pathEntriesAlignedData.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellIds));
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAlignedData);
 
 			} else {
 				// Add path metadata entries for "Flowcell" collection
 				// Example row: collectionType - Flowcell, FlowcellID - 20191101 (derived)
-				String flowcellId = getFlowCellId(object);
+				String flowcellId = getFlowCellId(object,path);
 				String flowcellCollectionPath = projectCollectionPath + "/Flowcell_" + flowcellId;
 				HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
 				pathEntriesFlowcell.setPath(flowcellCollectionPath);
@@ -192,7 +201,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 					pathEntriesSampleData.getPathMetadataEntries()
 							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-					pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
+					pathEntriesSampleData.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
 					pathEntriesSampleData.setPath(sampleCollectionPath);
 					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSampleData);
 				}
@@ -215,15 +224,15 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return dataObjectRegistrationRequestDTO;
 	}
 
-	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
+	private String getSampleParentPath(StatusInfo object, String parentName) {
 		// Example originalFilepath -
-		// /mnt/NCEF-CryoEM/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
+		// /data/Amunda/Prostate_RNA_seq/Raw_data/Fastq_Files/D0P2BACXX/Sample_42/fileName
 		Path fullFilePath = Paths.get(object.getOriginalFilePath());
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
 		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-				return fullFilePath.getFileName().toString();
+			if (fullFilePath.getParent().getFileName().toString().contains(parentName)) {
+				return fullFilePath.getParent().getParent().toString();
 			}
 			fullFilePath = fullFilePath.getParent();
 		}
@@ -236,17 +245,17 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	}
 
-	private String getProjectCollectionName(StatusInfo object) {
+	private String getProjectCollectionName(StatusInfo object, String fullPath) {
 		String projectCollectionName = null;
-		String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+		String path = FilenameUtils.separatorsToUnix(fullPath);
 		projectCollectionName = getAttrValueWithKey(path, "Project");
 		logger.info("Project Collection Name: {}", projectCollectionName);
 		return projectCollectionName;
 	}
 
-	private String getFlowCellId(StatusInfo object) {
+	private String getFlowCellId(StatusInfo object, String fullPath) {
 		String flowCellId = null;
-		String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+		String path = FilenameUtils.separatorsToUnix(fullPath);
 		flowCellId = getAttrValueWithKey(path, "Flowcell");
 		logger.info("FlowCell Id: {}", flowCellId);
 		return flowCellId;

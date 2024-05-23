@@ -90,7 +90,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
       String tarFileName;
       if (tarNameinExcelFile) {
     	  threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
-  		  String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
+  		  String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath()+"/");
     	  tarFileName = getAttrValueWithKey(path,"tar_name");
       }else {
        tarFileName = object.getOrginalFileName() + ".tar";
