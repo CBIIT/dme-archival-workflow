@@ -40,13 +40,14 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] CSB getArchivePath called");
 
-	    Path sourceDirPath = Paths.get(object.getOriginalFilePath());
+		Path sourceDirPath = Paths.get(object.getSourceFilePath());
+	    Path originalDirPath = Paths.get(object.getOriginalFilePath());
         String dataSet = getCollectionNameFromParent(object, "CSB-CryoEM-raw");
 	    if(dataSet.equals("arctica") || dataSet.equals("krios")) {
 	    	dataSet = getCollectionNameFromParent(object, getCollectionNameFromParent(object,
 					getCollectionNameFromParent(object, dataSet)));
 	    }
-        Path checkExistFilePath = Paths.get(StringUtils.substringBefore(sourceDirPath.toString(), dataSet) + dataSet);
+        Path checkExistFilePath = Paths.get(StringUtils.substringBefore(originalDirPath.toString(), dataSet) + dataSet);
 		// load the metadata from the json file
 		String metadataFile;
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath,
