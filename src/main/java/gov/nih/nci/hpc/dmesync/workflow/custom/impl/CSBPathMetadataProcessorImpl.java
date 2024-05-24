@@ -68,7 +68,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Instrument_"
 				+ getInstrumentCollectionName() + "/Date_" + getDateCollectionName() + "/Dataset_" + getDatasetName()
-				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet)+ "/"+object.getSourceFileName();
+				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet);
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
