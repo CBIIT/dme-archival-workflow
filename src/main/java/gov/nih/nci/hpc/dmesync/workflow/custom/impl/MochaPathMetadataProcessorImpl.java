@@ -324,9 +324,9 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  } catch (DmeSyncMappingException e) {
 			  throw new DmeSyncMappingException("Run ID is missing from spreadsheet. Run_ID: " + runId);
 		  }
-		  if(StringUtils.contains(platform, "HiSeq"))
+		  if(StringUtils.containsIgnoreCase(platform, "HiSeq"))
 			  platform = "HiSeq";
-		  else if (StringUtils.contains(platform, "NovaSeq"))
+		  else if (StringUtils.containsIgnoreCase(platform, "NovaSeq"))
 			  platform = "NovaSeq";
 		  else
 			  throw new DmeSyncMappingException("Platform cannot be determined from Run_ID " + runId);
