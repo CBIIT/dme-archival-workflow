@@ -360,6 +360,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		flowcellCollectionName = getCollectionNameFromParent(object, getCollectionNameFromParent(object, "BW_transfers"));
 	} else if (path.contains("mocha_ngs") && path.contains("BW_transfers")) {
 		flowcellCollectionName = getCollectionNameFromParent(object, getCollectionNameFromParent(object, "MoCha-NGS_BW_transfers"));
+	} else if (path.contains("mocha_ngs") && path.contains("FASTQ")) {
+		flowcellCollectionName = getCollectionNameFromParent(object, getCollectionNameFromParent(object, "FASTQ"));
 	} else if (path.contains("static") && path.contains("NovaSeq")) {
 		flowcellCollectionName = getCollectionNameFromParent(object, "NovaSeq");
 	} else if (path.contains("static")) {
