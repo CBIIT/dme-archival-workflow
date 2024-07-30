@@ -10,7 +10,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.opencsv.CSVParser;
+import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -23,14 +26,17 @@ public class CsvFileUtil {
 	}
 
 	public static Map<String, Map<String, String>> parseBulkMetadataEntries(String metadataFile, String key)
-			throws DmeSyncMappingException {
+			throws DmeSyncMappingException, IOException {
 
 		if (StringUtils.isEmpty(metadataFile))
 			return null;
 
 		Map<String, Map<String, String>> metdataSheetMap = new HashMap<>();
 
-		try (CSVReader reader = new CSVReader(new FileReader(metadataFile))) {
+        CSVParser parser = new CSVParserBuilder().withSeparator(detectDelimiter(metadataFile)).build(); 
+ 
+		try (CSVReader reader = new CSVReaderBuilder
+				(new FileReader(metadataFile)).withCSVParser(parser).build()) {
 			// Read 1st row which is header row with attribute names
 			String[] headers = reader.readNext();
 			String[] row;

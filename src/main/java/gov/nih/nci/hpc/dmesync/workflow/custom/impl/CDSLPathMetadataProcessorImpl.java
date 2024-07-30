@@ -71,7 +71,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	@Override
 	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
-			throws DmeSyncMappingException, DmeSyncWorkflowException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException , IOException {
 
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
@@ -128,7 +128,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		pathEntriesPI.setPath(piCollectionPath);
 		threadLocalMap.set(loadCsvMetadataFile(ownerMetadataCsvFile.toString(), "data_owner"));
-		String dataOwnerKey = "KolmogorovLab";
+		String dataOwnerKey = "KolmogorovLab2";
 		pathEntriesPI.getPathMetadataEntries()
 				.add(createPathEntry("data_owner", getPiCollectionName(filePath, "DataOwner")));
 		pathEntriesPI.getPathMetadataEntries()

@@ -188,7 +188,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
       return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
   }
   
-  public Map<String, Map<String, String>> loadCsvMetadataFile(String metadataFile, String key) throws DmeSyncMappingException {
+  public Map<String, Map<String, String>> loadCsvMetadataFile(String metadataFile, String key) throws DmeSyncMappingException , IOException{
       return CsvFileUtil.parseBulkMetadataEntries(metadataFile, key);
   }
   
