@@ -157,9 +157,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			
 			logger.info("[{}] started Multiple tar creations in {}", super.getTaskName());							
 
-			String tarFileNameFormat = sourceDirPath.getParent().getFileName().toString() + "_"
+			String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
+			String tarFileNameFormat = tarFileParentName + "_"
 					+ object.getOrginalFileName();
-			File tarMappingFile = new File(syncWorkDir, (tarFileNameFormat + "_TarMappingNotes.txt"));
+			File tarMappingFile = new File(syncWorkDir + tarFileParentName, (tarFileNameFormat + "_TarMappingNotes.txt"));
 			BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 			File directory = new File(object.getOriginalFilePath());
 			File[] files = directory.listFiles();
