@@ -61,7 +61,8 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// load the user metadata from the externally placed excel
 		threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
 
-		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
+		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data") ||
+				StringUtils.containsIgnoreCase(object.getSourceFileName(), "Aligned_Data")	) {
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object, object.getOriginalFilePath()+"/") + "/Aligned_Data" + "/" + fileName;
 		} else {
@@ -174,7 +175,8 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesProject.setPath(projectCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
-			if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data")) {
+			if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data") ||
+					StringUtils.containsIgnoreCase(object.getSourceFileName(), "Aligned_Data")) {
 
 				String flowcellIds = getFlowCellId(object, path);
 				String mergedDataCollectionPath = projectCollectionPath + "/Aligned_Data";
