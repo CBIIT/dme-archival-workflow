@@ -45,6 +45,9 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
+	
+	@Value("${dmesync.tar:false}")
+	private boolean tar;
 
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
@@ -62,7 +65,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object, object.getOriginalFilePath()+"/") + "/Aligned_Data" + "/" + fileName;
 		} else {
-			if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+			if (!tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
 				String samplePath = getSampleParentPath(object, "Sample") + "/";
 				archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 						+ getProjectCollectionName(object, samplePath) + "/Flowcell_" + getFlowCellId(object, samplePath) + "/Sample_" + getSampleId(object) + "/" + fileName;
@@ -194,7 +197,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
-				if (StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+				if (!tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
 					String sampleId = getSampleId(object);
 					String sampleCollectionPath = flowcellCollectionPath + "/" + "Sample_" + sampleId;
 					HpcBulkMetadataEntry pathEntriesSampleData = new HpcBulkMetadataEntry();
