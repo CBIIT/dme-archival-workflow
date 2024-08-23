@@ -8,6 +8,7 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
+import gov.nih.nci.hpc.dmesync.dto.DmeSyncStats;
 
 /**
  * DME Sync Workflow Service Interface
@@ -240,4 +241,13 @@ public interface DmeSyncWorkflowService {
    * @return the list of StatusInfo objects
    */
   List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
+  
+  /**
+   * getProfileStatistics
+   * 
+   * @param doc the doc
+   * @param days the number of days of interest
+   * @return the list of DmeSyncStats objects
+   */
+  List<DmeSyncStats> getProfileStatistics(String doc, Long days);
 }

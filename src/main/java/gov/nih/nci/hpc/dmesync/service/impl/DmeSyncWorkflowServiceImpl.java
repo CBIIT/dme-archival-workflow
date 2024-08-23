@@ -1,8 +1,11 @@
 package gov.nih.nci.hpc.dmesync.service.impl;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+
+import org.apache.commons.codec.binary.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +20,9 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.StatusInfoStats;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
+import gov.nih.nci.hpc.dmesync.dto.DmeSyncStats;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 
 @Service("local")
@@ -182,4 +187,24 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
 	return statusInfoDao.findStatusInfoByDocAndStatus(doc, status);
   }
+
+@Override
+public List<DmeSyncStats> getProfileStatistics(String doc, Long days) {
+	List<StatusInfoStats> sizeList = statusInfoDao.getTotalSizeTBByDate(doc, days);
+	List<StatusInfoStats> countList = statusInfoDao.getRunCountByDate(doc, days);
+	List<DmeSyncStats> result = new ArrayList<DmeSyncStats>();
+	for(StatusInfoStats sizeEntry: sizeList) {
+		DmeSyncStats entry = new DmeSyncStats();
+		entry.setDate(sizeEntry.getLabel());
+		entry.setSize(sizeEntry.getValue());
+		for(StatusInfoStats countEntry: countList) {
+			if(StringUtils.equals(sizeEntry.getLabel(),countEntry.getLabel())) {
+				entry.setCount(countEntry.getValue());
+				break;
+			}
+		}
+		result.add(entry);
+	}
+	return result;
+}
 }

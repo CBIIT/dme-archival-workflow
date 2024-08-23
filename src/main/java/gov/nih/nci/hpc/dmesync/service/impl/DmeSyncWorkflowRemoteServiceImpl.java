@@ -21,6 +21,7 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
+import gov.nih.nci.hpc.dmesync.dto.DmeSyncStats;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
 
 @Service("remote")
@@ -299,5 +300,11 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 				.getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
 		StatusInfo[] statusInfoArray = response.getBody();
 		return new ArrayList<>(Arrays.asList(statusInfoArray));
+	}
+
+	@Override
+	public List<DmeSyncStats> getProfileStatistics(String doc, Long days) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

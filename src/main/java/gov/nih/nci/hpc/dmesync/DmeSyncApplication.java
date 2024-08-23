@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jms.annotation.EnableJms;
@@ -26,7 +27,7 @@ import gov.nih.nci.hpc.dmesync.scheduler.DmeSyncScheduler;
 @SpringBootApplication
 @EnableJms
 @EnableScheduling
-public class DmeSyncApplication {
+public class DmeSyncApplication extends SpringBootServletInitializer {
 
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
