@@ -74,6 +74,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
 	
+	@Value("${dmesync.verify.prev.upload:none}")
+	  private String verifyPrevUpload;
 
 	@PostConstruct
 	public boolean init() {
@@ -144,8 +146,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} catch (Exception e) {
 
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			//throw new DmeSyncWorkflowException("Error occurred during tar. " +
-			// e.getMessage(), e);
+			throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			 e.getMessage(), e);
 		}
 
 		return object;
@@ -253,12 +255,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				
 				notesWriter.close();
 				logger.info("[{}] Ended Multiple tar creations in {}", super.getTaskName());							
-
 				Long totalFilesinTars= 
 						dmeSyncWorkflowService.getService(access).totalFilesinAllTarsForOriginalFilePath(object.getOriginalFilePath());
+				
 			   if (totalFilesinTars !=null && 
 						files.length!=totalFilesinTars) {
-					throw new Exception((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
+					throw new DmeSyncWorkflowException((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
 				}
 					// update the current statusInfo row with the TarMappingNotesFile
 				object.setFilesize(tarMappingFile.length());
@@ -269,8 +271,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			object.setError(e.getMessage());
-			dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+			throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			 e.getMessage(), e);
 		}
 		return object;
 	}
