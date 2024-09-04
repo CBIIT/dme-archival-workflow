@@ -118,7 +118,7 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status, String runId);
   
   /**
-   * CountOfFilesinAllTarsForOriginalFilePathAndRunId
+   * CountOfFilesinAllTarsForOriginalFilePath
    *
    * @param originalFilePath the original file path
    * @return the list of StatusInfo objects
@@ -126,6 +126,14 @@ public interface DmeSyncWorkflowService {
   Long totalFilesinAllTarsForOriginalFilePath(
       String originalFilePath);
 
+  /**
+   * CountOfFilesinAllTarsForOriginalFilePathAndRunId
+   *
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  Long totalFilesinAllTarsForOriginalFilePathAndRunId(
+      String originalFilePath,String runId);
   /**
    * findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc
    *
