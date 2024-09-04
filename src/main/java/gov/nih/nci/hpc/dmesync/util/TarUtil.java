@@ -171,7 +171,11 @@ public class TarUtil {
   public static int countFilesinTar(String name) throws IOException {
 	  try (TarFile tarFile = new TarFile(new File(name))) {
           return tarFile!=null?tarFile.getEntries().size():0;     
-	  }
+	  }catch (IOException e) {
+          // Handle cases where the TAR file might be corrupted or truncated
+          System.out.println("Exception during TAR processing: " + e.getMessage());
+          return 0; // Indicate that the TAR file could not be processed
+      }
   }
   
   

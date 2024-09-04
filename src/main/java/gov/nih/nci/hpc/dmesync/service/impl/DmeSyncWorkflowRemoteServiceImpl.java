@@ -100,6 +100,17 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
         Long totalCount = response.getBody();
         return totalCount;
     }
+	
+	@Override
+    public Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath, String runId) {
+        final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+                .path("/api/totalFilesinAllTarsForOriginalFilePathAndRunId")
+                .queryParam("originalFilePath", originalFilePath).build().encode().toUri();
+        ResponseEntity<Long> response = restTemplateFactory
+                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, Long.class);
+        Long totalCount = response.getBody();
+        return totalCount;
+    }
 	 @Override
 	  public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
 		 final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
