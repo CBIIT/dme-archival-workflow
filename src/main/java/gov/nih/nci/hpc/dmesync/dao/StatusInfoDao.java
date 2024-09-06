@@ -50,7 +50,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param originalFilePath the original file path
    * @return the sum of tarContentsCount for the records.
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1")
+  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.error is not null")
   Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath );
   
   /**
@@ -59,7 +59,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param originalFilePath the original file path
    * @return the sum of tarContentsCount for the records.
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2")
+  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2 and s.error is not null")
   Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath , String runId);
   
   /**

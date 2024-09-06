@@ -75,7 +75,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private boolean cleanup;
 	
 	@Value("${dmesync.verify.prev.upload:none}")
-	  private String verifyPrevUpload;
+	private String verifyPrevUpload;
+	
+	@Value("${dmesync.multiple.tars.files.validation:true}")
+	private boolean verifyTarFilesCount;
+	
 
 	@PostConstruct
 	public boolean init() {
@@ -275,10 +279,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					totalFilesinTars=	dmeSyncWorkflowService.getService(access).totalFilesinAllTarsForOriginalFilePathAndRunId(object.getOriginalFilePath(),object.getRunId());
 				}
 				
-			   if (totalFilesinTars !=null && 
+			   if (verifyTarFilesCount && totalFilesinTars !=null && 
 						files.length!=totalFilesinTars) {
-					logger.error("[{}] error {}", super.getTaskName(), "Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars);
-					throw new DmeSyncWorkflowException((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
+					object.setError((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
+				    dmeSyncWorkflowService.getService(access).recordError(object);
+					throw new DmeSyncMappingException((" Files in original folder "+ files.length  + " didn't match the files in multiple created tars " + totalFilesinTars));
 				}
 					// update the current statusInfo row with the TarMappingNotesFile
 				object.setFilesize(tarMappingFile.length());
@@ -289,7 +294,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			throw new DmeSyncMappingException("Error occurred during tar. " +
 			 e.getMessage(), e);
 		}
 		return object;

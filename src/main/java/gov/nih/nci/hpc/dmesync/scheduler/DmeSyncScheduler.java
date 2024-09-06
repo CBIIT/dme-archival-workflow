@@ -475,7 +475,7 @@ public class DmeSyncScheduler {
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
 		} else if (tar && filesPerTar > 0  && multpleTarsFolders != null
 				&& StringUtils.contains( multpleTarsFolders, file.getName())) {
-			logger.info("checking if all the Multiple Tars got uploaded {}",filesPerTar);
+			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
 			if (!statusInfoList.isEmpty()) {

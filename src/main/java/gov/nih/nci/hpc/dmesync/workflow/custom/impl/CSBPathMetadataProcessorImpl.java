@@ -168,7 +168,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("object_name", Paths.get(object.getSourceFilePath()).toFile().getName()));
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("source_path", object.getSourceFilePath()));
+					.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
 		} finally {
 			threadLocalMap.remove();
