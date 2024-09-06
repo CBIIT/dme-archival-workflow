@@ -1,9 +1,15 @@
 package gov.nih.nci.hpc.dmesync.service.impl;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
@@ -21,6 +27,7 @@ import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.dto.DmeCSBMailBodyDto;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
@@ -49,6 +56,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   
   @Value("${dmesync.min.tar.file.size:1024}")
   private String minTarFile;
+  
+  @Value("${dmesync.multiple.tars.files.count:0}")
+  private Integer filesPerTar;
   
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
   
@@ -134,12 +144,42 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
-      
+      String updatedBody=body;
+      if("csb".equals(doc)) {
+
+    	  Set<String>  folderPaths= statusInfo.stream()
+          .map(StatusInfo::getOriginalFilePath)
+          .collect(Collectors.toSet());
+    	  List<DmeCSBMailBodyDto> folders = new ArrayList<>();
+          for (String name : folderPaths) {
+        	  if(name.contains("movies")) {
+        	  List<StatusInfo> allTars=dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(name, doc);
+              // Fetch details for each folder name
+        	  DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
+        	  File directory = new File(name);
+  			  File[] files = directory.listFiles();
+  			List<File> fileList = new ArrayList<>(Arrays.asList(files));
+			int tarLoopCount = (fileList.size() + filesPerTar - 1) / filesPerTar;
+              folder.setFolderName(name);
+              folder.setFilesCount(files.length);
+              folder.setExpectedTars(tarLoopCount);
+              folder.setUploadedTars(allTars.stream()
+                      .filter(tar -> "COMPLETED".equals(tar.getStatus())) // Apply the condition
+                      .count());
+              folder.setFailedTars(allTars.stream()
+                      .filter(tar -> tar.getStatus()== null) // Apply the condition
+                      .count());
+              folders.add(folder);
+          }        }
+          String htmlContent = buildHtmlTable(folders);
+
+    	 updatedBody= body+ htmlContent;
+      }
 	  subject = (failedCount > 0) ? "Failed " : "Completed ";
 	  helper.setSubject("DME Auto Archival " + subject + "for  " + doc.toUpperCase() + " - Run_ID: " + runId
 				+ " - Base Path:  " + syncBaseDir);
 
-      helper.setText(body,true);
+      helper.setText(updatedBody,true);
       
       FileSystemResource file = new FileSystemResource(excelFile);
       helper.addAttachment(file.getFilename(), file);
@@ -149,5 +189,38 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       throw new MailParseException(e);
     }
     
+  }
+  
+  public String buildHtmlTable(List<DmeCSBMailBodyDto> folders) {
+      StringBuilder htmlBuilder = new StringBuilder();
+
+      htmlBuilder.append("<p>Folder Details</p>")
+                 .append("<table>")
+                 .append("<thead>")
+                 .append("<tr>")
+                 .append("<th>Folder Name</th>")
+                 .append("<th>Files Count)</th>")
+                 .append("<th>Expected Tars</th>")
+                 .append("<th>Uploaded Tars</th>")
+                 .append("<th>Failed Tars</th>")
+                 .append("</tr>")
+                 .append("</thead>")
+                 .append("<tbody>");
+
+      for (DmeCSBMailBodyDto folder : folders) {
+          htmlBuilder.append("<tr>")
+                     .append("<td>").append(folder.getFolderName()).append("</td>")
+                     .append("<td>").append(folder.getFilesCount()).append("</td>")
+                     .append("<td>").append(folder.getExpectedTars()).append("</td>")
+                     .append("<td>").append(folder.getUploadedTars()).append("</td>")
+                     .append("<td>").append(folder.getFailedTars()).append("</td>")
+                     .append("</tr>");
+      }
+
+      htmlBuilder.append("</tbody>")
+                 .append("</table>");
+                
+
+      return htmlBuilder.toString();
   }
 }
