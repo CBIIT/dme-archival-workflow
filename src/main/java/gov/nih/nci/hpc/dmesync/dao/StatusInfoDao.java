@@ -14,7 +14,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @return the StatusInfo object
    */
   StatusInfo findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(String originalFilePath, String status);
-
+  
   /**
    * findAllByOriginalFilePathAndStatus
    * 
@@ -50,7 +50,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param originalFilePath the original file path
    * @return the sum of tarContentsCount for the records.
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.error is not null")
+  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.error is null")
   Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath );
   
   /**
@@ -59,7 +59,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param originalFilePath the original file path
    * @return the sum of tarContentsCount for the records.
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2 and s.error is not null")
+  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2 and s.error is null")
   Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath , String runId);
   
   /**
