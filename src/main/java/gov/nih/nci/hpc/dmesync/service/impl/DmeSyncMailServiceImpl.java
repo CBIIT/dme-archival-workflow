@@ -153,7 +153,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     	  List<DmeCSBMailBodyDto> folders = new ArrayList<>();
           for (String name : folderPaths) {
         	  if(name.contains("movies")) {
-        	  List<StatusInfo> allTars=dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(name, doc);
+        	  List<StatusInfo> allTars=dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(doc, name);
               // Fetch details for each folder name
         	  DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
         	  File directory = new File(name);
@@ -194,8 +194,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   public String buildHtmlTable(List<DmeCSBMailBodyDto> folders) {
       StringBuilder htmlBuilder = new StringBuilder();
 
-      htmlBuilder.append("<p>Folder Details</p>")
-                 .append("<table>")
+      htmlBuilder.append("<p>Movies folder multiple folder Details</p>")
+                 .append("<table border='1' style='border-collapse:collapse; width:100%;'>")
                  .append("<thead>")
                  .append("<tr>")
                  .append("<th>Folder Name</th>")
