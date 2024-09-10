@@ -147,30 +147,30 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       String updatedBody=body;
       if("csb".equals(doc)) {
 
-    	  Set<String>  folderPaths= statusInfo.stream()
-          .map(StatusInfo::getOriginalFilePath)
-          .collect(Collectors.toSet());
-    	  List<DmeCSBMailBodyDto> folders = new ArrayList<>();
-          for (String name : folderPaths) {
-        	  if(name.contains("movies")) {
-        	  List<StatusInfo> allTars=dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(doc, name);
-              // Fetch details for each folder name
-        	  DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
-        	  File directory = new File(name);
-  			  File[] files = directory.listFiles();
-  			List<File> fileList = new ArrayList<>(Arrays.asList(files));
-			int tarLoopCount = (fileList.size() + filesPerTar - 1) / filesPerTar;
-              folder.setFolderName(name);
-              folder.setFilesCount(files.length);
-              folder.setExpectedTars(tarLoopCount);
-              folder.setUploadedTars(allTars.stream()
-                      .filter(tar -> "COMPLETED".equals(tar.getStatus())) // Apply the condition
-                      .count());
-              folder.setFailedTars(allTars.stream()
-                      .filter(tar -> tar.getStatus()== null) // Apply the condition
-                      .count());
-              folders.add(folder);
-          }        }
+			Set<String> folderPaths = statusInfo.stream().map(StatusInfo::getOriginalFilePath)
+					.collect(Collectors.toSet());
+			List<DmeCSBMailBodyDto> folders = new ArrayList<>();
+			for (String name : folderPaths) {
+				if (name.contains("movies")) {
+					List<StatusInfo> allUploads = dmeSyncWorkflowService.getService(access)
+							.findAllByDocAndLikeOriginalFilePath(doc, name);
+					// Fetch details for each folder name
+					DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
+					File directory = new File(name);
+					File[] files = directory.listFiles();
+					int expectedTars = (files.length + filesPerTar - 1) / filesPerTar;
+					folder.setFolderName(name);
+					folder.setFilesCount(files.length);
+					// adding + 1 to include tarMapping notes files
+					folder.setExpectedTars(expectedTars + 1);
+					folder.setCreatedTars(allUploads.size());
+					folder.setUploadedTars(allUploads.stream().filter(tar -> "COMPLETED".equals(tar.getStatus())) 
+							.count());
+					folder.setFailedTars(allUploads.stream().filter(tar -> tar.getStatus() == null) 
+							.count());
+					folders.add(folder);
+				}
+			}
           String htmlContent = buildHtmlTable(folders);
 
     	 updatedBody= body+ htmlContent;
@@ -194,15 +194,16 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   public String buildHtmlTable(List<DmeCSBMailBodyDto> folders) {
       StringBuilder htmlBuilder = new StringBuilder();
 
-      htmlBuilder.append("<p>Movies folder multiple folder Details</p>")
+      htmlBuilder.append("<p>Movies folder archival details</p>")
                  .append("<table border='1' style='border-collapse:collapse; width:100%;'>")
                  .append("<thead>")
                  .append("<tr>")
                  .append("<th>Folder Name</th>")
-                 .append("<th>Files Count)</th>")
-                 .append("<th>Expected Tars</th>")
-                 .append("<th>Uploaded Tars</th>")
-                 .append("<th>Failed Tars</th>")
+                 .append("<th>Files Count</th>")
+                 .append("<th>Expected uploads</th>")
+                 .append("<th>Processed</th>")
+                 .append("<th>Uploaded</th>")
+                 .append("<th>Failed</th>")
                  .append("</tr>")
                  .append("</thead>")
                  .append("<tbody>");
@@ -212,6 +213,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
                      .append("<td>").append(folder.getFolderName()).append("</td>")
                      .append("<td>").append(folder.getFilesCount()).append("</td>")
                      .append("<td>").append(folder.getExpectedTars()).append("</td>")
+                     .append("<td>").append(folder.getCreatedTars()).append("</td>")
                      .append("<td>").append(folder.getUploadedTars()).append("</td>")
                      .append("<td>").append(folder.getFailedTars()).append("</td>")
                      .append("</tr>");
