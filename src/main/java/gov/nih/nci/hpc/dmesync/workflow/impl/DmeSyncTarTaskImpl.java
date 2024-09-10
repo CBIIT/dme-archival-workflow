@@ -161,7 +161,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		
 		try {
 			
-			logger.info("[{}] started Multiple tar creations in {}", super.getTaskName());							
+			logger.info("[{}] Started multiple tar files creations in {}", super.getTaskName(),object.getOriginalFilePath());							
 
 			String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 			String tarFileNameFormat = tarFileParentName + "_"
@@ -181,6 +181,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				Arrays.sort(files, Comparator.comparing(File::lastModified));
 				List<File> fileList = new ArrayList<>(Arrays.asList(files));
 				int tarLoopCount = (fileList.size() + filesPerTar - 1) / filesPerTar;
+				logger.info("[{}] Started creating {} tars for the dataset {} with {} files ", super.getTaskName(),tarLoopCount,tarFileParentName,fileList.size());							
+
 				for (int i = 0; i < tarLoopCount; i++) {
 					Date tarStartedTimeStamp= new Date();
 					int start = i * filesPerTar;
