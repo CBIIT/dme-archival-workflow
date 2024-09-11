@@ -502,6 +502,10 @@ public class DmeSyncScheduler {
 					dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(statusInfo.getId());
 					// Send the incomplete objectId to the message queue for processing
 					DmeSyncMessageDto message = new DmeSyncMessageDto();
+					statusInfo.setRunId(runId);
+					statusInfo.setError("");
+					statusInfo.setRetryCount(0L);
+					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					sender.send(message, "inbound.queue");
 					continue;
