@@ -24,6 +24,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
@@ -90,7 +91,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+	public StatusInfo process(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException , DmeSyncStorageException {
 
 		// Task: Create tar file in work directory for processing
 		try {
@@ -150,7 +151,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} catch (Exception e) {
 
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			throw new DmeSyncWorkflowException("Error occurred during tar. " +
+			throw new DmeSyncStorageException("Error occurred during tar. " +
 			 e.getMessage(), e);
 		}
 
@@ -172,7 +173,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			File[] files = directory.listFiles();
 			// Check directory permission
 			if (!Files.isReadable(Paths.get(object.getOriginalFilePath()))) {
-				throw new Exception("No Read permission to " + object.getOriginalFilePath());
+				throw new DmeSyncStorageException("No Read permission to " + object.getOriginalFilePath());
 			}
 			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
@@ -296,7 +297,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			throw new DmeSyncMappingException("Error occurred during tar. " +
+			throw new DmeSyncStorageException("Error occurred during tar. " +
 			 e.getMessage(), e);
 		}
 		return object;

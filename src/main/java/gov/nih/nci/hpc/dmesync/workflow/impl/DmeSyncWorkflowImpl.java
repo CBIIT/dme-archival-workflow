@@ -14,6 +14,8 @@ import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
+
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
@@ -145,7 +147,13 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       statusInfo.setError(e.getMessage());
       dmeSyncWorkflowService.getService(access).recordError(statusInfo);
       
-    } catch (DmeSyncWorkflowException e) {
+    } catch (DmeSyncStorageException e) {
+        
+        // In case of space issue while tarring, retry will not help.
+        statusInfo.setError(e.getMessage());
+        dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+        
+      }catch (DmeSyncWorkflowException e) {
       
       statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
       dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);

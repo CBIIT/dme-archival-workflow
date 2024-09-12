@@ -9,6 +9,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -26,7 +27,7 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
   public StatusInfo processTask(StatusInfo object)
-      throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException {
+      throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException {
 
     if (!checkComplete(object.getId())) {
 
@@ -43,7 +44,7 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
   }
 
   protected abstract StatusInfo process(StatusInfo object)
-      throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException;
+      throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException;
 
   private boolean checkComplete(Long objectId) {
 
