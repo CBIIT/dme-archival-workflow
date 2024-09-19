@@ -5,7 +5,7 @@
 
 	<groupId>gov.nih.nci.hpc</groupId>
 	<artifactId>dme-sync</artifactId>
-	<version>2.4.1</version>
+	<version>2.4.2</version>
 	<name>dme-sync</name>
 	<packaging>jar</packaging>
 	<description>DME Auto-archival Workflow Application</description>
@@ -134,6 +134,11 @@
    			<groupId>org.apache.tika</groupId>
     		<artifactId>tika-parsers</artifactId>
     		<version>1.24.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>5.5.1</version>
 		</dependency>
 	</dependencies>
 
