@@ -25,6 +25,8 @@ public class StatusInfo {
   private Date uploadEndTimestamp;
   private Date tarStartTimestamp;
   private Date tarEndTimestamp;
+  private Integer tarIndexStart ;
+  private Integer tarIndexEnd ;
   private Long retryCount = 0L;
   private String error;
   private String moveDataObjectOrignalPath;
@@ -185,12 +187,28 @@ public class StatusInfo {
   }
   
 
-	public Integer getTarContentsCount() {
-		return tarContentsCount;
+  public Integer getTarContentsCount() {
+	 return tarContentsCount;
+  }
+
+  public void setTarContentsCount(Integer tarContentsCount) {
+		this.tarContentsCount = tarContentsCount;
 	}
 
-	public void setTarContentsCount(Integer tarContentsCount) {
-		this.tarContentsCount = tarContentsCount;
+  public Integer getTarIndexStart() {
+		return tarIndexStart;
+	}
+
+  public void setTarIndexStart(Integer tarIndexStart) {
+		this.tarIndexStart = tarIndexStart;
+	}
+
+  public Integer getTarIndexEnd() {
+		return tarIndexEnd;
+	}
+
+  public void setTarIndexEnd(Integer tarIndexEnd) {
+		this.tarIndexEnd = tarIndexEnd;
 	}
 
 @Transient
@@ -225,47 +243,15 @@ public class StatusInfo {
   }
 
 @Override
-  public String toString() {
-    return "StatusInfo [id="
-        + id
-        + ", runId="
-        + runId
-        + ", orginalFileName="
-        + orginalFileName
-        + ", originalFilePath="
-        + originalFilePath
-        + ", sourceFileName="
-        + sourceFileName
-        + ", sourceFilePath="
-        + sourceFilePath
-        + ", fullDestinationPath="
-        + fullDestinationPath
-        + ", filesize="
-        + filesize
-        + ", checksum="
-        + checksum
-        + ", status="
-        + status
-        + ", startTimestamp="
-        + startTimestamp
-        + ", endTimestamp="
-        + endTimestamp
-        + ", uploadStartTimestamp="
-        + uploadStartTimestamp
-        + ", uploadEndTimestamp="
-        + uploadEndTimestamp
-        + ", tarStartTimestamp="
-        + tarStartTimestamp
-        + ", tarEndTimestamp="
-        + tarEndTimestamp
-        + ", tarContentsCount="
-        + tarContentsCount
-        + ", retryCount="
-        + retryCount
-        + ", error="
-        + error
-        + ", dataObjectRegistrationRequestDTO="
-        + dataObjectRegistrationRequestDTO
-        + "]";
-  }
+public String toString() {
+	return "StatusInfo [id=" + id + ", doc=" + doc + ", runId=" + runId + ", orginalFileName=" + orginalFileName
+			+ ", originalFilePath=" + originalFilePath + ", sourceFileName=" + sourceFileName + ", sourceFilePath="
+			+ sourceFilePath + ", fullDestinationPath=" + fullDestinationPath + ", filesize=" + filesize + ", checksum="
+			+ checksum + ", status=" + status + ", startTimestamp=" + startTimestamp + ", endTimestamp=" + endTimestamp
+			+ ", uploadStartTimestamp=" + uploadStartTimestamp + ", uploadEndTimestamp=" + uploadEndTimestamp
+			+ ", tarStartTimestamp=" + tarStartTimestamp + ", tarEndTimestamp=" + tarEndTimestamp + ", tarIndexStart="
+			+ tarIndexStart + ", tarIndexEnd=" + tarIndexEnd + ", retryCount=" + retryCount + ", error=" + error
+			+ ", moveDataObjectOrignalPath=" + moveDataObjectOrignalPath + ", tarContentsCount=" + tarContentsCount
+			+ "]";
+}
 }
