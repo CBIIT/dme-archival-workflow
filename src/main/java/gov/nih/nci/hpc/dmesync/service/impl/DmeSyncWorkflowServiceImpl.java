@@ -91,8 +91,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir) {
-    return statusInfoDao.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc, baseDir);
+  public StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath) {
+    return statusInfoDao.findTopStatusInfoByDocAndSourceFilePath(doc, sourceFilePath);
   }
   
   @Override
@@ -103,16 +103,9 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public Long totalFilesinAllTarsForOriginalFilePath(
-	      String originalFilePath){
-	  return statusInfoDao.totalFilesinAllTarsForOriginalFilePath(originalFilePath);
+  public List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String doc, String runId, String originalFilePath){
+	  return statusInfoDao.findAllByDocAndRunIdAndLikeOriginalFilePath(doc,runId,originalFilePath);
   }
-  @Override
-  public Long totalFilesinAllTarsForOriginalFilePathAndRunId(
-	      String originalFilePath, String runId){
-	  return statusInfoDao.totalFilesinAllTarsForOriginalFilePathAndRunId(originalFilePath, runId);
-  }
-
   
   @Override
   public StatusInfo findTopBySourceFilePathAndRunId(

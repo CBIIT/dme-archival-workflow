@@ -43,24 +43,18 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   @Query("select s from StatusInfo s where s.originalFilePath like ?2 and s.doc =?1")
   List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String Doc,String originalFilePath);
-
-  /**
-   * totalFilesinAllTarsForOriginalFilePath
-   * 
-   * @param originalFilePath the original file path
-   * @return the sum of tarContentsCount for the records.
-   */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.error is null")
-  Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath );
+  
   
   /**
-   * totalFilesinAllTarsForOriginalFilePath
+   * findAllLikeOriginalFilePathandRun_id
    * 
    * @param originalFilePath the original file path
-   * @return the sum of tarContentsCount for the records.
+   * @param doc the docName
+   * @return the list of StatusInfo objects
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2 and s.error is null")
-  Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath , String runId);
+  @Query("select s from StatusInfo s where s.originalFilePath like ?2 and s.doc =?1")
+  List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
+
   
   /**
    * findByRunId
@@ -89,12 +83,12 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull
+   * findTopStatusInfoByDocAndSourceFilePath
    * @param doc the doc
-   * @param baseDir the base directory
+   * @param sourceFilePath 
    * @return the original StatusInfo object for multiple tars 
    */
-  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
+  StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath);
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc

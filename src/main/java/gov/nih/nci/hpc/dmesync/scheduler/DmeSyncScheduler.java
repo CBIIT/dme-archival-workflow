@@ -476,14 +476,14 @@ public class DmeSyncScheduler {
 		} else if (tar && filesPerTar > 0  && multpleTarsFolders != null
 				&& StringUtils.contains( multpleTarsFolders, file.getName())) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
-			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
+			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
-			if (!statusInfoList.isEmpty()) {
+			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
-						.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc,
+						.findTopStatusInfoByDocAndSourceFilePath(doc,
 								file.getAbsolutePath());
-				List<StatusInfo> statusInfoNotCompletedList = statusInfoList.stream().filter(c -> c.getStatus() == null)
+				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty()) {
 					// use the same status Info rows with new Run Id for reupload

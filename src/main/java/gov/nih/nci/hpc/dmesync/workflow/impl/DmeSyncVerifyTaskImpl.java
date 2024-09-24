@@ -1,6 +1,8 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
@@ -50,9 +53,14 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.source.aws:false}")
   private boolean awsFlag;
   
+  @Value("${dmesync.tar:false}")
+  private boolean tar;
+  
   @Autowired private RestTemplateFactory restTemplateFactory;
   
   @Autowired private ObjectMapper objectMapper;
+
+  HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();
 
   @PostConstruct
   public boolean init() {
@@ -132,6 +140,26 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           }
           logger.error("[{}] {}", super.getTaskName(), msg);
         }
+		if (tar) {
+			if (object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
+				int expectedFiles=object.getTarIndexEnd() - object.getTarIndexStart();
+				if (expectedFiles 
+						!= object.getTarContentsCount()) {
+					String msg = "Files in the tar " + object.getTarContentsCount() + " doesn't matched with files in the original path"+ expectedFiles;
+					object.setError(msg);
+					logger.error("[{}] {}", super.getTaskName(), msg);
+				}
+			} else {
+				long filesCount = Files.walk(Paths.get(object.getSourceFilePath())).filter(Files::isRegularFile) 
+						.count();
+				if ( object.getTarContentsCount()!=filesCount) {
+					String msg = "Files in the tar doesn't matched with files in the original path";
+					object.setError(msg);
+					logger.error("[{}] {}", super.getTaskName(), msg);
+				}
+
+			}
+		}
         if(StringUtils.isEmpty(object.getError())) {
         	//Update DB to completed but if verification succeeds.
             object.setStatus("COMPLETED");

@@ -97,10 +97,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
                   ? null
                   : new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
       
-      // if this index range are given for files  in status_info object 
-         // then the tar should be done for files in folders
-      if ( filesPerTar > 0 && object.getTarIndexStart()!=0 
-    		      && object.getTarIndexEnd()!=0) {
+      // if this index range are given for files  in status_info object  then the tar should be done for files in folders
+      if ( filesPerTar > 0 && object.getTarIndexStart()!=null
+    		      && object.getTarIndexEnd()!=null ) {
     	
     	  createTarForFiles(object,sourceDirPath , tarWorkDir,excludeFolders);
     	  
@@ -110,6 +109,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
       String tarFile = tarWorkDir + File.separatorChar + tarFileName;
       tarFile = Paths.get(tarFile).normalize().toString();
       File directory = new File(object.getOriginalFilePath());
+	  int filesCount = directory.listFiles().length;
 
       logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
       
@@ -130,6 +130,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
           TarUtil.tar(tarFile, excludeFolders, directory);
         }
       }
+      long fileCount = Files.walk(Paths.get(object.getSourceFilePath())).filter(Files::isRegularFile) 
+				.count();
 
       // Update the record for upload
       File createdTarFile = new File(tarFile);
@@ -137,6 +139,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
       object.setSourceFileName(tarFileName);
       object.setSourceFilePath(tarFile);
       object.setTarEndTimestamp(new Date());
+	  object.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
       object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
       }
     } catch (Exception e) {
@@ -158,8 +161,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 			tarFile = Paths.get(tarFile).normalize().toString();
 
-			// sorting the files based on the lastModified in asc, so every rerun we get
-			// them in same order.
+			// sorting the files based on the lastModified in asc, so every rerun we get them in same order.
 			Arrays.sort(files, Comparator.comparing(File::lastModified));
 			List<File> fileList = new ArrayList<>(Arrays.asList(files));
 
