@@ -72,6 +72,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor dcegProcessor;
   
   @Autowired
+  @Qualifier("dceg-ltg")
+  private DmeSyncPathMetadataProcessor dcegLtgProcessor;
+  
+  @Autowired
   @Qualifier("csb")
   private DmeSyncPathMetadataProcessor csbProcessor;
   
@@ -154,7 +158,9 @@ public class DmeSyncPathMetadataProcessorFactory {
         return biobankProcessor;
     } else if ("dceg".equals(doc)){
         return dcegProcessor;
-    } else if ("csb".equals(doc)){
+    } else if ("dceg-ltg".equals(doc)){
+        return dcegLtgProcessor;
+    }else if ("csb".equals(doc)){
         return csbProcessor;
     } else if ("template".equals(doc)){
         return templateProcessor;

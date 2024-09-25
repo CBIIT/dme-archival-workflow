@@ -91,8 +91,12 @@ public class DmeSyncScheduler {
   @Value("${dmesync.preprocess.depth:0}")
   private String depth;
   
+
   @Value("${dmesync.multiple.tars.files.count:0}")
   private Integer filesPerTar;
+
+  @Value("${dmesync.depth.leaf.folder.skip:true}")
+  private boolean skipIfNotLeafFolder;
 
   @Value("${dmesync.run.once.and.shutdown:false}")
   private boolean shutDownFlag;
@@ -242,7 +246,7 @@ public class DmeSyncScheduler {
         for (HpcPathAttributes pathAttr : paths) {
           if (pathAttr.getIsDirectory()) {
             //If depth of -1 is specified, skip if it is not a leaf folder
-            if (tar && depth.equals("-1")) {
+            if (tar && depth.equals("-1") && skipIfNotLeafFolder) {
               try(Stream<Path> stream = Files.list(Paths.get(pathAttr.getAbsolutePath()))) {
                if(stream.anyMatch(x -> x.toFile().isDirectory()))
                   continue;
