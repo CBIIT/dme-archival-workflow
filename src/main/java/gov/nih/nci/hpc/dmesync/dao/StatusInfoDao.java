@@ -52,7 +52,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param doc the docName
    * @return the list of StatusInfo objects
    */
-  @Query("select s from StatusInfo s where s.originalFilePath like ?2 and s.doc =?1")
+  @Query("select s from StatusInfo s where  s.doc =?1 and s.runId=?2 and s.originalFilePath like ?3 ")
   List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
 
   

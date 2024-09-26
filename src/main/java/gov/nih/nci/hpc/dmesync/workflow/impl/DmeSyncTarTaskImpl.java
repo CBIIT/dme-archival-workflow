@@ -30,6 +30,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
@@ -98,7 +99,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
-		// Task: Create tar file in work directory for processing
+		
+		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"movies_TarContentsFile.txt")){
+			// Skipping this task for the contents file for multiple Tars processing
+			return object;
+			
+		}else {
+			// Task: Create tar file in work directory for processing
 		try {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
@@ -112,12 +119,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
-
 			// if this index range are given for files in status_info object then the tar
 			// should be done for files in folders
 			if (filesPerTar > 0 && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
 				createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
+				
 
 			} else {
 				object.setTarStartTimestamp(new Date());
@@ -167,7 +174,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} finally {
 			threadLocalMap.remove();
 		}
-
+		}
 		return object;
 	}
 
@@ -183,7 +190,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		tarFile = Paths.get(tarFile).normalize().toString();
 
 		// sorting the files based on the lastModified in asc, so every rerun we get
-		// them in same order.
+		// them in same order.  
 		Arrays.sort(files, Comparator.comparing(File::lastModified));
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
 
@@ -193,8 +200,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 		List<File> subList = fileList.subList(start, end);
 
-		logger.info("[{}] No  tar file found in work Directory or completed status in the Db row {} , {}",
-				super.getTaskName(), tarFile);
+
 		logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
 		File[] filesArray = new File[subList.size()];
 		subList.toArray(filesArray);
@@ -209,14 +215,21 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				TarUtil.tar(tarFile, excludeFolders, filesArray);
 			}
 		}
-
-		// Update the record for upload
+		
 		File createdTarFile = new File(tarFile);
+		int tarContentsCount=TarUtil.countFilesinTar(createdTarFile.getAbsolutePath());
+		
+		if (totalFiles != tarContentsCount) {
+			String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
+			logger.error("[{}] {}", super.getTaskName(), msg);
+			throw new DmeSyncVerificationException(msg);
+		}
+		// Update the record for upload
 		object.setFilesize(createdTarFile.length());
 		object.setSourceFileName(tarFileName);
 		object.setSourceFilePath(tarFile);
 		object.setTarEndTimestamp(new Date());
-		object.setTarContentsCount(TarUtil.countFilesinTar(createdTarFile.getAbsolutePath()));
+		object.setTarContentsCount(tarContentsCount);
 		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 	}catch(Exception e)
 	{

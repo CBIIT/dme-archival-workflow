@@ -98,7 +98,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
 		if (StringUtils.equalsIgnoreCase(multpleTarsFolders, sourceDirLeafNode)) {
-			
+
 			try {
 
 				Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -110,7 +110,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				Files.createDirectories(tarWorkDirPath);
 				File directory = new File(object.getOriginalFilePath());
 				File[] files = directory.listFiles();
-				
+
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
 				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
@@ -118,7 +118,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 
 				int lastTarIndex = 0;
-				
+
 				logger.info("[{}] Started multiple tar files processing in {}", super.getTaskName(),
 						object.getOriginalFilePath());
 
@@ -128,7 +128,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				}
 
 				if (files != null) {
-					// sorting the files based on the lastModified in asc, so every rerun we get them in same order.
+					// sorting the files based on the lastModified in asc, so every rerun we get
+					// them in same order.
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -144,34 +145,66 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
-
-						/* check if tarName already got uploaded to DME from statusInfo table */
-
-						StatusInfo checkForUploadedTar = dmeSyncWorkflowService.getService(access)
-								.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
-										object.getOriginalFilePath(), tarFileName, "COMPLETED");
-
-						if (("local".equals(verifyPrevUpload)) && checkForUploadedTar != null) {
-
-							logger.info(
-									"[{}] Skipping the Creation of tar file in since this is already got uploaded {} {} {}",
-									super.getTaskName(), tarFileName, checkForUploadedTar.getId(),
-									checkForUploadedTar.getStatus());
-							writeToContentsFile(notesWriter, tarFileName, subList);
-							continue;
-						} else {
-							// check is there is already record in DB for this runId and sourceFilePath mainly for failed tar reruns
+						
+                      /* Before creating new tar request If verifyPrevUpload is local check these two conditions
+                       *   check if already uploaded to dme: if yes check Indexes in the statusInfo row are same: if above condition works write to contents file and skip the tar
+                       *   check if there is already record inserted in Db: If yes check the indexes, if not reuse the row from Db record.
+                       */
+						
+						if ("local".equals(verifyPrevUpload)) {
+							// check if tarName already got uploaded to DME from statusInfo table */
+							StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
+									.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
+											object.getOriginalFilePath(), tarFileName, "COMPLETED");
 							StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
 									.findTopBySourceFilePathAndRunId(tarFilePath, object.getRunId());
-							if (("local".equals(verifyPrevUpload)) && recordForTarfile != null) {
-								logger.info("[{}]Enqueuing the existing tar request {} from DB {}", super.getTaskName(),
-										recordForTarfile.getId(), tarFilePath);
-								DmeSyncMessageDto message = new DmeSyncMessageDto();
-								message.setObjectId(recordForTarfile.getId());
-								sender.send(message, "inbound.queue");
-								logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+							if (recordForUploadedTar != null) {
+								// Check the startIndex and EndIndex with start and End to make sure uploaded tars have same range
+								if (start != recordForUploadedTar.getTarIndexStart()
+										|| end != recordForUploadedTar.getTarIndexEnd()) {
+                                  // If indexes doesn't match , insert the new row with error message
+									String errorMsg = "TarRange Indexes doesn't matched with expected Index ranges tarStartIndex:"
+											+ start + "UploadedStartIndex:" + recordForUploadedTar.getTarIndexStart()
+											+ "tarEndIndex:" + end + " uploadedEndIndex:"
+											+ recordForUploadedTar.getTarIndexEnd();
+									logger.info("[{}] UploadedTarIndexes {} mismatch Inserting error row in database {}", super.getTaskName(),
+											tarFileName, errorMsg);
+									StatusInfo indexErrorRow = insertErrorRowforTar(object, tarFileName, start, end,
+											errorMsg);
+								} else {
+									// This block is executed when the tar is already uploaded to DME
+									logger.info(
+											"[{}] Skipping the Creation of tar file in since this is already got uploaded {} {} {}",
+											super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
+											recordForUploadedTar.getStatus());
+								}
+								writeToContentsFile(notesWriter, tarFileName, subList);
+								continue;
+							} else if (recordForTarfile != null) {
+								// check is there is already record in DB for this runId and sourceFilePath mainly for failed tar reruns
+									if (start != recordForTarfile.getTarIndexStart()
+											|| end != recordForTarfile.getTarIndexEnd()) {
+										// This block executes when there is already record in the Db for that tar and indexes are not same, just enter new row with error msge
+										String errorMsg = "TarRange Indexes doesn't matched with expected Index ranges tarStartIndex:"
+												+ start + "UploadedStartIndex:" + recordForTarfile.getTarIndexStart()
+												+ "tarEndIndex:" + end + " uploadedEndIndex:"
+												+ recordForTarfile.getTarIndexEnd();
 
-							} else {
+										logger.info("[{}] UploadedTarIndexes {} mismatch {}", super.getTaskName(),
+												tarFileName, errorMsg);
+										StatusInfo indexErrorRow = insertErrorRowforTar(object, tarFileName, start, end,
+												errorMsg);
+									} else {
+										// This block executes when there is already record in the Db so reusing the tar
+										logger.info("[{}]Enqueuing the existing tar request {} from DB {}",
+												super.getTaskName(), recordForTarfile.getId(), tarFilePath);
+										DmeSyncMessageDto message = new DmeSyncMessageDto();
+										message.setObjectId(recordForTarfile.getId());
+										sender.send(message, "inbound.queue");
+										logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+									}
+							}else {
+								// This block executes when the tar is not uploaded or record is not created. mainly for new request 
 								// add new row in status info table for created tar.
 								StatusInfo statusInfo = insertNewRowforTar(object, tarFileName, true, start, end, null);
 								// Send the objectId to the message queue for processing
@@ -182,13 +215,23 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								sender.send(message, "inbound.queue");
 								logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 							}
+						} else {
+							// This block executes when the verifyPrevUpload value is none. This means doesn't check the database 
+							StatusInfo statusInfo = insertNewRowforTar(object, tarFileName, true, start, end, null);
+							logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
+									statusInfo.getId());
+							DmeSyncMessageDto message = new DmeSyncMessageDto();
+							message.setObjectId(statusInfo.getId());
+							sender.send(message, "inbound.queue");
+							logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 						}
+
 						writeToContentsFile(notesWriter, tarFileName, subList);
 					}
 
 					notesWriter.close();
 					logger.info("[{}] Ended Multiple tar requests processing in {}", super.getTaskName());
-					logger.info("[{}] Started Multiple tar requests Verification Started in {}", super.getTaskName());
+					logger.info("[{}] Started Multiple tar requests Verification  in {}", super.getTaskName());
 
 					List<StatusInfo> totalRequestsForFolder;
 					if ("local".equals(verifyPrevUpload)) {
@@ -218,12 +261,14 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						throw new DmeSyncVerificationException((" Expected tar creation Requests " + expectedTarRequests
 								+ " didn't match the creation requests in DB " + totalTarsRequests));
 					} else {
-						logger.info("[{}] Started Multiple tar requests Verification Completed in {}", super.getTaskName());
+						logger.info("[{}] Completed Multiple tar requests Verification Completed in {}",
+								super.getTaskName());
 
 						StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
 								.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
 										object.getOriginalFilePath(), tarMappingFile.getName(), "COMPLETED");
-						
+						logger.info("[{}]Enqueuing the contents file upload request {}", super.getTaskName(),
+								tarMappingFile.getName());
 						if (("local".equals(verifyPrevUpload)) && checkForUploadedContentsFile != null) {
 							logger.info("[{}] Updating the record {} in DB {}", super.getTaskName(),
 									checkForUploadedContentsFile.getId(), tarMappingFile.getName());
@@ -236,8 +281,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo statusInfo = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
 									null, tarMappingFile);
-							upsertTask(statusInfo.getId());
-							upsertTaskByTaskName(statusInfo.getId(), "TarTask");
 							// Send the objectId to the message queue for processing
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(statusInfo.getId());
@@ -254,8 +297,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 				throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
 			}
-		}
-		return object;
+		}return object;
+
 	}
 
 	private StatusInfo insertNewRowforTar(StatusInfo object, String sourceFileName, boolean isTarRequest,
@@ -275,6 +318,28 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 			statusInfo.setSourceFilePath(sourceFile.getAbsolutePath());
 			statusInfo.setFilesize(sourceFile.length());
 		}
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+
+		return statusInfo;
+
+	}
+
+	private StatusInfo insertErrorRowforTar(StatusInfo object, String sourceFileName, Integer tarStartIndex,
+			Integer tarEndIndex, String error) throws IOException {
+
+		StatusInfo statusInfo = new StatusInfo();
+		statusInfo.setRunId(object.getRunId());
+		statusInfo.setOrginalFileName(object.getOrginalFileName());
+		statusInfo.setOriginalFilePath(object.getOriginalFilePath());
+		statusInfo.setSourceFileName(sourceFileName);
+		statusInfo.setStartTimestamp(new Date());
+		statusInfo.setDoc(object.getDoc());
+		statusInfo.setTarIndexEnd(tarEndIndex);
+		statusInfo.setTarIndexStart(tarStartIndex);
+		statusInfo.setSourceFilePath(object.getOriginalFilePath());
+		statusInfo.setFilesize(0L);
+		statusInfo.setError(error);
+
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 
 		return statusInfo;
