@@ -323,10 +323,10 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	
 	
 	@Override
-	  public StatusInfo findTopBySourceFilePathAndRunId(String doc, String baseDir) {
+	  public StatusInfo findTopBySourceFileNameAndRunId(String sourceFileName, String runId) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
 				.path("/api/findTopBySourceFilePathAndRunId")
-				.queryParam("doc", doc).queryParam("baseDir", baseDir).build().encode().toUri();
+				.queryParam("sourceFileName", sourceFileName).queryParam("runId", runId).build().encode().toUri();
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);	  }
 	

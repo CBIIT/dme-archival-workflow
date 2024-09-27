@@ -157,7 +157,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 									.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
 											object.getOriginalFilePath(), tarFileName, "COMPLETED");
 							StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
-									.findTopBySourceFilePathAndRunId(tarFilePath, object.getRunId());
+									.findTopBySourceFileNameAndRunId(tarFileName, object.getRunId());
 							if (recordForUploadedTar != null) {
 								// Check the startIndex and EndIndex with start and End to make sure uploaded tars have same range
 								if (start != recordForUploadedTar.getTarIndexStart()
