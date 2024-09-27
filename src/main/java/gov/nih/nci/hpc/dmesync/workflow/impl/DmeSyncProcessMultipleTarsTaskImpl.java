@@ -174,7 +174,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								} else {
 									// This block is executed when the tar is already uploaded to DME
 									logger.info(
-											"[{}] Skipping the Creation of tar file in since this is already got uploaded {} {} {}",
+											"[{}] Skipping the Creation of tar request {} since this is already got uploaded  {} {}",
 											super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
 											recordForUploadedTar.getStatus());
 								}
@@ -265,19 +265,30 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								super.getTaskName());
 
 						StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-								.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
-										object.getOriginalFilePath(), tarMappingFile.getName(), "COMPLETED");
-						logger.info("[{}]Enqueuing the contents file upload request {}", super.getTaskName(),
-								tarMappingFile.getName());
-						if (("local".equals(verifyPrevUpload)) && checkForUploadedContentsFile != null) {
-							logger.info("[{}] Updating the record {} in DB {}", super.getTaskName(),
-									checkForUploadedContentsFile.getId(), tarMappingFile.getName());
+								.findTopStatusInfoByDocAndSourceFilePath(doc,
+										tarMappingFile.getAbsolutePath());
+
+						if ("local".equals(verifyPrevUpload) && checkForUploadedContentsFile!=null) {
+							
+						   if( StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
+							   // Tar contents file request have already uplaoded in previous run
+							   logger.info(
+										"[{}] Tar Contents file already uploaded to DME  {} ,{} ,{}",
+										super.getTaskName(), checkForUploadedContentsFile, checkForUploadedContentsFile.getId(),
+										checkForUploadedContentsFile.getStatus());
+							   
+						   }else {
+							   // Tar contents file request have already created in previous run
+								logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
+										tarMappingFile.getName());
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(checkForUploadedContentsFile.getId());
 							sender.send(message, "inbound.queue");
 							logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
-
+						   }
 						} else {
+							logger.info("[{}]Enqueuing the new contents file upload request {}", super.getTaskName(),
+									tarMappingFile.getName());
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo statusInfo = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
 									null, tarMappingFile);
