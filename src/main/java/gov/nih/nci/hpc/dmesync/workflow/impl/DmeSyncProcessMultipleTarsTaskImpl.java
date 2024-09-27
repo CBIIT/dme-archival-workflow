@@ -82,7 +82,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
-		super.setCheckTaskForCompletion(false);
 		return true;
 	}
 
@@ -196,8 +195,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 												errorMsg);
 									} else {
 										// This block executes when there is already record in the Db so reusing the tar
-										logger.info("[{}]Enqueuing the existing tar request {} from DB {}",
-												super.getTaskName(), recordForTarfile.getId(), tarFilePath);
+										logger.info("[{}]Enqueuing the existing tar request {} with Id{} from DB {}",
+												super.getTaskName(), tarFileName ,recordForTarfile.getId(), tarFilePath);
 										DmeSyncMessageDto message = new DmeSyncMessageDto();
 										message.setObjectId(recordForTarfile.getId());
 										sender.send(message, "inbound.queue");
@@ -208,8 +207,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								// add new row in status info table for created tar.
 								StatusInfo statusInfo = insertNewRowforTar(object, tarFileName, true, start, end, null);
 								// Send the objectId to the message queue for processing
-								logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
-										statusInfo.getId());
+								logger.info("[{}]Enqueuing the new tar request {} with Id {}", super.getTaskName(),
+										tarFileName,statusInfo.getId());
 								DmeSyncMessageDto message = new DmeSyncMessageDto();
 								message.setObjectId(statusInfo.getId());
 								sender.send(message, "inbound.queue");
@@ -274,7 +273,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							   // Tar contents file request have already uplaoded in previous run
 							   logger.info(
 										"[{}] Tar Contents file already uploaded to DME  {} ,{} ,{}",
-										super.getTaskName(), checkForUploadedContentsFile, checkForUploadedContentsFile.getId(),
+										super.getTaskName(), checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
 										checkForUploadedContentsFile.getStatus());
 							   
 						   }else {

@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -91,6 +92,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.process.multiple.tars:fasle}")
   private boolean processMultipleTars;
   
+  @Value("${dmesync.multiple.tars.dir.folders:}")
+  private String multpleTarsFolders;
+  
   
   
   @PostConstruct
@@ -143,10 +147,15 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       statusInfo.setError("");
       statusInfo.setStartTimestamp(new Date());
       
+      String sourceDirLeafNode = statusInfo.getSourceFilePath() != null
+				? ((Paths.get(statusInfo.getSourceFilePath())).getFileName()).toString()
+				: null;
+      
       for (DmeSyncTask task : tasks) {
     	   statusInfo = task.processTask(statusInfo);
     	   // This condition is used when we want to peform specific task and complete the workflow
-    	   if( StringUtils.equals("COMPLETED", statusInfo.getStatus())){
+    	   if((StringUtils.equalsIgnoreCase(multpleTarsFolders, sourceDirLeafNode)) &&
+    			   StringUtils.equals("COMPLETED", statusInfo.getStatus()) ){
     		   break;
     	   }
       }
