@@ -82,6 +82,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
+		super.setCheckTaskForCompletion(false);
 		return true;
 	}
 
