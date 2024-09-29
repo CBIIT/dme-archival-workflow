@@ -95,7 +95,7 @@ public class ExcelUtil {
         row.createCell(colCount++).setCellValue(data.getId());
         row.createCell(colCount++).setCellValue(data.getOriginalFilePath());
         row.createCell(colCount++).setCellValue(data.getFullDestinationPath());
-        row.createCell(colCount++).setCellValue(data.getFilesize()!=null?data.getFilesize():null);
+        row.createCell(colCount++).setCellValue(data.getFilesize());
         row.createCell(colCount++).setCellValue(humanReadableByteCount(data.getFilesize().doubleValue(), true));
         row.createCell(colCount++).setCellValue(data.getStatus());
         if (data.getTarStartTimestamp() != null && data.getTarEndTimestamp() != null) {

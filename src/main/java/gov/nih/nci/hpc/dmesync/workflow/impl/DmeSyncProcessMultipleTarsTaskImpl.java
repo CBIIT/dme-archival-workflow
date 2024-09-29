@@ -325,6 +325,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		if (isTarRequest) {
 			statusInfo.setTarIndexEnd(tarEndIndex);
 			statusInfo.setTarIndexStart(tarStartIndex);
+			statusInfo.setFilesize(0L);
 		} else {
 			statusInfo.setSourceFilePath(sourceFile.getAbsolutePath());
 			statusInfo.setFilesize(sourceFile.length());
