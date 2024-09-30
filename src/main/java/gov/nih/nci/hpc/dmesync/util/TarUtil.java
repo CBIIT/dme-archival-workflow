@@ -118,6 +118,7 @@ public class TarUtil {
     } else if (path.toFile().isDirectory()) {
       try {
         Files.delete(path);
+        logger.info("{} Deleted the folder path", path);
       } catch (DirectoryNotEmptyException | NoSuchFileException e ) {
         //There could be common parent for the files being processed, the last one processing will remove the parent work folder.
         //Another thread might have removed it
