@@ -2,6 +2,7 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -199,9 +200,27 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		int totalFiles = end - start;
 
 		List<File> subList = fileList.subList(start, end);
-
+ 
+		File tarWorkDirectory= new File(tarWorkDir);
 
 		logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
+		
+		if (!tarWorkDirectory.exists()) {			
+			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
+			
+		}
+		try {
+	        File tfile = new File(tarFile);
+	        if(!tfile.exists()) {
+				logger.info("[{}] Tar file doesn't exists {}", super.getTaskName(), tarWorkDirectory);
+	        }
+
+		}catch(Exception e) {
+			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
+			throw new DmeSyncStorageException("Error occurred creating the tar. " + e.getMessage(), e);
+		}
+		
+		// tarFile 
 		File[] filesArray = new File[subList.size()];
 		subList.toArray(filesArray);
 		if (compress) {
