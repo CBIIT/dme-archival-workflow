@@ -116,7 +116,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			Path relativePath = baseDirPath.relativize(sourceDirPath);
 			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
 			Path tarWorkDirPath = Paths.get(tarWorkDir);
+			
+			synchronized (this) {
 			Files.createDirectories(tarWorkDirPath);
+			logger.info("[{}] Creating Tar work space directory {}", super.getTaskName(), tarWorkDirPath);			
+			}
 
 			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
