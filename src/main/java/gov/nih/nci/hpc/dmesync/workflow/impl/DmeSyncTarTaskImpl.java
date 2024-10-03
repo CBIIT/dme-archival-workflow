@@ -117,7 +117,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
 			Path tarWorkDirPath = Paths.get(tarWorkDir);
 			
-		
+			synchronized (this) {
+			Files.createDirectories(tarWorkDirPath);
+			logger.info("[{}] Creating Tar work space directory {}", super.getTaskName(), tarWorkDirPath);			
+			}
+
 			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 			// if this index range are given for files in status_info object then the tar
@@ -128,7 +132,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				
 
 			} else {
-				Files.createDirectories(tarWorkDirPath);
 				object.setTarStartTimestamp(new Date());
 				String tarFileName;
 				if (tarNameinExcelFile) {
@@ -184,8 +187,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			List<String> excludeFolders) throws Exception {
 		
 		try{
-			Path tarWorkDirPath = Paths.get(tarWorkDir);
-			
 
 		File directory = new File(object.getOriginalFilePath());
 		File[] files = directory.listFiles();
@@ -204,9 +205,24 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 		List<File> subList = fileList.subList(start, end);
  
+		File tarWorkDirectory= new File(tarWorkDir);
 
 		logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
 		
+		if (!tarWorkDirectory.exists()) {			
+			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
+			
+		}
+		try {
+	        File tfile = new File(tarFile);
+	        if(!tfile.exists()) {
+				logger.info("[{}] Tar file doesn't exists {}", super.getTaskName(), tarWorkDirectory);
+	        }
+
+		}catch(Exception e) {
+			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
+			throw new DmeSyncStorageException("Error occurred creating the tar. " + e.getMessage(), e);
+		}
 		
 		// tarFile 
 		File[] filesArray = new File[subList.size()];
@@ -219,22 +235,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 		} else {
 			if (!dryRun) {
-
-				synchronized (this) {
-					File tarWorkDirectory = new File(tarWorkDir);
-					if (!Files.exists(tarWorkDirPath)) {
-						logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(),
-								tarWorkDirectory);
-
-					} else {
-						logger.info("[{}] Creating Tar work space directory {}", super.getTaskName(), tarWorkDirPath);
-						Files.createDirectories(tarWorkDirPath);
-					}
-				}
-			
 				TarUtil.tar(tarFile, excludeFolders, filesArray);
-				}
-			
+			}
 		}
 		
 		File createdTarFile = new File(tarFile);
