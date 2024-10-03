@@ -221,6 +221,15 @@ public class TarUtil {
   }
 
   private static TarArchiveOutputStream getTarArchiveOutputStream(String name) throws IOException {
+	
+	  Path tarPath = Paths.get(name);
+      Path tarWorkDirectory = tarPath.getParent(); // Gets the parent directory
+      if (tarWorkDirectory != null) {
+          if (!Files.exists(tarWorkDirectory)) {
+			logger.info("Tar work space directory doesn't exists {}" ,tarWorkDirectory.toString());
+			
+		}
+      }
     FileOutputStream fileOutputStream = new FileOutputStream(name);
     BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
     TarArchiveOutputStream taos = new TarArchiveOutputStream(bufferedOutputStream);
