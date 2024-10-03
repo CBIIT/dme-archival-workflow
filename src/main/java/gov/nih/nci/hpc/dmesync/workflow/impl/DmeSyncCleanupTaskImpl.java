@@ -33,6 +33,10 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Value("${dmesync.file.tar:false}")
   private boolean tarIndividualFiles;
   
+  @Value("${dmesync.doc.name:default}")
+  private String doc;
+
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("CleanupTask");
@@ -49,7 +53,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
         if(cleanup)
-          TarUtil.deleteTar(object.getSourceFilePath(), syncWorkDir);
+          TarUtil.deleteTar(object.getSourceFilePath(), syncWorkDir, doc);
         else
           logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}", super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
       } catch (Exception e) {

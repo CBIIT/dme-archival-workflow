@@ -31,6 +31,8 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
   @Value("${dmesync.cleanup:false}")
   private boolean cleanup;
   
+  @Value("${dmesync.doc.name:default}")
+  private String doc;
   @PostConstruct
   public boolean init() {
     super.setTaskName("UntarTask");
@@ -66,7 +68,7 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
                 object.getOriginalFilePath(), "COMPLETED", object.getRunId());
         for (StatusInfo completedFile : completedFiles) {
           if(cleanup)
-            TarUtil.deleteTar(completedFile.getSourceFilePath(), syncWorkDir);
+            TarUtil.deleteTar(completedFile.getSourceFilePath(), syncWorkDir, doc);
           else
             logger.info("[{}] Test so it will not remove any files but remove called for {}  WORK_DIR: {}", super.getTaskName(), completedFile.getSourceFilePath(), syncWorkDir);
         }

@@ -7,6 +7,7 @@ import org.apache.commons.compress.archivers.tar.TarFile;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.BufferedInputStream;
@@ -99,7 +100,7 @@ public class TarUtil {
    * @param workDir the work directory
    * @throws IOException on IO error
    */
-  public static void deleteTar(String tarFile, String workDir) throws IOException {
+  public static void deleteTar(String tarFile, String workDir , String doc) throws IOException {
     Path filePath = Paths.get(tarFile);
     Path basePath = Paths.get(workDir).toRealPath();
 
@@ -107,10 +108,10 @@ public class TarUtil {
     if (!filePath.startsWith(basePath)) return;
 
     //Delete the tar file and the parent dir until the work base directory if there are no other files
-    removeFileAndParentsIfEmpty(filePath, basePath);
+    removeFileAndParentsIfEmpty(filePath, basePath , doc);
   }
 
-  private static void removeFileAndParentsIfEmpty(Path path, Path basePath) throws IOException {
+  private static void removeFileAndParentsIfEmpty(Path path, Path basePath , String doc) throws IOException {
     if (path == null || path.endsWith(basePath)) return;
 
     if (path.toFile().isFile()) {
@@ -125,8 +126,10 @@ public class TarUtil {
         return;
       }
     }
-
-    removeFileAndParentsIfEmpty(path.getParent(), basePath);
+    // Skipping the deletion of the parent folder for the csb upload multiple tar design
+    if(!StringUtils.equalsIgnoreCase("csb", doc )){
+    	removeFileAndParentsIfEmpty(path.getParent(), basePath , doc);
+    }
   }
 
   /**
