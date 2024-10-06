@@ -68,7 +68,7 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
                 object.getOriginalFilePath(), "COMPLETED", object.getRunId());
         for (StatusInfo completedFile : completedFiles) {
           if(cleanup)
-            TarUtil.deleteTar(completedFile.getSourceFilePath(), syncWorkDir, doc);
+            TarUtil.deleteTarAndParentsIfEmpty(completedFile.getSourceFilePath(), syncWorkDir, doc);
           else
             logger.info("[{}] Test so it will not remove any files but remove called for {}  WORK_DIR: {}", super.getTaskName(), completedFile.getSourceFilePath(), syncWorkDir);
         }

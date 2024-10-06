@@ -100,15 +100,29 @@ public class TarUtil {
    * @param workDir the work directory
    * @throws IOException on IO error
    */
-  public static void deleteTar(String tarFile, String workDir , String doc) throws IOException {
+  public static void deleteTarFile(String tarFile, String workDir , String doc) throws IOException {
     Path filePath = Paths.get(tarFile);
     Path basePath = Paths.get(workDir).toRealPath();
 
     // Make sure we are removing from the work directory ONLY
     if (!filePath.startsWith(basePath)) return;
+    if (filePath == null || filePath.endsWith(basePath)) return;
 
-    //Delete the tar file and the parent dir until the work base directory if there are no other files
-    removeFileAndParentsIfEmpty(filePath, basePath , doc);
+    if (filePath.toFile().isFile()) {
+      Files.deleteIfExists(filePath);
+    }
+    
+  }
+  
+  public static void deleteTarAndParentsIfEmpty(String tarFile, String workDir , String doc) throws IOException {
+	    Path filePath = Paths.get(tarFile);
+	    Path basePath = Paths.get(workDir).toRealPath();
+
+	    // Make sure we are removing from the work directory ONLY
+	    if (!filePath.startsWith(basePath)) return;
+
+	    //Delete the tar file and the parent dir until the work base directory if there are no other files
+	    removeFileAndParentsIfEmpty(filePath, basePath , doc);
   }
 
   private static void removeFileAndParentsIfEmpty(Path path, Path basePath , String doc) throws IOException {
@@ -126,10 +140,9 @@ public class TarUtil {
         return;
       }
     }
-    // Skipping the deletion of the parent folder for the csb upload multiple tar design
-    if(!StringUtils.equalsIgnoreCase("csb", doc )){
-    	removeFileAndParentsIfEmpty(path.getParent(), basePath , doc);
-    }
+    
+      	removeFileAndParentsIfEmpty(path.getParent(), basePath , doc);
+
   }
 
   /**

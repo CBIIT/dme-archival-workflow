@@ -110,7 +110,8 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                 .stream()
                 .collect(
                     Collectors.toMap(HpcMetadataEntry::getAttribute, HpcMetadataEntry::getValue));
-
+      
+        // verify source_file_size 
         if (!awsFlag && map.get("source_file_size") != null
             && !map.get("source_file_size").equals(object.getFilesize().toString())) {
           String msg =
@@ -121,6 +122,8 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
         }
+        
+        // verify checksum
         if (!awsFlag && checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
           String msg =
               "Checksum does not match local "
@@ -130,6 +133,8 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
         }
+        
+        // verify data_transfer_status
         if (map.get("data_transfer_status") != null
             && !map.get("data_transfer_status").equals("ARCHIVED")) {
           String msg =
@@ -141,6 +146,9 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
         }
 		
+        
+        
+        
         if(StringUtils.isEmpty(object.getError())) {
         	//Update DB to completed but if verification succeeds.
             object.setStatus("COMPLETED");
@@ -158,6 +166,10 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         }
         throw new DmeSyncWorkflowException("Received bad response from verify dataObject");
       }
+      
+
+      
+      
     } catch (DmeSyncVerificationException e) {
         throw e;
     } catch (Exception e) {

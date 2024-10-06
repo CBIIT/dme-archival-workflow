@@ -111,6 +111,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				File directory = new File(object.getOriginalFilePath());
 				File[] files = directory.listFiles();
 
+				// FYI,, If the contents file format has changed , these changes should also done in cleanup task, 
+				  //since we are enqeueing contents file to upload logic in cleanup task. 
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
 				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
@@ -127,7 +129,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					throw new DmeSyncStorageException("No Read permission to " + object.getOriginalFilePath());
 				}
 
-				if (files != null) {
+				if (files != null && files.length>0) {
 					// sorting the files based on the lastModified in asc, so every rerun we get
 					// them in same order.
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
@@ -277,9 +279,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 										super.getTaskName(), checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
 										checkForUploadedContentsFile.getStatus());
 							   
-						   }else {
-							   // Tar contents file request have already created in previous run
-								logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
+						   } else if (object.getTarContentsCount()==0) {
+							  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
+							logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
 										tarMappingFile.getName());
 							DmeSyncMessageDto message = new DmeSyncMessageDto();
 							message.setObjectId(checkForUploadedContentsFile.getId());
@@ -287,21 +289,17 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 						   }
 						} else {
-							logger.info("[{}]Enqueuing the new contents file upload request {}", super.getTaskName(),
+							logger.info("[{}]Inserting the new contents file upload request {}", super.getTaskName(),
 									tarMappingFile.getName());
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo statusInfo = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
 									null, tarMappingFile);
-							// Send the objectId to the message queue for processing
-							DmeSyncMessageDto message = new DmeSyncMessageDto();
-							message.setObjectId(statusInfo.getId());
-							sender.send(message, "inbound.queue");
-							logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
-						}
+							// Sending  the objectId to the message queue in the cleanup task after all tars are uploaded
+						 }
 						// update the current status info row as completed so this workflow is completed
 						object.setStatus("COMPLETED");
+						object.setTarContentsCount(object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests);
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-
 					}
 				}
 			} catch (Exception e) {
