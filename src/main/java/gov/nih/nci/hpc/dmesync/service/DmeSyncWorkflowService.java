@@ -90,6 +90,15 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath);
 
   /**
+   * findTopByDocAndSourceFilePathAndRunId
+   * @param doc the doc
+   * @param sourceFilePath
+   * @param runId
+   * @return the StatusInfo object
+   */
+  StatusInfo findTopByDocAndSourceFilePathAndRunId( String doc,String sourceFilePath, String runId) ;
+
+  /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc
    * @param doc the doc
    * @return the StatusInfo object

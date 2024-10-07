@@ -99,7 +99,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 					// have the sourcefilename as movies
 					// other rows have tarnames.
 					StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
-							.findTopBySourceFileNameAndRunId(object.getOrginalFileName(), object.getRunId());
+							.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
 					if (tarFolderRow != null) {
 						logger.info(
 								"[{}] Decrementing the tar counter old value{} , new value {} ",

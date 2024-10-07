@@ -329,6 +329,13 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 				.queryParam("sourceFileName", sourceFileName).queryParam("runId", runId).build().encode().toUri();
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);	  }
+	@Override
+	  public StatusInfo findTopByDocAndSourceFilePathAndRunId(String doc,String sourceFilePath, String runId) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findTopStatusInfoByDocAndSourceFilePathAndRunId")
+				.queryParam("sourceFilePath", sourceFilePath).queryParam("doc", doc).queryParam("runId", runId).build().encode().toUri();
+		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
+				StatusInfo.class);	  }
 	
 	@Override
 	public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
