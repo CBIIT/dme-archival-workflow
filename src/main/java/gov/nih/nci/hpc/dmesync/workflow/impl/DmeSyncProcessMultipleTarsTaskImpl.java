@@ -135,7 +135,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
-
+					object.setTarContentsCount(object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests);
+					object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+					
 					logger.info("[{}] Started creating {} tars for the dataset {} with {} files ", super.getTaskName(),
 							expectedTarRequests, tarFileParentName, fileList.size());
 
@@ -183,7 +185,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								writeToContentsFile(notesWriter, tarFileName, subList);
 								continue;
 							} else if (recordForTarfile != null) {
-								// check is there is already record in DB for this runId and sourceFilePath mainly for failed tar reruns
+								// check is there is already record in DB for this runId and sourceFileName mainly for failed tar reruns
 									if (start != recordForTarfile.getTarIndexStart()
 											|| end != recordForTarfile.getTarIndexEnd()) {
 										// This block executes when there is already record in the Db for that tar and indexes are not same, just enter new row with error msge
@@ -197,7 +199,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 										StatusInfo indexErrorRow = insertErrorRowforTar(object, tarFileName, start, end,
 												errorMsg);
 									} else {
-										// This block executes when there is already record in the Db so reusing the tar
+										// This block executes when there is already record in the Db so reusing the status info row
 										logger.info("[{}]Enqueuing the existing tar request {} with Id{} from DB {}",
 												super.getTaskName(), tarFileName ,recordForTarfile.getId(), tarFilePath);
 										DmeSyncMessageDto message = new DmeSyncMessageDto();
@@ -206,7 +208,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 										logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 									}
 							}else {
-								// This block executes when the tar is not uploaded or record is not created. mainly for new request 
+								// This block executes when the tar is not uploaded or record is not inserted in DB. mainly for new run of folder 
 								// add new row in status info table for created tar.
 								StatusInfo statusInfo = insertNewRowforTar(object, tarFileName, true, start, end, null);
 								// Send the objectId to the message queue for processing
@@ -218,7 +220,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 							}
 						} else {
-							// This block executes when the verifyPrevUpload value is none. This means doesn't check the database 
+							// This block executes when the verifyPrevUpload value is none. This means doesn't check the database just start as the running 
+							 // folder for first time
 							StatusInfo statusInfo = insertNewRowforTar(object, tarFileName, true, start, end, null);
 							logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
 									statusInfo.getId());
