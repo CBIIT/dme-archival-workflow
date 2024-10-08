@@ -100,6 +100,7 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 			s3UploadSource.setSourceLocation(source);
 			requestDto.setS3UploadSource(s3UploadSource);
 			requestDto.setCreateParentCollections(true);
+			requestDto.setGenerateUploadRequestURL(false);
 			String jsonRequestDto = objectMapper.writeValueAsString(requestDto);
 			HttpEntity<String> jsonHttpEntity = new HttpEntity<>(jsonRequestDto, jsonHeader);
 			body.add("dataObjectRegistration", jsonHttpEntity);
