@@ -26,9 +26,7 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
-import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
@@ -212,16 +210,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		if (!tarWorkDirectory.exists()) {			
 			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
 			
-		}
-		try {
-	        File tfile = new File(tarFile);
-	        if(!tfile.exists()) {
-				logger.info("[{}] Tar file doesn't exists {}", super.getTaskName(), tarWorkDirectory);
-	        }
-
-		}catch(Exception e) {
-			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-			throw new DmeSyncStorageException("Error occurred creating the tar. " + e.getMessage(), e);
 		}
 		
 		// tarFile 

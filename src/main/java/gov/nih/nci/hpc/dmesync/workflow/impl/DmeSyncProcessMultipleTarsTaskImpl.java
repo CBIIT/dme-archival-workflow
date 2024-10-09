@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -21,15 +20,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
-import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
-import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -135,9 +131,14 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
+					
 					object.setTarContentsCount(object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests);
+					
 					object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 					
+					logger.info("[{}] Updated the expected tars counter value column {} in the DB  ", super.getTaskName(),
+							object.getTarContentsCount());
+
 					logger.info("[{}] Started creating {} tars for the dataset {} with {} files ", super.getTaskName(),
 							expectedTarRequests, tarFileParentName, fileList.size());
 
@@ -301,7 +302,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						 }
 						// update the current status info row as completed so this workflow is completed
 						object.setStatus("COMPLETED");
-						object.setTarContentsCount(object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests);
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 					}
 				}

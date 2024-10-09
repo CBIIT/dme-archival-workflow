@@ -10,6 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
@@ -53,6 +55,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   
   @Autowired
   private DmeSyncProducer sender;
+  
+  @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
 
   
   @PostConstruct
@@ -153,9 +157,32 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
         // Record it in DB as well
         object.setError("Upload successful but failed to remove file");
         dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+        updateTarCounterForMultipleTars(object);
+        dmeSyncMailServiceFactory.getService(doc).sendErrorMail("HPCDME Auto Archival Cleanup Error: " + e.getMessage(),
+				e.getMessage() + "\n\n" + e.getCause().getMessage());
       }
     }
 
     return object;
   }
+  
+  void updateTarCounterForMultipleTars(StatusInfo object){
+	  
+	if(processMultipleTars) {
+	  // This block only executes for mulitpleTars feature
+	  synchronized (this) {
+		// retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies  other rows have tarnames.
+			StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
+					.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
+			if (tarFolderRow != null && tarFolderRow.getTarContentsCount()!=null) {
+				logger.info(
+						"[{}] Decrementing the tar counter old value when cleanup has error in execption block{} , new value {} ",
+						super.getTaskName(), tarFolderRow.getTarContentsCount(),
+						tarFolderRow.getTarContentsCount()-1);
+				// decrement and read the counter
+				tarFolderRow.setTarContentsCount(tarFolderRow.getTarContentsCount() - 1);
+				tarFolderRow = dmeSyncWorkflowService.getService(access).saveStatusInfo(tarFolderRow);
+	  
+	  }}}
+	  }
 }

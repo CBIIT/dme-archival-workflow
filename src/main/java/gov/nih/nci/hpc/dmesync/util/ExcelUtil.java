@@ -80,6 +80,7 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("DataTransferRate(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("Error");
       header.createCell(colCount++).setCellValue("RetryCount");
+      header.createCell(colCount++).setCellValue("SourceFileName");
 
       Set<String> set = new HashSet<>(metadataInfo.size());
       metadataInfo.stream().filter(p -> set.add(p.getMetaDataKey())).collect(Collectors.toList());
@@ -135,6 +136,7 @@ public class ExcelUtil {
         }
         row.createCell(colCount++).setCellValue(data.getError());
         row.createCell(colCount++).setCellValue(data.getRetryCount());
+        row.createCell(colCount++).setCellValue(data.getSourceFileName());
         for (String key : set) {
           boolean found = false;
           for (MetadataInfo metadata : metadataInfo) {

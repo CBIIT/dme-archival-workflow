@@ -23,4 +23,14 @@ public interface DmeSyncMailService {
    */
   public void sendResult(String runId);
   
+  /**
+   * Send Error mail with subject and text to NCI HPC_DME_Admin 
+   * @param subject the mail subject
+   * @param text the mail text
+   * @return SUCCESS or ERROR
+   */
+  
+  public String sendErrorMail(String subject, String text);
+
+  
 }

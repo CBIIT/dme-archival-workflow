@@ -81,6 +81,24 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     sender.send(message);
     return "SUCCESS";
   }
+  
+  @Override
+  public String sendErrorMail(String subject, String text) {
+    MimeMessage message = sender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(message);
+
+    try {
+      helper.setFrom("hpcdme-sync");
+      helper.setTo("HPC_DME_Admin@mail.nih.gov");
+      helper.setText(text);
+      helper.setSubject(subject);
+    } catch (MessagingException e) {
+      logger.error("Error while sending mail", e);
+      return "ERROR";
+    }
+    sender.send(message);
+    return "SUCCESS";
+  }
 
   @Override
   public void sendResult(String runId) {
