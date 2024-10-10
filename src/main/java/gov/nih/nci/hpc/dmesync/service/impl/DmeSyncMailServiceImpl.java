@@ -163,6 +163,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
       String updatedBody=body;
+      
       if("csb".equals(doc)) {
 
 			Set<String> folderPaths = statusInfo.stream().map(StatusInfo::getOriginalFilePath)
@@ -180,9 +181,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					folder.setFolderName(name);
 					folder.setFilesCount(files.length);
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
-					folder.setExpectedTars(expectedTars + 2);
+					folder.setExpectedTars(expectedTars + 1);
 					folder.setCreatedTars(allUploads.size());
-					folder.setUploadedTars(allUploads.stream().filter(tar -> "COMPLETED".equals(tar.getStatus())) 
+					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()) && tar.getUploadEndTimestamp()!=null)) 
 							.count());
 					folder.setFailedTars(allUploads.stream().filter(tar -> tar.getStatus() == null) 
 							.count());

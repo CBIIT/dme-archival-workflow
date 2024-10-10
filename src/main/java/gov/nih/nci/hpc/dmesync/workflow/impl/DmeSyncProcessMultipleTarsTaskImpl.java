@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 
@@ -132,15 +133,16 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
 					
-					object.setTarContentsCount(object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests);
+					int tarsCounter= object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests;
+					object.setTarContentsCount(tarsCounter);
 					
 					object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 					
 					logger.info("[{}] Updated the expected tars counter value column {} in the DB  ", super.getTaskName(),
 							object.getTarContentsCount());
 
-					logger.info("[{}] Started creating {} tars for the dataset {} with {} files ", super.getTaskName(),
-							expectedTarRequests, tarFileParentName, fileList.size());
+					logger.info("[{}] Started creating {} tars with total of  {} for the dataset {} with {} files ", super.getTaskName(),
+							tarsCounter,expectedTarRequests, tarFileParentName, fileList.size());
 
 					for (int i = 0; i < expectedTarRequests; i++) {
 						int start = i * filesPerTar;
@@ -298,8 +300,13 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo statusInfo = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
 									null, tarMappingFile);
-							// Sending  the objectId to the message queue in the cleanup task after all tars are uploaded
+							// Sending  this objectId to the message queue in the cleanup task after all tars are uploaded
 						 }
+						
+					    object = dmeSyncWorkflowService.getService(access).findStatusInfoById(object.getId()).orElseThrow();
+
+						logger.info("[{}] Updated the expected tars counter value column {} in the DB  ", super.getTaskName(),
+								object.getTarContentsCount());
 						// update the current status info row as completed so this workflow is completed
 						object.setStatus("COMPLETED");
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
