@@ -104,7 +104,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			return object;
 			
 		}else {
-			// Task: Create tar file in work directory for processing
+		// Task: Create tar file in work directory for processing
 		try {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
@@ -126,7 +126,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// should be done for files in folders
 			if (filesPerTar > 0 && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
-				createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
+				object=createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
 				
 
 			} else {
@@ -231,6 +231,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		int tarContentsCount=TarUtil.countFilesinTar(createdTarFile.getAbsolutePath());
 		
 		if (totalFiles != tarContentsCount) {
+			// Tar Verification.
 			String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
 			logger.error("[{}] {}", super.getTaskName(), msg);
 			throw new DmeSyncVerificationException(msg);
