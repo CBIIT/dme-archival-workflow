@@ -42,7 +42,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.admin.emails}")
   private String adminEmails;
   
-  @Value("${logging.file}")
+  @Value("${logging.file.name}")
   private String logFile;
   
   @Value("${dmesync.doc.name}")
