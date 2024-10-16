@@ -182,7 +182,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					folder.setFilesCount(files.length);
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
 					folder.setExpectedTars(expectedTars + 1);
-					folder.setCreatedTars(allUploads.size());
+					// Removing the movies folder since we are only displaying the uploaded tars
+					folder.setCreatedTars(allUploads.size()-1);
 					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()) && tar.getUploadEndTimestamp()!=null)) 
 							.count());
 					folder.setFailedTars(allUploads.stream().filter(tar -> tar.getStatus() == null) 
