@@ -125,6 +125,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multpleTarsFolders;
   
+  @Value("${dmesync.process.multiple.tars:false}")
+  private boolean processMultpleTars;
+
   @Value("${dmesync.file.exist.under.basedir:false}")
   private boolean checkExistsFileUnderBaseDir;
   
@@ -252,7 +255,17 @@ public class DmeSyncScheduler {
                   continue;
               }
             }
-            folders.add(pathAttr);
+			if (processMultpleTars) {
+				// Only add the folder if the folder is not empty.
+				File folder = new File(pathAttr.getAbsolutePath());
+				if (folder.list() != null && folder.list().length > 0) {
+					folders.add(pathAttr);
+				} else {
+					logger.info("[Scheduler] There are no files in the Folder  {}", pathAttr.getAbsolutePath());
+				}
+			} else {
+				folders.add(pathAttr);
+			}
           } else {
             files.add(pathAttr);
           }
