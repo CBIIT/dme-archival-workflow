@@ -48,7 +48,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Value("${dmesync.doc.name:default}")
   private String doc;
   
-  @Value("${dmesync.process.multiple.tars:fasle}")
+  @Value("${dmesync.process.multiple.tars:false}")
   private boolean processMultipleTars;
   
   @Value("${dmesync.multiple.tars.dir.folders:}")

@@ -89,7 +89,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.source.aws:false}")
   private boolean awsFlag;
   
-  @Value("${dmesync.process.multiple.tars:fasle}")
+  @Value("${dmesync.process.multiple.tars:false}")
   private boolean processMultipleTars;
   
   @Value("${dmesync.multiple.tars.dir.folders:}")
