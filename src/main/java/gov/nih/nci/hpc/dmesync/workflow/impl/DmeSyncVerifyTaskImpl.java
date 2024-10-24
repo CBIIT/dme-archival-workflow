@@ -1,8 +1,9 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,7 +26,6 @@ import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
-import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
@@ -38,6 +38,9 @@ import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
 @Component
 public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
+  public static  final String DEEP_ARCHIVE_STATUS_INPROGRESS = "DEEP_ARCHIVE";
+  public static  final String DEEP_ARCHIVE_STATUS_ARCHIVED = "IN_PROGRESS";
+  
   @Value("${hpc.server.url}")
   private String serverUrl;
 
@@ -53,14 +56,9 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Value("${dmesync.source.aws:false}")
   private boolean awsFlag;
   
-  @Value("${dmesync.tar:false}")
-  private boolean tar;
-  
   @Autowired private RestTemplateFactory restTemplateFactory;
   
   @Autowired private ObjectMapper objectMapper;
-
-  HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();
 
   @PostConstruct
   public boolean init() {
@@ -70,6 +68,9 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   
   @Override
   public StatusInfo process(StatusInfo object) throws DmeSyncWorkflowException, DmeSyncVerificationException {
+	  
+		
+	  
 
     //Verify, call GET dataObject and verify file size and checksum against local db.
     try {
@@ -110,10 +111,10 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                 .stream()
                 .collect(
                     Collectors.toMap(HpcMetadataEntry::getAttribute, HpcMetadataEntry::getValue));
-      
-        // verify source_file_size 
-        if (!awsFlag && map.get("source_file_size") != null
-            && !map.get("source_file_size").equals(object.getFilesize().toString())) {
+
+        if (!awsFlag && map.get("source_file_size") != null) {
+        	
+            if( !map.get("source_file_size").equals(object.getFilesize().toString())) {
           String msg =
               "File size does not match local "
                   + object.getFilesize()
@@ -121,9 +122,14 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                   + map.get("source_file_size");
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
+        }else if(!awsFlag && map.get("source_file_size") == null) {
+        	
+        	String msg =
+                    "System generated metadata source_file_size is missing.";
+                logger.error("[{}] {}", super.getTaskName(), msg);
+            object.setError(msg);
         }
-        
-        // verify checksum
+        }
         if (!awsFlag && checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
           String msg =
               "Checksum does not match local "
@@ -133,8 +139,6 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
         }
-        
-        // verify data_transfer_status
         if (map.get("data_transfer_status") != null
             && !map.get("data_transfer_status").equals("ARCHIVED")) {
           String msg =
@@ -147,8 +151,25 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         }
 		
         
+        // verify uuid is missing
+        if (map.get("uuid") == null) {
+          String msg =
+              "System generated metdata UUID is missing.";
+          object.setError(msg);
+          if (fileSystemUpload || awsFlag) {
+        	  throw new DmeSyncVerificationException(msg);
+          }
+          logger.error("[{}] {}", super.getTaskName(), msg);
+        }
         
+        // verify data_transfer_completed timestamp
+		object=verifyDataTransferTimestampMetadata(map,object);
         
+		// verify deep archive status
+		
+		object=verifyDeepArchiveMetadata(map,object);
+
+		
         if(StringUtils.isEmpty(object.getError())) {
         	//Update DB to completed but if verification succeeds.
             object.setStatus("COMPLETED");
@@ -166,10 +187,6 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         }
         throw new DmeSyncWorkflowException("Received bad response from verify dataObject");
       }
-      
-
-      
-      
     } catch (DmeSyncVerificationException e) {
         throw e;
     } catch (Exception e) {
@@ -179,4 +196,54 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
 
     return object;
   }
+  
+  public StatusInfo verifyDataTransferTimestampMetadata( Map<String, String> metadataMap,StatusInfo object) throws DmeSyncVerificationException {
+	  if (metadataMap.get("data_transfer_completed") != null) {
+			try {
+				String format = "MM-dd-yyyy HH:mm:ss";
+		        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+	            LocalDateTime.parse(metadataMap.get("data_transfer_completed"), formatter);
+				logger.info("[{} verified data_transfer_completed timestamp: {}", metadataMap.get("data_transfer_completed") );
+
+			} catch (DateTimeParseException e) {
+				String msg = "Invalid data_transfer_completed timestamp format " + metadataMap.get("data_transfer_completed");
+				object.setError(msg);
+				if (fileSystemUpload || awsFlag) {
+					throw new DmeSyncVerificationException(msg);
+				}
+				logger.error("[{}] {}", super.getTaskName(), msg);
+			}
+		} else {
+			String msg =
+		              "System generated metadata data_transfer_completed data  is missing.";
+		          object.setError(msg);
+		          if (fileSystemUpload || awsFlag) {
+		        	  throw new DmeSyncVerificationException(msg);
+		          }
+		          logger.error("[{}] {}", super.getTaskName(), msg);
+		}
+	  return object;
+	  
+  }
+  
+public StatusInfo verifyDeepArchiveMetadata( Map<String, String> metadataMap,StatusInfo object) throws DmeSyncVerificationException {
+	  
+	  if (metadataMap.get("deep_archive_status") != null) {
+			logger.info("[{} verifying deep_archive_status{}", metadataMap.get("deep_archive_status") );
+		  String deepArchiveStatus=metadataMap.get("deep_archive_status");
+		  if (!StringUtils.equalsIgnoreCase(deepArchiveStatus, DEEP_ARCHIVE_STATUS_INPROGRESS) ||
+				 ! StringUtils.equalsIgnoreCase(deepArchiveStatus, DEEP_ARCHIVE_STATUS_ARCHIVED)) {
+				String msg = "Deep_archive_status  is not in DEEP_ARCHIVE, IN_PROGRESS"
+						+ ", it is " + deepArchiveStatus;
+				object.setError(msg);
+				if (fileSystemUpload || awsFlag) {
+					throw new DmeSyncVerificationException(msg);
+				}
+				logger.error("[{}] {}", super.getTaskName(), msg);
+			} 
+	  }
+	  return object;
+	  
+}
+
 }
