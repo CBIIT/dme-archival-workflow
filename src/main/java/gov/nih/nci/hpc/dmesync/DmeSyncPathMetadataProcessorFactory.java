@@ -127,10 +127,6 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("dctd-pcl")
   private DmeSyncPathMetadataProcessor dctdPclProcessor;
   
-  @Autowired
-  @Qualifier("pob")
-  private DmeSyncPathMetadataProcessor pobCcdiProcessor;
-  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -190,8 +186,6 @@ public class DmeSyncPathMetadataProcessorFactory {
         return nextProcessor;
     } else if ("dctd-pcl".equals(doc)){
         return dctdPclProcessor;
-    } else if ("pob".equals(doc)){
-        return pobCcdiProcessor;
     } else {
         return defaultProcessor;
     }
