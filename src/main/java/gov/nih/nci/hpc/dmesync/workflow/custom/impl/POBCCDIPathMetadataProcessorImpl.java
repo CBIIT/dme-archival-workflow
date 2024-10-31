@@ -403,6 +403,10 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			parentPath = getPathFromParent(object, "dme_test");
 			
 			if(!hasMetricsFile(object)) {
+			if(StringUtils.equalsIgnoreCase(FASTQ_QC_NAME,getAnalysisCollectionName(object))) {
+				// For fastqc remove the fastqc value at the end of path.
+				parentPath = StringUtils.replace(parentPath, "/fastqc", "");
+			}
 			String geonomeType = getGenomeCollectionName(object);
 			
 			if (geonomeType != null && geonomeType.startsWith("GRCh")) {
