@@ -394,26 +394,28 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		if (StringUtils.equals(getSubCollectionName(object), FASTQ)) {
 
-			// path is equal to parent filepath which is
-			// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
+			// path is equal to parent filepath which is /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
 			parentPath = fullPath.getParent().toString();
 		} else {
-			// for Analysis, path is substring of path which is project folder path
-			// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX
+			// for Analysis, path is substring of path which is project folder path /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX
 			parentPath = getPathFromParent(object, "dme_test");
 			
-			if(!hasMetricsFile(object)) {
-			if(StringUtils.equalsIgnoreCase(FASTQ_QC_NAME,getAnalysisCollectionName(object))) {
-				// For fastqc remove the fastqc value at the end of path.
-				parentPath = StringUtils.replace(parentPath, "/fastqc", "");
-			}
-			String geonomeType = getGenomeCollectionName(object);
-			
-			if (geonomeType != null && geonomeType.startsWith("GRCh")) {
-			// For geonome path is parent path
-			///data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/02_PrimaryAnalysisOutput/GRCh37/
-				parentPath = fullPath.getParent().toString();
-			}
+			if (!hasMetricsFile(object)) {
+
+				String analysisSubType = getAnalysisCollectionName(object);
+				if (StringUtils.equalsIgnoreCase(FASTQ_QC_NAME, analysisSubType)) {
+					// For fastqc remove the fastqc value at the end of path.
+					parentPath = StringUtils.replace(parentPath, "/fastqc", "");
+				} else if (StringUtils.equalsIgnoreCase(PRIMARY_ANALYSIS_INPUT_NAME, analysisSubType)) {
+                    
+				} else {
+					String geonomeType = getGenomeCollectionName(object);
+					if (geonomeType != null && geonomeType.startsWith("GRCh")) {
+						// For geonome path is parent path
+						/// data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/02_PrimaryAnalysisOutput/GRCh37/
+						parentPath = fullPath.getParent().toString();
+					}
+				}
 			}
 
 		}
