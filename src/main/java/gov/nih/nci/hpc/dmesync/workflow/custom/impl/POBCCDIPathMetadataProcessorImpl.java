@@ -71,7 +71,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(object, metadataFilePathKey) + "" + "/Analysis/"
 					+ getAnalysisCollectionName(object) + "/"
-					+ ((geonomeType != null && geonomeType.startsWith("GRCh")) ? geonomeType + "/" : "") + fileName;
+					+ (geonomeType != null ? geonomeType + "/" : "") + fileName;
 			}
 
 		}
@@ -90,7 +90,6 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
-			String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
 
 			// find the metadataFilePathKey to use as key value for the metadata from file.
 			String metadataFilePathKey = getPathForMetadata(object);
@@ -337,13 +336,16 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	private String getGenomeCollectionName(StatusInfo object) {
-		String genomeCollectionName = null;
+		
+		Path fullPath = Paths.get(object.getOriginalFilePath());
+		String parentName=fullPath.getParent().getFileName().toString();
 
-		genomeCollectionName = getPathFromParent(object,"02_PrimaryAnalysisOutput");
-		Path genomePath = Paths.get(genomeCollectionName);
-
-		logger.info("genomeCollectionName: {}", genomePath.getFileName());
-		return genomePath.getFileName().toString();
+		if(parentName.startsWith("GRCh")) {
+			logger.info("genomeCollectionName: {}", parentName);
+			return parentName;
+		}else {
+			return null;
+		}
 	}
 
 	private String getSubCollectionName(StatusInfo object) {
@@ -364,10 +366,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	private String getAnalysisCollectionName(StatusInfo object) {
 		String anlaysisCollectionName = null;
-		// Example: If originalFilePath is
-		// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/tarfile
-		// then the Analysis collection name will be Primary Analysis Input, Primary
-		// Analysis Output, Fastq_qc
+		// then the Analysis collection name will be Primary Analysis Input, Primary Analysis Output, Fastq_qc
 		String path = object.getOriginalFilePath();
 		if (StringUtils.containsIgnoreCase(path, "fastqc")) {
 			anlaysisCollectionName = FASTQ_QC_NAME;
@@ -382,10 +381,10 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	/*
 	 * metadata spreadsheet has mapping only for fastq paths and geoneme path.
-	 * Analysis we check the project file substring and retrieve one of the rows for
-	 * that project filepath Fastq paths filepath key is the parent path of
-	 * OriginalFilePath Analysis Paths filepath key is retrieved based on the
-	 * project name Geonome paths is based on the parent path of original path
+	 * For Analysis we check the project file substring and retrieve one of the rows for that project Fastq paths 
+	 * Fastq: Original File Path ,
+	 * Analysis: Parent_file_path from parent keyword "dme_test"
+	 * Geonome: full file Path
 	 */
 	public String getPathForMetadata(StatusInfo object) {
 
@@ -394,7 +393,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		if (StringUtils.equals(getSubCollectionName(object), FASTQ)) {
 
-			// path is equal to parent filepath which is /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
+			// path is equal to parent file path which is /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
 			parentPath = fullPath.getParent().toString();
 		} else {
 			// for Analysis, path is substring of path which is project folder path /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX
@@ -403,14 +402,15 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			if (!hasMetricsFile(object)) {
 
 				String analysisSubType = getAnalysisCollectionName(object);
+				
 				if (StringUtils.equalsIgnoreCase(FASTQ_QC_NAME, analysisSubType)) {
 					// For fastqc remove the fastqc value at the end of path.
 					parentPath = StringUtils.replace(parentPath, "/fastqc", "");
-				} else if (StringUtils.equalsIgnoreCase(PRIMARY_ANALYSIS_INPUT_NAME, analysisSubType)) {
-                    
-				} else {
+					
+				} else if (StringUtils.equalsIgnoreCase(PRIMARY_ANALYSIS_OUTPUT_NAME, analysisSubType)) {
+					
 					String geonomeType = getGenomeCollectionName(object);
-					if (geonomeType != null && geonomeType.startsWith("GRCh")) {
+					if (geonomeType != null) {
 						// For geonome path is parent path
 						/// data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/02_PrimaryAnalysisOutput/GRCh37/
 						parentPath = fullPath.getParent().toString();
