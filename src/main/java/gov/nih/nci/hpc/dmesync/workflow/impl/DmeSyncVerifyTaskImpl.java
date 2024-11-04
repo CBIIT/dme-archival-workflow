@@ -38,8 +38,8 @@ import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
 @Component
 public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
-  public static  final String DEEP_ARCHIVE_STATUS_ARCHIVED = "DEEP_ARCHIVE";
-  public static  final String DEEP_ARCHIVE_STATUS_IN_PROGRESS = "IN_PROGRESS"; 
+  public static final String DEEP_ARCHIVE_STATUS_ARCHIVED = "DEEP_ARCHIVE";
+  public static final String DEEP_ARCHIVE_STATUS_IN_PROGRESS = "IN_PROGRESS"; 
   
   @Value("${hpc.server.url}")
   private String serverUrl;
@@ -231,8 +231,8 @@ public StatusInfo verifyDeepArchiveMetadata( Map<String, String> metadataMap,Sta
 	  if (metadataMap.get("deep_archive_status") != null) {
 			logger.info("[{} verifying deep_archive_status{}", metadataMap.get("deep_archive_status") );
 		  String deepArchiveStatus=metadataMap.get("deep_archive_status");
-		  if (!StringUtils.equalsIgnoreCase(deepArchiveStatus, DEEP_ARCHIVE_STATUS_IN_PROGRESS) &&
-				 ! StringUtils.equalsIgnoreCase(deepArchiveStatus, DEEP_ARCHIVE_STATUS_ARCHIVED)) {
+		  if (!DEEP_ARCHIVE_STATUS_IN_PROGRESS.equals(deepArchiveStatus) &&
+				 !DEEP_ARCHIVE_STATUS_ARCHIVED.equals(deepArchiveStatus)) {
 				String msg = "Deep_archive_status  is not in DEEP_ARCHIVE, IN_PROGRESS"
 						+ ", it is " + deepArchiveStatus;
 				object.setError(msg);
