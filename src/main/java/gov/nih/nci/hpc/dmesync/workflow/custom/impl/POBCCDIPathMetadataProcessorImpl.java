@@ -178,8 +178,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					createPathEntry("instrument_model", getAttrValueWithKey(metadataFilePathKey, "Instrument model")));
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("is_pdx", getAttrValueWithKey(metadataFilePathKey, "is_pdx")));
-			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("data_types", getAttrValueWithKey(metadataFilePathKey, "data_types")));
+			
 
 			// TODO: data_generating_facilty name
 			pathEntriesProject.getPathMetadataEntries()
@@ -231,6 +230,8 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						.add(createPathEntry("tissue", getAttrValueWithKey(metadataFilePathKey, "tissue")));
 				pathEntriesSeq.getPathMetadataEntries()
 						.add(createPathEntry("tissue_type", getAttrValueWithKey(metadataFilePathKey, "tissue_type")));
+				pathEntriesSeq.getPathMetadataEntries()
+				.add(createPathEntry("data_type", getAttrValueWithKey(metadataFilePathKey, "data_type")));
 				pathEntriesSeq.setPath(seqCollectionPath);
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSeq);
 			} else {
