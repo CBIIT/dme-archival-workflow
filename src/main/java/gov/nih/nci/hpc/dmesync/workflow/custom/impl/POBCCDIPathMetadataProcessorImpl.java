@@ -261,7 +261,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				} else if (StringUtils.equalsIgnoreCase(analysisCollectionName, FASTQ_QC_NAME)) {
 					analysisSubCollectionPath = analysisSubCollectionPath + "/FASTQ_QC";
 					pathEntriesAnalysisSub.getPathMetadataEntries()
-							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "FASTQ_QC"));
+							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "QC"));
 					pathEntriesAnalysisSub.setPath(analysisSubCollectionPath);
 					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysisSub);
 
