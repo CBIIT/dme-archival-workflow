@@ -11,14 +11,14 @@
 	<description>DME Auto-archival Workflow Application</description>
 	
 	<properties>
-		<java.version>11</java.version>
+		<java.version>21</java.version>
 		<log4j2.version>2.20.0</log4j2.version>
 	</properties>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.1.6.RELEASE</version>
+		<version>2.7.18</version>
 	</parent>
 	
 	<dependencies>
@@ -87,7 +87,7 @@
 		<dependency>
 			<groupId>gov.nih.nci.hpc</groupId>
 			<artifactId>hpc-dto</artifactId>
-			<version>[3.0.0,)</version>
+			<version>[3.7.0,)</version>
 		</dependency>
 		
 		<!-- For retries -->
@@ -153,7 +153,6 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>2.3.0.RELEASE</version><!--$NO-MVN-MAN-VER$-->
 			</plugin>
 		</plugins>
 	</build>

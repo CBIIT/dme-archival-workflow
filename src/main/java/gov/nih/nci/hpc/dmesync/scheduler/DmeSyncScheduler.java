@@ -134,7 +134,7 @@ public class DmeSyncScheduler {
   @Value("${dmesync.file.exist.under.basedir.depth:0}")
   private String checkExistsFileUnderBaseDirDepth;
   
-  @Value("${logging.file}")
+  @Value("${logging.file.name}")
   private String logFile;
 
   @Value("${dmesync.create.softlink:false}")

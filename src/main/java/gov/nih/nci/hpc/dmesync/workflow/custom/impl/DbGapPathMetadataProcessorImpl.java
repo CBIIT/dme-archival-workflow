@@ -215,9 +215,11 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
           .getMetadataEntries()
           .add(createPathEntry("object_name", fileName));
       dataObjectRegistrationRequestDTO
-          .getMetadataEntries()
-          .add(createPathEntry("file_type", FilenameUtils.getExtension(fileName)));
-      
+      .getMetadataEntries()
+      .add(createPathEntry("source_path", object.getOriginalFilePath()));
+		dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("file_type",
+				FilenameUtils.getExtension(fileName).isEmpty() ? "sra" : FilenameUtils.getExtension(fileName)));
+
       if (dataType.equals("Trait")) {
         Path filePath = Paths.get(object.getOriginalFilePath());
         String traitMetadataFile = null;
@@ -263,7 +265,8 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     //         If parent folder is refseq, then the dataType will be Alignment
     //         else dataType will be Trait.
     Path filePath = Paths.get(path);
-    if(StringUtils.equals(filePath.getParent().getFileName().toString(), "sra"))
+	if (StringUtils.equals(filePath.getParent().getFileName().toString(), "sra")
+			|| StringUtils.startsWith(filePath.getParent().getFileName().toString(), "SRR"))
       dataType =  "SRA_Read";
     else if(StringUtils.equals(filePath.getParent().getFileName().toString(), "refseq"))
       dataType = "Alignment";
