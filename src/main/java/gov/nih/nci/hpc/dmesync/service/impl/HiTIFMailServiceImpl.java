@@ -45,7 +45,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.send.user.emails:false}")
   private boolean sendUserEmails;
 
-  @Value("${logging.file}")
+  @Value("${logging.file.name}")
   private String logFile;
   
   @Value("${dmesync.source.base.dir}")
