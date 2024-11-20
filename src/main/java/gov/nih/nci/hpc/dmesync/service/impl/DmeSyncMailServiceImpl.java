@@ -187,8 +187,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()) && tar.getUploadEndTimestamp()!=null &&
 							tar.getTarEndTimestamp()!=null)) 
 							.count());
-					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null  && tar.getUploadEndTimestamp()!=null &&
-							tar.getTarEndTimestamp()!=null)) 
+					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null  && tar.getUploadEndTimestamp()==null && !tar.getSourceFileName().endsWith(".txt")))
 							.count());
 					folders.add(folder);
 				}
