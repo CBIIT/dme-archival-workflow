@@ -122,12 +122,15 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                   + map.get("source_file_size");
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
+    	  throw new DmeSyncVerificationException(msg);
         }else if(!awsFlag && map.get("source_file_size") == null) {
         	
         	String msg =
                     "System generated metadata source_file_size is missing.";
                 logger.error("[{}] {}", super.getTaskName(), msg);
             object.setError(msg);
+      	  throw new DmeSyncVerificationException(msg);
+
         }
         }
         if (!awsFlag && checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
@@ -138,6 +141,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                   + map.get("checksum");
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
+    	  throw new DmeSyncVerificationException(msg);
         }
         if (map.get("data_transfer_status") != null
             && !map.get("data_transfer_status").equals("ARCHIVED")) {
@@ -156,10 +160,8 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           String msg =
               "System generated metdata UUID is missing.";
           object.setError(msg);
-          if (fileSystemUpload || awsFlag) {
-        	  throw new DmeSyncVerificationException(msg);
-          }
           logger.error("[{}] {}", super.getTaskName(), msg);
+    	  throw new DmeSyncVerificationException(msg);
         }
         
         // verify data_transfer_completed timestamp
@@ -208,19 +210,15 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
 			} catch (DateTimeParseException e) {
 				String msg = "Invalid data_transfer_completed timestamp format " + metadataMap.get("data_transfer_completed");
 				object.setError(msg);
-				if (fileSystemUpload || awsFlag) {
-					throw new DmeSyncVerificationException(msg);
-				}
 				logger.error("[{}] {}", super.getTaskName(), msg);
+		    	 throw new DmeSyncVerificationException(msg);
 			}
 		} else {
 			String msg =
 		              "System generated metadata data_transfer_completed data  is missing.";
 		          object.setError(msg);
-		          if (fileSystemUpload || awsFlag) {
-		        	  throw new DmeSyncVerificationException(msg);
-		          }
 		          logger.error("[{}] {}", super.getTaskName(), msg);
+			      throw new DmeSyncVerificationException(msg);
 		}
 	  return object;
 	  
@@ -236,10 +234,9 @@ public StatusInfo verifyDeepArchiveMetadata( Map<String, String> metadataMap,Sta
 				String msg = "Deep_archive_status  is not in DEEP_ARCHIVE, IN_PROGRESS"
 						+ ", it is " + deepArchiveStatus;
 				object.setError(msg);
-				if (fileSystemUpload || awsFlag) {
-					throw new DmeSyncVerificationException(msg);
-				}
 				logger.error("[{}] {}", super.getTaskName(), msg);
+				throw new DmeSyncVerificationException(msg);
+
 			} 
 	  }
 	  return object;
