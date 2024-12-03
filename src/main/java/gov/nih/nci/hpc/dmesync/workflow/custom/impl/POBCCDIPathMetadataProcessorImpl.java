@@ -174,8 +174,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					.add(createPathEntry("is_cell_line", getAttrValueWithKey(metadataFilePathKey, "is_cell_line")));
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("study_disease", getAttrValueWithKey(metadataFilePathKey, "study_disease (project or sample level if multiple)")));
-			pathEntriesProject.getPathMetadataEntries().add(
-					createPathEntry("instrument_model", getAttrValueWithKey(metadataFilePathKey, "Instrument model")));
+			
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("is_pdx", getAttrValueWithKey(metadataFilePathKey, "is_pdx")));
 			
@@ -230,8 +229,8 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						.add(createPathEntry("tissue", getAttrValueWithKey(metadataFilePathKey, "tissue")));
 				pathEntriesSeq.getPathMetadataEntries()
 						.add(createPathEntry("tissue_type", getAttrValueWithKey(metadataFilePathKey, "tissue_type")));
-				pathEntriesSeq.getPathMetadataEntries()
-				.add(createPathEntry("data_type", getAttrValueWithKey(metadataFilePathKey, "data_type")));
+				pathEntriesSeq.getPathMetadataEntries().add(
+						createPathEntry("instrument_model", getAttrValueWithKey(metadataFilePathKey, "Instrument model")));
 				pathEntriesSeq.setPath(seqCollectionPath);
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSeq);
 			} else {
