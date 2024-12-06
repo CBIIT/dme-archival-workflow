@@ -1,12 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,15 +13,14 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
-import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 /**
  * SCAF DME Path and Meta-data Processor Implementation
  *
  * @author konerum3
  */
-@Service("scaf")
-public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
+@Service("scaf2")
+public class SCAF2PathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
 	// SCAF DME path construction and meta data creation
@@ -57,15 +51,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String archivePath = null;
 		String sampleName = getSampleName(object);
 		String sampleSubFolder = getSampleSubFolder(object);
-        String metadataFilePath=getMetadataFilePath(object.getOriginalFilePath());
+
 		if (StringUtils.isBlank(sampleSubFolder)) {
-			threadLocalMap.set(loadJsonMetadataFile(metadataFilePath, "Analysis"));
-			String piCollectionName=getPiCollectionNameForAnalysis(object);
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_"
-					+ getProjectCollectionNameForAnalysis(object,piCollectionName) + "/Analysis" + fileName;
+			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+					+ getProjectCollectionName(object) + "/Analysis" + fileName;
 
 		} else {
-			retrieveMetadataFromFile(object.getOriginalFilePath());
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object) + "/Sample_" + getSampleName(object) + "/" + sampleSubFolder
 					+ getTarFileName(object, sampleSubFolder);
@@ -205,8 +196,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return dataObjectRegistrationRequestDTO;
 	}
 
-	private String getCollectionNameFromParent(String originalFilePath, String parentName) {
-		Path fullFilePath = Paths.get(originalFilePath);
+	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
+		Path fullFilePath = Paths.get(object.getOriginalFilePath());
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
 		for (int i = 0; i <= count; i++) {
@@ -225,38 +216,26 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("PI Collection Name: {}", piCollectionName);
 		return piCollectionName;
 	}
-	
-	private String getPiCollectionNameForAnalysis(StatusInfo object) throws DmeSyncMappingException {
-		String piCollectionName = null;
-		 // Example: If originalFilePath is
-				/// /CCR_SCAF_Archive/Jay_Berzofsky_lab/CS036014_CS037666_Sui/Analysis/01_SummaryHTMLs.tar
-				// then return Jay_Berzofsky_lab
-		piCollectionName= getCollectionNameFromParent(getAttrValueWithKey("Analysis", "object_name"), "CCR_SCAF_Archive");
 
-		logger.info("PI Collection Name for Analysis: {}", piCollectionName);
-		return piCollectionName;
-	}
-	
-	
-
-	
 	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Staudt_Shaffer
-		return getCollectionNameFromParent(object.getOriginalFilePath(), "scaf-ccr-a-data");
-	}
-	
-	private String getProjectCollectionNameForAnalysis(StatusInfo object, String picollectionName) throws DmeSyncMappingException {
-		// Example: If originalFilePath is
-		////CCR_SCAF_Archive/Jay_Berzofsky_lab/CS036014_CS037666_Sui/Analysis/01_SummaryHTMLs.tar
-		// then return CS036014_CS037666_Sui
-		return getCollectionNameFromParent(object.getOriginalFilePath(), picollectionName);
+		return getCollectionNameFromParent(object, "scaf-ccr-a-data");
 	}
 
 	private String getSampleName(StatusInfo object) throws DmeSyncMappingException {
-		
-		return "GEX";
+		String path = Paths.get(object.getOriginalFilePath()).toString();
+		String sampleName = null;
+		// Example: If originalFilePath is
+		// /SCAF/CS027118/02_PrimaryAnalysisOutput/00_FullCellrangerOutputs/GEX/SCAF1536_CD45TumCor/outs
+		// then return SCAF1536_CD45TumCor
+		if (path.contains("GEX")) {
+			sampleName = getCollectionNameFromParent(object, "GEX");
+		} else {
+			sampleName = getCollectionNameFromParent(object, "TCR");
+		}
+		return sampleName;
 	}
 
 	private boolean isAggregatedDatasets(StatusInfo object) throws DmeSyncMappingException {
@@ -264,12 +243,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getSampleSubFolder(StatusInfo object) {
-		// TODO: Change the logic to Parent name
 		String sampleSubFolder = null;
-		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(),FASTQ)) {
+		if (StringUtils.containsIgnoreCase("01_DemultiplexedFastqs", object.getOriginalFilePath())) {
 			sampleSubFolder = FASTQ;
 			logger.info("sampleSubFolder: {}", sampleSubFolder);
-		} else if ((StringUtils.containsIgnoreCase( object.getOriginalFilePath(),PRIMARY_ANALYSIS_OUTPUT_NAME))) {
+		} else if ((StringUtils.containsIgnoreCase("00_FullCellrangerOutputs", object.getOriginalFilePath()))) {
 
 			sampleSubFolder = PRIMARY_ANALYSIS_OUTPUT_NAME;
 			logger.info("sampleSubFolder: {}", sampleSubFolder);
@@ -305,7 +283,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
 		// then the flowcell Id will be AAAKYHJM5
 
-		flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), "ClassifierReports");
+		flowcellId = getCollectionNameFromParent(object, "ClassifierReports");
 		flowcellId = StringUtils.substringBeforeLast(StringUtils.substring(flowcellId, flowcellId.indexOf('_') + 1),
 				"_");
 		logger.info("flowcellId: {}", flowcellId);
@@ -318,7 +296,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
 		// then the chemistry will be VDJ
 
-		chemistry = getCollectionNameFromParent(object.getOriginalFilePath(), "ClassifierReports");
+		chemistry = getCollectionNameFromParent(object, "ClassifierReports");
 		chemistry = StringUtils.substringAfterLast(StringUtils.substring(chemistry, chemistry.indexOf('_') + 1), "_");
 		logger.info("flowcellId: {}", chemistry);
 		return chemistry;
@@ -336,60 +314,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
 	}
-	
-	public  String getMetadataFilePath(String filePath) throws DmeSyncMappingException {
-        // Extract the file name from the given path ( "01_SummaryHTMLs.tar")
-        String fileName = Paths.get(filePath).getFileName().toString();
 
-        // Append ".metadata.json" to the original file name, including the extension
-        String metadataFileName = fileName + ".metadata.json";
-
-        // Get the parent directory from the file path
-        String parentDirectory = Paths.get(filePath).getParent().toString();
-
-        // Combine the parent directory with the metadata file name
-        String metadataFilePath = Paths.get(parentDirectory, metadataFileName).toString();
-
-        logger.info("Constructed metadata file path: {}", metadataFilePath);
-
-        // Check if the metadata file exists
-        if (!Files.exists(Paths.get(metadataFilePath))) {
-        	logger.error("Metadata json file not found for {}", filePath);
-			throw new DmeSyncMappingException("Metadata json file not found for " + filePath);
-        }
-        logger.info("Metadata file found at: {}", metadataFilePath);
-
-        return metadataFilePath;
-    }
-	
-	 // Start from the file path and retrieve all the metadata for the folder and its parents, only if metadata file name matches folder name
-    public  void retrieveMetadataFromFile(String filePath) throws DmeSyncMappingException {
-        Path path = Paths.get(filePath).getParent();
-        
-        // Traverse the directory structure upwards from the file
-        while (path != null && Files.exists(path)) {
-            // Get the folder name and construct the metadata file name
-            String folderName = path.getFileName().toString();
-            String metadataFileName = folderName + ".metadata.json";
-            
-            // Look for metadata file that matches the folder name
-         // Correctly resolve the path for the metadata file by checking the parent directory
-            Path metadataFilePath = path.resolve(metadataFileName);
-
-            // Look for metadata file in the current folder that matches the folder name
-            File metadataFile = metadataFilePath.toFile();
-            
-            if (metadataFile.exists()) {
-    			threadLocalMap.set(loadJsonMetadataFile(metadataFile.getPath(), "Sample"));
-                         
-            } else {
-                logger.info("No matching metadata file found for folder: {}", folderName);
-            }
-            // Move to the parent directory for the next iteration
-            path = path.getParent();
-        }
-    }
-
-	
 	
 }
