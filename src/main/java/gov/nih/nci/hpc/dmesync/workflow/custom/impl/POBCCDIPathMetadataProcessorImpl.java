@@ -363,15 +363,17 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	private String getGenomeCollectionName(StatusInfo object) {
-
+		
+		if(isGeonomeFolder(object)) {
 		String parentName = getGenomeCollectionPath(object);
 
 		if (parentName != null) {
 			String genomeFolder = Paths.get(parentName).getFileName().toString();
-			if (genomeFolder.startsWith("GRCh")) {
+			if (genomeFolder!=null && genomeFolder.startsWith("GRCh")) {
 				logger.info("genomeCollectionName: {}", parentName);
 				return genomeFolder;
 			}
+		}
 		}
 		return null;
 	}
@@ -488,6 +490,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					metadataFilePathKey = key;
 					logger.info("Full File Path in Excel = {}, matchPath {} , fullPath{}", metadataFilePathKey,
 							fileSubStringPath, fullPath);
+					break;
 				}
 			}
 		}
@@ -531,6 +534,13 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		boolean isFullRangerOutput = StringUtils.equalsIgnoreCase(
 				(Paths.get(object.getSourceFilePath()).getParent().getFileName().toString()),
 				"00_FullCellrangerOutputs");
+		return isFullRangerOutput;
+
+	}
+	
+	private boolean isGeonomeFolder(StatusInfo object) {
+		boolean isFullRangerOutput = StringUtils.containsIgnoreCase(object.getOriginalFilePath(),"02_PrimaryAnalysisOutput/GRCh");
+				
 		return isFullRangerOutput;
 
 	}
