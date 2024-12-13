@@ -83,8 +83,8 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 							+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "" + "/Analysis/"
 							+ getAnalysisCollectionName(object) + "/"
-							+ (geonomeType != null ? geonomeType + "/" + "00_FullCellrangerOutputs/"
-									: "00_FullCellrangerOutputs/")
+							+ (geonomeType != null ? geonomeType + "/" + "FullCellrangerOutputs/"
+									: "FullCellrangerOutputs/")
 							+ fileName;
 
 				} else {
@@ -308,7 +308,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						}
 
 						if (isFullRangerOutput(object)) {
-							String fullRangerSubCollectionPath = geonomeCollectionPath + "/00_FullCellrangerOutputs";
+							String fullRangerSubCollectionPath = geonomeCollectionPath + "/FullCellrangerOutputs";
 							HpcBulkMetadataEntry pathEntriesFullRanger = new HpcBulkMetadataEntry();
 							pathEntriesFullRanger.getPathMetadataEntries()
 									.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Folder"));
