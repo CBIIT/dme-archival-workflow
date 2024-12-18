@@ -99,12 +99,12 @@ public class ExcelUtil {
         row.createCell(colCount++).setCellValue(data.getFilesize());
         row.createCell(colCount++).setCellValue(humanReadableByteCount(data.getFilesize().doubleValue(), true));
         row.createCell(colCount++).setCellValue(data.getStatus());
+        if (data.getTarContentsCount() != null) {
+			row.createCell(colCount++).setCellValue(data.getTarContentsCount());
+		} else {
+			row.createCell(colCount++).setCellValue("");
+		}
         if (data.getTarStartTimestamp() != null && data.getTarEndTimestamp() != null) {
-			if (data.getTarContentsCount() != null) {
-				row.createCell(colCount++).setCellValue(data.getTarContentsCount());
-			} else {
-				row.createCell(colCount++).setCellValue("");
-			}
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarStartTimestamp()));
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarEndTimestamp()));
         } else {

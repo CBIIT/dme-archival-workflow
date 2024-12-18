@@ -132,7 +132,20 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);
 	}
+	
+	@Override
+	public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath,
+			String sourceFileName) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findByOriginalFilePathAndSourceFileNameAndStatusNull")
+				.queryParam("originalFilePath", originalFilePath).queryParam("sourceFileName", sourceFileName).build().encode().toUri();
+		ResponseEntity<StatusInfo[]> response = restTemplateFactory
+				.getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
+		StatusInfo[] statusInfoArray = response.getBody();
+		return new ArrayList<>(Arrays.asList(statusInfoArray));
+	}
 
+	
 	@Override
 	public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc,
 			String baseDir) {
@@ -248,6 +261,15 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 		final HttpEntity<StatusInfo> entity = new HttpEntity<>(statusInfo);
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).postForObject(finalUrl,
 				entity, StatusInfo.class);
+	}
+	
+	@Override
+	public void deleteStatusInfoByIds(List<Long> objectIds) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl).path("/api/deleteStatusInfoByIds").build()
+				.encode().toUri();
+		final HttpEntity<List<Long>> entity = new HttpEntity<>(objectIds);
+		restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).exchange(finalUrl, HttpMethod.POST,
+				entity, Object.class);
 	}
 
 	@Override

@@ -84,7 +84,15 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
     return statusInfoDao.findFirstByOriginalFilePathAndSourceFileNameAndStatus(
         originalFilePath, sourceFileName, status);
   }
+  
+  @Override
+  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+      String originalFilePath, String sourceFileName) {
+    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusNull(
+        originalFilePath, sourceFileName);
+  }
 
+  
   @Override
   public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir) {
     return statusInfoDao.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, baseDir);
@@ -170,6 +178,12 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public StatusInfo saveStatusInfo(StatusInfo statusInfo) {
     return statusInfoDao.save(statusInfo);
   }
+  
+  @Override
+   public void deleteStatusInfoByIds(List<Long> ids) {
+	  statusInfoDao.deleteStatusInfoByIds(ids);
+  }
+
 
   @Override
   public TaskInfo findFirstTaskInfoByObjectIdAndTaskName(Long id, String taskName) {

@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -182,12 +183,26 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 									StatusInfo indexErrorRow = insertErrorRowforTar(object, tarFileName, start, end,
 											errorMsg);
 									
+									
 								} else {
 									//If tar start index matches and tar is already uploaded , then log the info.
 									logger.info(
 											"[{}] Skipping the Creation of tar request {} since this is already got uploaded  {} {}",
 											super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
 											recordForUploadedTar.getStatus());
+									List<StatusInfo> duplicateRows = dmeSyncWorkflowService.getService(access)
+											.findByOriginalFilePathAndSourceFileNameAndStatusNull(object.getOriginalFilePath(),
+													tarFileName);
+									if (!duplicateRows.isEmpty()) {
+										List<Long> objectIds = duplicateRows.stream().map(StatusInfo::getId)
+												.collect(Collectors.toList());
+										dmeSyncWorkflowService.getService(access).deleteStatusInfoByIds(objectIds);
+										logger.info(
+												"[{}] Deleting the duplicate row for {} with ID {} because there is already uploaded row {} with {} status",
+												super.getTaskName(), tarFileName,objectIds, recordForUploadedTar.getId(),
+												recordForUploadedTar.getStatus());
+									}
+
 								}
 								writeToContentsFile(notesWriter, tarFileName, subList);
 								continue;
@@ -264,6 +279,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						object.setError((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple tars requests " + lastTarIndex));
 						dmeSyncWorkflowService.getService(access).recordError(object);
+						object.setStatus(null);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple created tars " + lastTarIndex));
 						
@@ -272,6 +288,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						// verify if all the tar requests are inserted in status_info table.If not throw the exception
 						object.setError((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));
+						object.setStatus(null);
 						dmeSyncWorkflowService.getService(access).recordError(object);
 						throw new DmeSyncVerificationException((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));

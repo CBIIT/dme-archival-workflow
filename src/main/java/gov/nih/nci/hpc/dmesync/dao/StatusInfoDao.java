@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.dao;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Long> {
@@ -54,7 +55,16 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   @Query("select s from StatusInfo s where  s.doc =?1 and s.runId=?2 and s.originalFilePath like ?3 ")
   List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
-
+  
+  /**
+   * findByOriginalFilePathAndSourceFileNameAndStatusNull
+   * 
+   * @param originalFilePath the original file path
+   * @param sourceFileName the sourceFileName
+   * @return the list of StatusInfo objects which matches sourceFileName  and status is null
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and s.status is null")
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath, String sourceFileName);
   
   /**
    * findByRunId
@@ -73,6 +83,8 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   StatusInfo findFirstByOriginalFilePathAndSourceFileNameAndStatus(
       String originalFilePath, String sourceFileName, String status);
+  
+  
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
@@ -143,5 +155,17 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @return  the list of StatusInfo objects
    */
   List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
+  
+  /**
+   * Delete mainly used to remove the duplicate rows for multiple tars design
+   * @param List of ids
+   * 
+   */
+  
+  @Modifying
+  @Query("delete from StatusInfo s where s.id in ?1")
+  void deleteStatusInfoByIds(List<Long> ids);
+  
+  
 
 }

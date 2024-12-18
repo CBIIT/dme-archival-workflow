@@ -72,6 +72,17 @@ public interface DmeSyncWorkflowService {
    */
   StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
       String originalFilePath, String sourceFileName, String status);
+  
+  /**
+   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
+   *
+   * @param originalFilePath the original file path
+   * @param sourceFileName the source file name
+   * @param status the null
+   * @return the StatusInfo object
+   */
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+      String originalFilePath, String sourceFileName);
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
@@ -285,4 +296,10 @@ public interface DmeSyncWorkflowService {
    * @return the list of StatusInfo objects
    */
   List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
+
+  /**
+   * Delete StatusInfo rows
+   * @param List of object Ids.
+   */
+   void deleteStatusInfoByIds(List<Long> ids);
 }
