@@ -328,6 +328,13 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo contentsFileRecord = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
 									null, tarMappingFile);
+							if (object.getTarContentsCount()==0) {
+								// tarContentsCounter : number of tars remaining to be uploaded .
+								  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
+								logger.info("[{}]Enqueuing the contents file upload request {}", super.getTaskName(),
+											tarMappingFile.getName());
+								enqueueRequestToJms(contentsFileRecord);
+							}
 							// This contentsFileRecord objectId is send to the message queue in the cleanup task after all tars are uploaded
 						 }
 						
