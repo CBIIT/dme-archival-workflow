@@ -45,7 +45,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
-		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")) {
+		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar") ||
+				StringUtils.contains(object.getOriginalFilePath(),"summary_metrics.xlsx")	) {
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 
@@ -91,6 +92,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
+		piCollectionPath=piCollectionPath.replace(" ", "_");
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries()
 				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
@@ -158,6 +160,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "Collaborators")))
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
+		projectCollectionPath=projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
