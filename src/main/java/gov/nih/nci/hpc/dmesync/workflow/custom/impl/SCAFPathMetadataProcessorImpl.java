@@ -25,7 +25,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	// SCAF DME path construction and meta data creation
 
-	public static final String PRIMARY_ANALYSIS_OUTPUT_NAME = "Primary Analysis Output";
+	public static final String PRIMARY_ANALYSIS_OUTPUT_NAME = "Primary_Analysis_Output";
 	public static final String FASTQ_QC_NAME = "FASTQ_QC";
 
 	public static final String ANALYSIS = "Analysis";
@@ -45,28 +45,35 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
-		threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
-		
-		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
-		String archivePath = null;
-		String sampleSubFolder = getSampleSubFolder(object);
-        String path=null;
-		if (StringUtils.isBlank(sampleSubFolder)) {
-			archivePath = destinationBaseDir  + "/"+ getPiCollectionName(object,path) +"_lab" + "/"
-					+ getProjectCollectionName(object) + "/Analysis" + "/"+ fileName;
+		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")) {
 
+			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
+
+			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+			String archivePath = null;
+			String sampleSubFolder = getSampleSubFolder(object);
+			String path = getProjectPathName(object);
+			if (StringUtils.isBlank(sampleSubFolder)) {
+				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
+
+			} else {
+				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/" + sampleSubFolder
+						+ "/" + getTarFileName(object, sampleSubFolder);
+
+			}
+			// replace spaces with underscore
+			archivePath = archivePath.replace(" ", "_");
+
+			logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
+
+			return archivePath;
 		} else {
-			archivePath = destinationBaseDir + "/" + getPiCollectionName(object,path) + "_lab" + "/"
-					+ getProjectCollectionName(object) + "/" + getSCAFNumber(object) + "/" + sampleSubFolder + "/"
-					+ getTarFileName(object, sampleSubFolder);
-
+			logger.info("Skipping the file since the file type is not tar");
+			throw new DmeSyncMappingException("Skipping the file since the file type is not tar");
 		}
-		// replace spaces with underscore
-		archivePath = archivePath.replace(" ", "_");
 
-		logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
-
-		return archivePath;
 	}
 
 	@Override
@@ -79,8 +86,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 
 		// Add path metadata entries for "PI_XXX" collection
-		String metadataFileKey = "Sample";
-		String piCollectionName = getPiCollectionName(object,metadataFileKey);
+		String metadataFileKey = getProjectPathName(object);
+		String piCollectionName = getPiCollectionName(object, metadataFileKey);
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
@@ -91,20 +98,18 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.add(createPathEntry("data_owner_email", getAttrValueWithKey(metadataFileKey, "data_owner_email")));
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
 				getAttrValueWithKey(metadataFileKey, "data_owner_affiliation")));
-		
-		//data_generator, affiliation, email: SCAF, CRTP, CCR-SCAF@nih.gov (workflow will add this metadata)		
-		pathEntriesPI.getPathMetadataEntries()
-				.add(createPathEntry("data_generator", "SCAF"));
-		pathEntriesPI.getPathMetadataEntries().add(
-				createPathEntry("data_generator_email","CCR-SCAF@nih.gov"));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
-				"CRTP"));
+
+		// data_generator, affiliation, email: SCAF, CRTP, CCR-SCAF@nih.gov (workflow
+		// will add this metadata)
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator", "SCAF"));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", "CCR-SCAF@nih.gov"));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation", "CRTP"));
 
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for "Project" collection
 		// Example row: collectionType - Project, collectionName - CS027118
-		String projectCollectionName = getProjectCollectionName(object);
+		String projectCollectionName = getProjectCollectionName(object, metadataFileKey);
 		String projectCollectionPath = piCollectionPath + "/" + projectCollectionName;
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
@@ -112,46 +117,47 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years ", "7"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
-		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_title", projectCollectionName));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
+		
+		//TODO: update logic for project_start_date 
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date",
-				getAttrWithKey(metadataFileKey, "project_start_date"), "MM/dd/yy"));
+				"10/10/24", "MM/dd/yy"));
 
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", getAttrWithKey(metadataFileKey, "project_poc")));
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("project_poc_affiliation", getAttrWithKey(metadataFileKey, "project_poc_affiliation")));
+				.add(createPathEntry("project_poc", getAttrValueWithKey(metadataFileKey, "project_poc")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",
+				getAttrValueWithKey(metadataFileKey, "project_poc_affiliation")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_email", getAttrWithKey(metadataFileKey, "project_poc_email")));
+				.add(createPathEntry("project_poc_email", getAttrValueWithKey(metadataFileKey, "project_poc_email")));
 
 		// optional data
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "project_description")))
-			pathEntriesProject.getPathMetadataEntries().add(
-					createPathEntry("project_description", getAttrWithKey(metadataFileKey, "project_description")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "project_description")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description",
+					getAttrValueWithKey(metadataFileKey, "project_description")));
 
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "key_collaborator")))
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "key_collaborator")))
 			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("key_collaborator", getAttrWithKey(metadataFileKey, "key_collaborator")));
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "key_collaborator_affiliation")))
+					.add(createPathEntry("key_collaborator", getAttrValueWithKey(metadataFileKey, "key_collaborator")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "key_collaborator_affiliation")))
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation",
 					getAttrWithKey(metadataFileKey, "key_collaborator_affiliation")));
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "key_collaborator_email")))
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "key_collaborator_email")))
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_email",
-					getAttrWithKey(metadataFileKey, "key_collaborator_email")));
+					getAttrValueWithKey(metadataFileKey, "key_collaborator_email")));
 
 		// Optional Values
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "project_completed_date")))
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "project_completed_date")))
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
-					getAttrWithKey(metadataFileKey, "project_completed_date")));
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "pubmed_id")))
+					getAttrValueWithKey(metadataFileKey, "project_completed_date")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "pubmed_id")))
 			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("pubmed_id", getAttrWithKey(metadataFileKey, "pubmed_id")));
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "public_data_accession_id")))
+					.add(createPathEntry("pubmed_id", getAttrValueWithKey(metadataFileKey, "pubmed_id")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "public_data_accession_id")))
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("public_data_accession_id",
-					getAttrWithKey(metadataFileKey, "public_data_accession_id")));
-		if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "Collaborators")))
+					getAttrValueWithKey(metadataFileKey, "public_data_accession_id")));
+		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "Collaborators")))
 			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("Collaborators", getAttrWithKey(metadataFileKey, "Collaborators")));
+					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
@@ -164,34 +170,47 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleCollectionName));
-			pathEntriesSample.getPathMetadataEntries()
-					.add(createPathEntry("sample_name", sampleCollectionName));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleCollectionName));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("curation_status", "False"));
 
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "library_strategy")))
-				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("library_strategy", getAttrWithKey(metadataFileKey, "library_strategy")));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "library_strategy")))
+				pathEntriesSample.getPathMetadataEntries().add(
+						createPathEntry("library_strategy", getAttrValueWithKey(metadataFileKey, "library_strategy")));
 
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "study_disease")))
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "study_disease")))
 				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("study_disease", getAttrWithKey(metadataFileKey, "study_disease")));
+						.add(createPathEntry("study_disease", getAttrValueWithKey(metadataFileKey, "study_disease")));
 
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "tissue_type")))
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "tissue_type")))
 				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("tissue_type", getAttrWithKey(metadataFileKey, "tissue_type")));
+						.add(createPathEntry("tissue_type", getAttrValueWithKey(metadataFileKey, "tissue_type")));
 
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "age")))
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "age")))
 				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("age", getAttrWithKey(metadataFileKey, "age")));
+						.add(createPathEntry("age", getAttrValueWithKey(metadataFileKey, "age")));
 
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "organism_strain")))
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "organism_strain")))
+				pathEntriesSample.getPathMetadataEntries().add(
+						createPathEntry("organism_strain", getAttrValueWithKey(metadataFileKey, "organism_strain")));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "gender")))
 				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("organism_strain", getAttrWithKey(metadataFileKey, "organism_strain")));
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "gender")))
-				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("gender", getAttrWithKey(metadataFileKey, "gender")));
+						.add(createPathEntry("gender", getAttrValueWithKey(metadataFileKey, "gender")));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
+			
+			String sampleSubCollectionPath = sampleCollectionPath + "/" + sampleSubFolder;
+			HpcBulkMetadataEntry pathEntriesSubSample = new HpcBulkMetadataEntry();
+			pathEntriesSubSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, sampleSubFolder));
+			pathEntriesSubSample.setPath(sampleSubCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSubSample);
+		}else {
+			
+			String AnalyisCollectionPath = projectCollectionPath + "/" + "Analysis";
+			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
+			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
+			pathEntriesAnalysis.setPath(AnalyisCollectionPath);
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
+			
 		}
 
 		// Set it to dataObjectRegistrationRequestDTO
@@ -206,22 +225,25 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("file_type", getFileType(object)));
 
 		if (sampleSubFolder != null) {
-			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", getTarFileName(object, sampleSubFolder)));
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("platform_name", getAttrWithKey(metadataFileKey, "platform_name")));
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "analyte_type")))
+					.add(createPathEntry("object_name", getTarFileName(object, sampleSubFolder)));
+			//TODO: update logic for platform_name 
+
+			dataObjectRegistrationRequestDTO.getMetadataEntries()
+					.add(createPathEntry("platform_name", "10XGEX"));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "analyte_type")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
-						.add(createPathEntry("analyte_type", getAttrWithKey(metadataFileKey, "analyte_type")));
-			if (StringUtils.isNotBlank(getAttrWithKey(metadataFileKey, "chemistry")))
+						.add(createPathEntry("analyte_type", getAttrValueWithKey(metadataFileKey, "analyte_type")));
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "chemistry")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
-						.add(createPathEntry("chemistry", getAttrWithKey(metadataFileKey, "chemistry")));
-		}else {
+						.add(createPathEntry("chemistry", getAttrValueWithKey(metadataFileKey, "chemistry")));
+		} else {
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
 
 		}
 		logger.info("Metadata custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
-	
+
 	}
 
 	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
@@ -239,13 +261,20 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getPiCollectionName(StatusInfo object, String path) throws DmeSyncMappingException {
 		String piCollectionName = null;
-		piCollectionName = getAttrValueWithKey(path, "data_owner");
-        
+		piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
+
 		logger.info("Lab Collection Name: {}", piCollectionName);
 		return piCollectionName;
 	}
 
-	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+	private String getProjectCollectionName(StatusInfo object, String metadataFileKey) throws DmeSyncMappingException {
+		// Example: If originalFilePath is
+		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
+		// then return CS029391_Staudt_Shaffer
+		return getAttrValueWithKey(metadataFileKey, "project_id");
+	}
+
+	private String getProjectPathName(StatusInfo object) throws DmeSyncMappingException {
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Staudt_Shaffer
@@ -254,20 +283,19 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getSampleName(StatusInfo object) throws DmeSyncMappingException {
 		Path path = Paths.get(object.getOriginalFilePath());
-		String sampleName=path.getFileName().toString().replaceAll("\\.tar$", "");
-		
-		logger.info("Sample Name",sampleName);
+		String sampleName = path.getFileName().toString().replaceAll("\\.tar$", "");
+
+		logger.info("Sample Name", sampleName);
 		return sampleName;
 
 	}
 
-
 	private String getSampleSubFolder(StatusInfo object) {
 		String sampleSubFolder = null;
-		if (StringUtils.containsIgnoreCase("01_DemultiplexedFastqs", object.getOriginalFilePath())) {
+		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
 			sampleSubFolder = FASTQ;
 			logger.info("sampleSubFolder: {}", sampleSubFolder);
-		} else if ((StringUtils.containsIgnoreCase("00_FullCellrangerOutputs", object.getOriginalFilePath()))) {
+		} else if ((StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "00_FullCellrangerOutputs"))) {
 			sampleSubFolder = PRIMARY_ANALYSIS_OUTPUT_NAME;
 			logger.info("sampleSubFolder: {}", sampleSubFolder);
 
@@ -279,25 +307,27 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getTarFileName(StatusInfo object, String sampleSubFolder) throws DmeSyncMappingException {
 		String tarFileName = null;
 		String scafNumber = getSCAFNumber(object);
+		Path path = Paths.get(object.getOriginalFilePath());
+		
 		if (StringUtils.equals(FASTQ, sampleSubFolder)) {
-			tarFileName = scafNumber + "_ FQ_ " + getFlowcellId(object) + "_" + getChemistry(object)+"." + getFileType(object);
+			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
+					+ getFileType(object);
 		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleSubFolder))
 			// TODO: Add Chemistry function
-			tarFileName = scafNumber + "_ PA_ " + getChemistry(object)+"." + getFileType(object);
+			tarFileName = scafNumber +"_PA_"+ path.getParent().getFileName().toString() + "." + getFileType(object);
 		logger.info("tarFileName: {}", tarFileName);
 		return tarFileName;
 	}
 
 	private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
-		
-		// filename without the extension is the SCAF Number
-		   String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
-			String sampleName=fileName.replaceAll("\\.tar$", "");
-			
-			logger.info("Sample Name",sampleName);
-			return sampleName;
 
-		
+		// filename without the extension is the SCAF Number
+		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+		String sampleName = fileName.replaceAll("\\.tar$", "");
+
+		logger.info("Sample Name", sampleName);
+		return sampleName;
+
 	}
 
 	private String getFlowcellId(StatusInfo object) {
@@ -325,7 +355,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return chemistry;
 	}
 
-
 	private String getAttrWithKey(String key, String attrKey) {
 		if (StringUtils.isEmpty(key)) {
 			logger.error("Excel mapping not found for {}", key);
@@ -338,5 +367,5 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		return fileName.substring(fileName.indexOf('.') + 1);
 	}
-	
+
 }
