@@ -74,9 +74,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			return archivePath;
 		} else {
-			logger.info("Skipping the file since the file type is not tar {}", object.getOrginalFileName());
+			logger.info("Error: Unsupported file type. Only '.tar' files are supported {}", object.getOrginalFileName());
 			throw new DmeSyncMappingException(
-					"Skipping the file since the file type is not tar" + object.getOrginalFileName());
+					"Error: Unsupported file type. Only '.tar' files are supported:" + object.getOrginalFileName());
 		}
 
 	}
@@ -325,10 +325,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (sampleName != null && sampleName.startsWith("SCAF")) {
 			return sampleName;
 		} else {
-			logger.info("Different Structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}",
+			logger.info("Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}",
 					object.getSourceFilePath());
 			throw new DmeSyncMappingException(
-					"Different Structure:The name of fastq file or cellranger output (sample name) file doesn't start with SCAF: "
+					"Invalid folder structure:The name of fastq file or cellranger output (sample name) file doesn't start with SCAF: "
 							+ object.getSourceFilePath());
 		}
 	}
@@ -366,9 +366,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("chemistry: {}", chemistry);
 			return chemistry;
 		} else {
-			logger.info("The chemistry metadata attribute is not able to derive from the parent folder: {}", object.getOriginalFilePath() );
+			logger.info("Invalid folder structure:The chemistry metadata attribute is not able to derive from the parent folder: {}", object.getOriginalFilePath() );
 			throw new DmeSyncMappingException(
-					"Different Structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: " + object.getOriginalFilePath());
+					"Invalid folder structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: " + object.getOriginalFilePath());
 		}
 	}
 
@@ -392,9 +392,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("flowcellId: {}", flowcellName);
 			return flowcellName;
 		} else {
-			logger.info("Different Structure:The flowcell Id couldn't be able to derive from the path: {}", object.getOriginalFilePath());
+			logger.info("Invalid folder structure:The flowcell Id couldn't be able to derive from the path: {}", object.getOriginalFilePath());
 			throw new DmeSyncMappingException(
-					"Different Structure: The flowcell Id couldn't be able to derive from the path" + object.getOriginalFilePath());
+					"Invalid folder structure: The flowcell Id couldn't be able to derive from the path" + object.getOriginalFilePath());
 		}
 	}
 
