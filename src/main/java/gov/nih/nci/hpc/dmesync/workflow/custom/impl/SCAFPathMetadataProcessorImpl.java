@@ -2,6 +2,8 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
+
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,8 +47,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
-		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar") ||
-				StringUtils.contains(object.getOriginalFilePath(),"summary_metrics.xlsx")	) {
+		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
+				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 
@@ -59,6 +61,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
 
 			} else {
+
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/" + sampleSubFolder
 						+ "/" + getTarFileName(object, sampleSubFolder);
@@ -71,8 +74,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			return archivePath;
 		} else {
-			logger.info("Skipping the file since the file type is not tar");
-			throw new DmeSyncMappingException("Skipping the file since the file type is not tar");
+			logger.info("Skipping the file since the file type is not tar {}", object.getOrginalFileName());
+			throw new DmeSyncMappingException(
+					"Skipping the file since the file type is not tar" + object.getOrginalFileName());
 		}
 
 	}
@@ -92,7 +96,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
-		piCollectionPath=piCollectionPath.replace(" ", "_");
+		piCollectionPath = piCollectionPath.replace(" ", "_");
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries()
 				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
@@ -120,13 +124,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years ", "7"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
-		
-		//TODO: update logic for project_start_date 
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date",
-				"10/10/24", "MM/dd/yy"));
+
+		// TODO: update logic for project_start_date
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", new Date().toString(), "MM/dd/yy"));
 
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", getAttrValueWithKey(metadataFileKey, "project_poc")));
+				.add(createPathEntry("project_poc", getAttrValueWithKey(metadataFileKey, "project_poc_id")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",
 				getAttrValueWithKey(metadataFileKey, "project_poc_affiliation")));
 		pathEntriesProject.getPathMetadataEntries()
@@ -160,7 +163,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "Collaborators")))
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
-		projectCollectionPath=projectCollectionPath.replace(" ", "_");
+		projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
@@ -200,20 +203,21 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 						.add(createPathEntry("gender", getAttrValueWithKey(metadataFileKey, "gender")));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
-			
+
 			String sampleSubCollectionPath = sampleCollectionPath + "/" + sampleSubFolder;
 			HpcBulkMetadataEntry pathEntriesSubSample = new HpcBulkMetadataEntry();
-			pathEntriesSubSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, sampleSubFolder));
+			pathEntriesSubSample.getPathMetadataEntries()
+					.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, sampleSubFolder));
 			pathEntriesSubSample.setPath(sampleSubCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSubSample);
-		}else {
-			
+		} else {
+
 			String AnalyisCollectionPath = projectCollectionPath + "/" + "Analysis";
 			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
 			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
 			pathEntriesAnalysis.setPath(AnalyisCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
-			
+
 		}
 
 		// Set it to dataObjectRegistrationRequestDTO
@@ -230,10 +234,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (sampleSubFolder != null) {
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("object_name", getTarFileName(object, sampleSubFolder)));
-			//TODO: update logic for platform_name 
+			// TODO: update logic for platform_name
 
-			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("platform_name", "10XGEX"));
+			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("platform_name",  getAttrValueWithKey(metadataFileKey, "platform_name")));
 			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "analyte_type")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
 						.add(createPathEntry("analyte_type", getAttrValueWithKey(metadataFileKey, "analyte_type")));
@@ -284,15 +287,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return getCollectionNameFromParent(object, "scaf-ccr-a-data");
 	}
 
-	private String getSampleName(StatusInfo object) throws DmeSyncMappingException {
-		Path path = Paths.get(object.getOriginalFilePath());
-		String sampleName = path.getFileName().toString().replaceAll("\\.tar$", "");
-
-		logger.info("Sample Name", sampleName);
-		return sampleName;
-
-	}
-
 	private String getSampleSubFolder(StatusInfo object) {
 		String sampleSubFolder = null;
 		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
@@ -310,14 +304,13 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getTarFileName(StatusInfo object, String sampleSubFolder) throws DmeSyncMappingException {
 		String tarFileName = null;
 		String scafNumber = getSCAFNumber(object);
-		Path path = Paths.get(object.getOriginalFilePath());
-		
+
 		if (StringUtils.equals(FASTQ, sampleSubFolder)) {
 			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
 					+ getFileType(object);
 		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleSubFolder))
 			// TODO: Add Chemistry function
-			tarFileName = scafNumber +"_PA_"+ path.getParent().getFileName().toString() + "." + getFileType(object);
+			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object) + "." + getFileType(object);
 		logger.info("tarFileName: {}", tarFileName);
 		return tarFileName;
 	}
@@ -329,33 +322,54 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String sampleName = fileName.replaceAll("\\.tar$", "");
 
 		logger.info("Sample Name", sampleName);
-		return sampleName;
-
+		if (sampleName != null && sampleName.startsWith("SCAF")) {
+			return sampleName;
+		} else {
+			logger.info("Different Structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}",
+					object.getSourceFilePath());
+			throw new DmeSyncMappingException(
+					"Different Structure:The name of fastq file or cellranger output (sample name) file doesn't start with SCAF: "
+							+ object.getSourceFilePath());
+		}
 	}
 
-	private String getFlowcellId(StatusInfo object) {
+	private String getFlowcellId(StatusInfo object) throws DmeSyncMappingException {
 		String flowcellId = null;
 		// Example: If originalFilePath is
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
 		// then the flowcell Id will be AAAKYHJM5
 
-		flowcellId = getCollectionNameFromParent(object, "01_DemultiplexedFastqs");
+		flowcellId = getFlowcellName(object);
 		flowcellId = StringUtils.substringBeforeLast(StringUtils.substring(flowcellId, flowcellId.indexOf('_') + 1),
 				"_");
 		logger.info("flowcellId: {}", flowcellId);
 		return flowcellId;
 	}
 
-	private String getChemistry(StatusInfo object) {
+	private String getChemistry(StatusInfo object) throws DmeSyncMappingException {
 		String chemistry = null;
 		// Example: If originalFilePath is
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
 		// then the chemistry will be VDJ
 
-		chemistry = getCollectionNameFromParent(object, "01_DemultiplexedFastqs");
-		chemistry = StringUtils.substringAfterLast(StringUtils.substring(chemistry, chemistry.indexOf('_') + 1), "_");
+		String flowcellName = getFlowcellName(object);
+		chemistry = StringUtils.substringAfterLast(StringUtils.substring(flowcellName, flowcellName.indexOf('_') + 1),
+				"_");
 		logger.info("Chemistry: {}", chemistry);
 		return chemistry;
+	}
+
+	private String getChemistryforPAO(StatusInfo object) throws DmeSyncMappingException {
+		Path path = Paths.get(object.getOriginalFilePath());
+		String chemistry = path.getParent().getFileName().toString();
+		if (chemistry != null && !chemistry.startsWith("00_FullCellrangerOutputs")) {
+			logger.info("chemistry: {}", chemistry);
+			return chemistry;
+		} else {
+			logger.info("The chemistry metadata attribute is not able to derive from the parent folder: {}", object.getOriginalFilePath() );
+			throw new DmeSyncMappingException(
+					"Different Structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: " + object.getOriginalFilePath());
+		}
 	}
 
 	private String getAttrWithKey(String key, String attrKey) {
@@ -369,6 +383,19 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getFileType(StatusInfo object) {
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		return fileName.substring(fileName.indexOf('.') + 1);
+	}
+
+	private String getFlowcellName(StatusInfo object) throws DmeSyncMappingException {
+
+		String flowcellName = getCollectionNameFromParent(object, "01_DemultiplexedFastqs");
+		if (flowcellName != null && flowcellName.startsWith("Seq")) {
+			logger.info("flowcellId: {}", flowcellName);
+			return flowcellName;
+		} else {
+			logger.info("Different Structure:The flowcell Id couldn't be able to derive from the path: {}", object.getOriginalFilePath());
+			throw new DmeSyncMappingException(
+					"Different Structure: The flowcell Id couldn't be able to derive from the path" + object.getOriginalFilePath());
+		}
 	}
 
 }
