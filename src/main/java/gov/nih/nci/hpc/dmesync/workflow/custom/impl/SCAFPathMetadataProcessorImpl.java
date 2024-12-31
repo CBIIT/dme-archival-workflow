@@ -50,7 +50,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
 				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
 
-			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
+			threadLocalMap.set(loadMetadataFile(metadataFile, "project"));
 
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
