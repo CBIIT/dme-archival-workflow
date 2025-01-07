@@ -1,11 +1,27 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import java.io.File;
 
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -33,8 +49,15 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public static final String ANALYSIS = "Analysis";
 	public static final String FASTQ = "FASTQ";
 
+	public static final String REPORT_DATE = "Report Date";
+	public static final String POC = "Project Point of Contact";
+	public static final String PROJECT_ID = "NAS Project ID";
+	public static final String PI = "Principal Investigator";
+
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
+
+	private String finalReportPath;
 
 	@Value("${dmesync.doc.name}")
 	private String doc;
@@ -42,8 +65,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.source.base.dir}")
 	private String sourceDir;
 
+	// Instance variable to hold the extracted fields
+	private Map<String, String> medatadaMapFromReport;
+
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
@@ -51,6 +77,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "project"));
+			constructFinalReportPath(object);
+			extractMetadataFromFinalReport(finalReportPath.toString());
 
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
@@ -74,7 +102,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			return archivePath;
 		} else {
-			logger.info("Error: Unsupported file type. Only '.tar' files are supported {}", object.getOrginalFileName());
+			logger.info("Error: Unsupported file type. Only '.tar' files are supported {}",
+					object.getOrginalFileName());
 			throw new DmeSyncMappingException(
 					"Error: Unsupported file type. Only '.tar' files are supported:" + object.getOrginalFileName());
 		}
@@ -83,7 +112,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	@Override
 	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
-			throws DmeSyncMappingException, DmeSyncWorkflowException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -126,7 +155,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 
 		// TODO: update logic for project_start_date
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", new Date().toString(), "MM/dd/yy"));
+		pathEntriesProject.getPathMetadataEntries()
+				.add(createPathEntry("project_start_date", medatadaMapFromReport.get(REPORT_DATE), "MM/dd/yy"));
 
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_poc", getAttrValueWithKey(metadataFileKey, "project_poc_id")));
@@ -236,7 +266,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("object_name", getTarFileName(object, sampleSubFolder)));
 			// TODO: update logic for platform_name
 
-			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("platform_name",  getAttrValueWithKey(metadataFileKey, "platform_name")));
+			dataObjectRegistrationRequestDTO.getMetadataEntries()
+					.add(createPathEntry("platform_name", medatadaMapFromReport.get(REPORT_DATE)));
 			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "analyte_type")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
 						.add(createPathEntry("analyte_type", getAttrValueWithKey(metadataFileKey, "analyte_type")));
@@ -267,7 +298,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getPiCollectionName(StatusInfo object, String path) throws DmeSyncMappingException {
 		String piCollectionName = null;
-		piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
+		piCollectionName = medatadaMapFromReport.get(PI);
+
+		if (piCollectionName != null) {
+			piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
+		}
 
 		logger.info("Lab Collection Name: {}", piCollectionName);
 		return piCollectionName;
@@ -325,7 +360,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (sampleName != null && sampleName.startsWith("SCAF")) {
 			return sampleName;
 		} else {
-			logger.info("Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}",
+			logger.info(
+					"Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}",
 					object.getSourceFilePath());
 			throw new DmeSyncMappingException(
 					"Invalid folder structure:The name of fastq file or cellranger output (sample name) file doesn't start with SCAF: "
@@ -366,9 +402,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("chemistry: {}", chemistry);
 			return chemistry;
 		} else {
-			logger.info("Invalid folder structure:The chemistry metadata attribute is not able to derive from the parent folder: {}", object.getOriginalFilePath() );
+			logger.info(
+					"Invalid folder structure:The chemistry metadata attribute is not able to derive from the parent folder: {}",
+					object.getOriginalFilePath());
 			throw new DmeSyncMappingException(
-					"Invalid folder structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: " + object.getOriginalFilePath());
+					"Invalid folder structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: "
+							+ object.getOriginalFilePath());
 		}
 	}
 
@@ -392,9 +431,143 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("flowcellId: {}", flowcellName);
 			return flowcellName;
 		} else {
-			logger.info("Invalid folder structure:The flowcell Id couldn't be able to derive from the path: {}", object.getOriginalFilePath());
+			logger.info("Invalid folder structure:The flowcell Id couldn't be able to derive from the path: {}",
+					object.getOriginalFilePath());
 			throw new DmeSyncMappingException(
-					"Invalid folder structure: The flowcell Id couldn't be able to derive from the path" + object.getOriginalFilePath());
+					"Invalid folder structure: The flowcell Id couldn't be able to derive from the path"
+							+ object.getOriginalFilePath());
+		}
+	}
+
+	public void extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
+		FileInputStream fis = new FileInputStream(new File(filePath));
+
+		// Map to store extracted fields and their values
+		medatadaMapFromReport = new HashMap<>();
+		try (XWPFDocument document = new XWPFDocument(fis)) {
+			List<XWPFParagraph> paragraphs = document.getParagraphs();
+
+			// Define the keys to extract
+			String[] keys = { PI, POC, PROJECT_ID, REPORT_DATE };
+			int i = 0;
+			// Iterate through the paragraphs in the document
+			for (XWPFParagraph paragraph : document.getParagraphs()) {
+				List<XWPFRun> runs = paragraph.getRuns();
+				// for (XWPFRun run : runs) {
+				String text = paragraph.getText();
+				if (text != null) {
+					// Check for each key and extract its corresponding value
+					for (String key : keys) {
+						if (StringUtils.containsIgnoreCase(text, "Project Summary") || i == 4)
+							break;
+						if (StringUtils.containsIgnoreCase(text, key)) {
+							int index = text.indexOf(key + ":") + (key + ":").length();
+							String value = text.substring(index).trim();
+							medatadaMapFromReport.put(key, value);
+							i++;// Save the extracted value
+						}
+					}
+					// }
+				}
+			}
+		} catch (Exception e) {
+			logger.info("Error while retrieving metadata in the final report{}", filePath);
+			throw new DmeSyncMappingException("Error while retrieving metadata in the final report " + filePath);
+		}
+	}
+
+	public Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
+		FileInputStream fis = new FileInputStream(new File(filePath));
+		try (XWPFDocument document = new XWPFDocument(fis)) {
+			// Initialize a map to store key-value pairs
+			Map<String, String> data = new LinkedHashMap<>();
+
+			// Iterate through all tables in the document
+			for (XWPFTable table : document.getTables()) {
+				// Find the table with the "sample_data_table" section, if applicable
+				// Assuming you want to find a specific section, you can identify it by checking
+				// headers, for example
+				if (isTableSampleDataTable(table)) {
+					// Process each row in the table
+					for (XWPFTableRow row : table.getRows()) {
+						// Get the first and third cells (assuming the table structure is consistent)
+						if (row.getTableCells().size() >= 3) {
+							String key = row.getTableCells().get(0).getText().trim();
+							String value = row.getTableCells().get(2).getText().trim();
+
+							// Add the key-value pair to the map
+							if (!key.isEmpty() && !value.isEmpty()) {
+								data.put(key, value);
+							}
+						}
+					}
+				}
+			}
+
+			return data;
+		}
+	}
+
+	private boolean isTableSampleDataTable(XWPFTable table) throws DmeSyncMappingException {
+		boolean chemistryFound = false;
+		// Check if the table has at least one row
+		if (table.getRows().size() > 0) {
+			// Get the first row of the table
+			XWPFTableRow firstRow = table.getRow(0);
+
+			// Check all cells in the first row for the word "Chemistry"
+			for (XWPFTableCell cell : firstRow.getTableCells()) {
+				String cellText = cell.getText(); // Case-insensitive check
+				if (StringUtils.containsIgnoreCase(cellText, "Chemistry")) {
+					chemistryFound = true; // Return true if "Chemistry" is found
+				}
+			}
+		}
+
+		if (chemistryFound)
+			return chemistryFound;
+		else
+			logger.info("Error while retrieving Platform name from the final report{}");
+		throw new DmeSyncMappingException("Error while retrieving Platform name from the final report");
+	}
+
+	private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException {
+
+		// Combine the parent folder path with the 'other_data' folder and the file name
+		finalReportPath=null;
+		Path parentFolderPath = null;
+		Path fullFilePath = Paths.get(object.getOriginalFilePath());
+		logger.info("Full File Path = {}", fullFilePath);
+		int count = fullFilePath.getNameCount();
+		for (int i = 0; i <= count; i++) {
+			if (fullFilePath.getParent().getFileName().toString().equals("scaf-ccr-a-data")) {
+				parentFolderPath = fullFilePath;
+				break;
+			}
+			fullFilePath = fullFilePath.getParent();
+		}
+		if (parentFolderPath != null) {
+			Path otherDataFolderPath = Paths.get(parentFolderPath.toString(), "Other_Data");
+			// Check if the folder exists
+			if (Files.exists(otherDataFolderPath) && Files.isDirectory(otherDataFolderPath)) {
+				try {
+					// List files in the 'other_data' folder and filter by the pattern
+					finalReportPath = Files.list(otherDataFolderPath)
+							 .filter(file -> file.getFileName().toString().endsWith("FinalReport.docx") 
+                                     || file.getFileName().toString().endsWith("Report.docx"))
+							 .map(Path::toString)   
+	                            .findFirst()            
+	                            .orElse("");  			
+					} catch (IOException e) {
+						logger.info("Couldn't find the finalReport file for the project: {}", otherDataFolderPath);
+						throw new DmeSyncMappingException(
+								"Couldn't find the finalReport file for the project: " + otherDataFolderPath);				}
+			} else {
+				logger.info("Couldn't find the Other_DATA folder for the project: {}", otherDataFolderPath);
+				throw new DmeSyncMappingException(
+						"Couldn't find the Other_DATA  for the project: " + otherDataFolderPath);
+			}
+
 		}
 	}
 
