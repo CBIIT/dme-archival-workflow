@@ -116,7 +116,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
 						(tarFileNameFormat + "_TarContentsFile.txt"));
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
-                int lastTarIndex = 0;
+                int totalFilesInTars = 0;
 
 				logger.info("[{}] Started multiple tar files processing in {}", super.getTaskName(),
 						object.getOriginalFilePath());
@@ -144,9 +144,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 					for (int i = 0; i < expectedTarRequests; i++) {
 						int start = i * filesPerTar;
-						int end = Math.min(start + filesPerTar, fileList.size());
-						lastTarIndex = end;
-						List<File> subList = fileList.subList(start, end);
+						int end = (Math.min(start + filesPerTar, fileList.size()))-1;
+						totalFilesInTars = end+1;
+						List<File> subList = fileList.subList(start, end+1);
 						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
@@ -275,13 +275,13 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					;
 					
 					// verify if all the files in folder got added to files in tar requests. If not throw the exception
-					if (lastTarIndex != files.length) {
+					if (totalFilesInTars != files.length) {
 						object.setError((" Files in original folder " + files.length
-								+ " doesn't match the files in multiple tars requests " + lastTarIndex));
+								+ " doesn't match the files in multiple tars requests " + totalFilesInTars));
 						dmeSyncWorkflowService.getService(access).recordError(object);
 						object.setStatus(null);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
-								+ " doesn't match the files in multiple created tars " + lastTarIndex));
+								+ " doesn't match the files in multiple created tars " + totalFilesInTars));
 						
 					} 
 					if (expectedTarRequests != (totalTarsRequests)) {  
@@ -339,12 +339,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						 }
 						
 					    object = dmeSyncWorkflowService.getService(access).findStatusInfoById(object.getId()).orElseThrow();
-						logger.info("[{}] expected tars counter value column {} in the DB  ", super.getTaskName(),
+						logger.info("[{}] Tars counter value column {} in the DB  ", super.getTaskName(),
 								object.getTarContentsCount());
 						
-						// update the current status info row as completed so this workflow is completed
+						// update the current status info row as completed so this workflow is completed and next task won't be processed.
 						object.setStatus("COMPLETED");
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+						
+						logger.info("[{}] Movies folder row status changed to {} in the DB for path {} ", super.getTaskName(),
+								object.getStatus(),object.getOriginalFilePath() );
 					
 				}
 			} catch (Exception e) {

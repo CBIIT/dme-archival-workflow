@@ -173,6 +173,11 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 				if (name.contains("movies")) {
 					List<StatusInfo> allUploads = dmeSyncWorkflowService.getService(access)
 							.findAllByDocAndLikeOriginalFilePath(doc, name);
+					// Removing the movies folder, tar contents file since we are only displaying the data for tars
+					allUploads.removeIf(file -> {
+			            String filename = file.getSourceFileName();
+			            return !filename.isEmpty() && (filename.endsWith(".txt") || filename.equalsIgnoreCase("movies"));
+			        });					
 					// Fetch details for each folder name
 					DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
 					File directory = new File(name);
@@ -182,12 +187,10 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					folder.setFilesCount(files.length);
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
 					folder.setExpectedTars(expectedTars );
-					// Removing the movies folder, tar contents file since we are only displaying the data for tars
-					folder.setCreatedTars(allUploads.size()-2);
-					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()) && tar.getUploadEndTimestamp()!=null &&
-							tar.getTarEndTimestamp()!=null)) 
+					folder.setCreatedTars(allUploads.size());
+					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()))) 
 							.count());
-					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null  && tar.getUploadEndTimestamp()==null && !tar.getSourceFileName().endsWith(".txt")))
+					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null ))
 							.count());
 					folders.add(folder);
 				}
