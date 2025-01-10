@@ -131,6 +131,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("gb-omics")
   private DmeSyncPathMetadataProcessor gbOmicsProcessor;
   
+  @Autowired
+  @Qualifier("cio")
+  private DmeSyncPathMetadataProcessor cioProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -192,6 +196,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return dctdPclProcessor;
     } else if ("gb-omics".equals(doc)){
         return gbOmicsProcessor;
+    } else if ("cio".equals(doc)){
+        return cioProcessor;
     } else {
         return defaultProcessor;
     }
