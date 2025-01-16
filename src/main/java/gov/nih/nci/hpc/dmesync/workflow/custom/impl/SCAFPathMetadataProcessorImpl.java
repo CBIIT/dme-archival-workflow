@@ -79,14 +79,14 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
 				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
 
-			threadLocalMap.set(loadMetadataFile(metadataFile, "project"));
+			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 			constructFinalReportPath(object);
 			extractMetadataFromFinalReport(finalReportPath.toString());
+			String path = getProjectPathName(object);
 
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
 			String sampleCollectionType  = getSampleCollectionType(object);
-			String path = getProjectPathName(object);
 			if (StringUtils.isBlank(sampleCollectionType )) {
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
@@ -273,6 +273,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String firstWord = sampleCollectionName.replaceAll("\\d.*", "");
 			String numberPart = sampleCollectionName.replaceAll("\\D", "");
 			String samplekey = firstWord + "0" + numberPart;
+			
+			logger.info("sample key to get the platform name {} ",samplekey);
 
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType )));
@@ -314,10 +316,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
 		if (piCollectionName == null) {
 			piCollectionName = medatadaMapFromReport.get(PI);
-
 		}
 
 		logger.info("Lab Collection Name: {}", piCollectionName);
+		
+		
 		return piCollectionName;
 	}
 
@@ -325,27 +328,53 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Shaffer
-		return	getAttrValueWithKey(metadataFileKey, "project_id");
+		String projectName=getAttrValueWithKey(metadataFileKey, "project_id");
+		if(projectName==null) {
+            throw new DmeSyncMappingException("Excel mapping not found for " + metadataFileKey);
+		}
+		return projectName;
 	}
 	
 	private String getProjectPOC(StatusInfo object, String metadataFileKey) throws DmeSyncMappingException {
-		// Example: If originalFilePath is
-		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
-		// then return CS029391_Shaffer
-		String poc=getAttrValueWithKey(metadataFileKey, "project_poc_id");
-		if(poc==null) {
-			poc = medatadaMapFromReport.get(POC);
-		}
-		return	poc;
-	}
+        // Example: If originalFilePath is
+        /// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
+        // then return CS029391_Shaffer
+        String poc=getAttrValueWithKey(metadataFileKey, "project_poc_id");
+        poc = medatadaMapFromReport.get(POC);
+            if(poc!=null) {
+                String[] pocs = poc.trim().split("\\s*,\\s*");
+                if (pocs.length > 1) {
+                    logger.info("Invalid project pocs : The project has more than one pocs {}",
+                            poc);
+                    throw new DmeSyncMappingException("Invalid project pocs : The project has more than one pocs  " + poc);
+                } else {
+                    return poc ;
+                }
+            }
+        return  poc;
+    }
 
 
-	private String getProjectPathName(StatusInfo object) throws DmeSyncMappingException {
-		// Example: If originalFilePath is
-		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
-		// then return CS029391_Staudt_Shaffer
-		return getCollectionNameFromParent(object, "scaf-ccr-a-data");
-	}
+	 private String getProjectPathName(StatusInfo object) throws DmeSyncMappingException {
+	        // Example: If originalFilePath is
+	        /// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
+	        // then return CS029391_Staudt_Shaffer
+	        String projectpathName= getCollectionNameFromParent(object, "scaf-ccr-a-data");
+	        
+	        if (projectpathName != null) {
+	            String[] projectKeywords = projectpathName.trim().split("_");
+	            if (projectKeywords.length != 3) {
+	                logger.info("Invalid project name : The project {} name has more/less than 3 words: {}",
+	                        projectpathName, projectKeywords.length);
+	                throw new DmeSyncMappingException("Invalid project name : The project name " + projectpathName
+	                        + " has more/less than 3 words: " + object.getSourceFilePath());
+	            } else {
+	                return projectpathName;
+	            }
+
+	        }
+	        return null;
+	    }
 
 	private String getSampleCollectionType(StatusInfo object) {
 		String sampleCollectionType  = null;
@@ -463,8 +492,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 							+ object.getOriginalFilePath());
 		}
 	}
+	
 
-	public void extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
+
+	private void extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
 
 		// Map to store extracted fields and their values
@@ -501,7 +532,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 	}
 
-	public Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
+
+	private Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
 		try (XWPFDocument document = new XWPFDocument(fis)) {
 			// Initialize a map to store key-value pairs
