@@ -453,8 +453,27 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		Path path = Paths.get(object.getOriginalFilePath());
 		String chemistry = path.getParent().getFileName().toString();
 		if (chemistry != null && !chemistry.startsWith("00_FullCellrangerOutputs")) {
-			logger.info("chemistry: {}", chemistry);
-			return chemistry;
+	            String[] chemistryKeywords = chemistry.trim().split("_");
+	            if (chemistryKeywords.length > 2) {
+	                logger.info("Invalid chemistry name for full ranger output tars : {}",chemistry);
+	                throw new DmeSyncMappingException("Invalid chemistry name for full ranger output tars :" + chemistry);
+	            } else {
+	            	if(chemistryKeywords.length==1) {
+	        		logger.info("chemistry: {}", chemistry);
+	                return chemistry;
+	            	}
+	            	if(chemistryKeywords.length==2) {
+	            		if(StringUtils.startsWithIgnoreCase(chemistryKeywords[0], "Seq")) {
+	            			logger.info("chemistry pathname {} derived chemistry: {}",chemistry, chemistryKeywords[1]);
+                          return chemistryKeywords[1];           			
+	            		}else {
+	            			logger.info("Invalid chemistry name for full ranger output tars : {}",chemistry);
+	    	                throw new DmeSyncMappingException("Invalid chemistry name for full ranger output tars :" + chemistry);
+	            		}
+	            	}
+	            		
+	            }
+	            
 		} else {
 			logger.info(
 					"Invalid folder structure:The chemistry metadata attribute is not able to derive from the parent folder: {}",
@@ -463,6 +482,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					"Invalid folder structure:The chemistry metadata attribute couldn't be able derive from the parent folder path: "
 							+ object.getOriginalFilePath());
 		}
+		return null;
 	}
 
 	private String getAttrWithKey(String key, String attrKey) {
@@ -622,6 +642,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 									|| file.getFileName().toString().endsWith("Report.docx"))
 							.map(Path::toString).findFirst().orElse("");
 					logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
+					if(finalReportPath.isBlank()) {
+						logger.info("Couldn't find the FinalReport file for the project: {}", otherDataFolderPath);
+						throw new DmeSyncMappingException(
+								"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+						
+					}
 
 				} catch (IOException e) {
 					logger.info("Couldn't find the FinalReport file for the project: {}", otherDataFolderPath);
