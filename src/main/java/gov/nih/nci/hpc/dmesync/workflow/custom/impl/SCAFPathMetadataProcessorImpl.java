@@ -339,19 +339,18 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         // Example: If originalFilePath is
         /// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
         // then return CS029391_Shaffer
-        String poc=getAttrValueWithKey(metadataFileKey, "project_poc_id");
-        poc = medatadaMapFromReport.get(POC);
+        String poc = medatadaMapFromReport.get(POC);
             if(poc!=null) {
                 String[] pocs = poc.trim().split("\\s*,\\s*");
                 if (pocs.length > 1) {
                     logger.info("Invalid project pocs : The project has more than one pocs {}",
                             poc);
                     throw new DmeSyncMappingException("Invalid project pocs : The project has more than one pocs  " + poc);
-                } else {
-                    return poc ;
-                }
+                } 
             }
-        return  poc;
+        String pocfromSpreadhseet=getAttrValueWithKey(metadataFileKey, "project_poc_id");
+            if(pocfromSpreadhseet==null) return poc;
+        return  pocfromSpreadhseet;
     }
 
 
