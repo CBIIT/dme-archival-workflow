@@ -154,7 +154,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years ", "7"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Completed"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 
 		// TODO: project_start_date is extrated from the finalReport file in OtherData
