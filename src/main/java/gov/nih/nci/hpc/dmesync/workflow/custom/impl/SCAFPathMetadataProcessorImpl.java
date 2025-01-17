@@ -2,6 +2,7 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -86,16 +87,16 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
-			String sampleCollectionType  = getSampleCollectionType(object);
-			if (StringUtils.isBlank(sampleCollectionType )) {
+			String sampleCollectionType = getSampleCollectionType(object);
+			if (StringUtils.isBlank(sampleCollectionType)) {
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
 
 			} else {
 
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
-						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/" + sampleCollectionType 
-						+ "/" + getTarFileName(object, sampleCollectionType );
+						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/"
+						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType);
 
 			}
 			// replace spaces with underscore
@@ -119,7 +120,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
-		String sampleCollectionType  = getSampleCollectionType(object);
+		String sampleCollectionType = getSampleCollectionType(object);
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 
 		// Add path metadata entries for "PI_XXX" collection
@@ -201,7 +202,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
-		if (sampleCollectionType  != null) {
+		if (sampleCollectionType != null) {
 
 			// Add path metadata entries for "Sample" collection
 			// Example row: collectionType - Sample
@@ -238,10 +239,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
 
-			String sampleSubCollectionPath = sampleCollectionPath + "/" + sampleCollectionType ;
+			String sampleSubCollectionPath = sampleCollectionPath + "/" + sampleCollectionType;
 			HpcBulkMetadataEntry pathEntriesSubSample = new HpcBulkMetadataEntry();
 			pathEntriesSubSample.getPathMetadataEntries()
-					.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, sampleCollectionType ));
+					.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, sampleCollectionType));
 			pathEntriesSubSample.setPath(sampleSubCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSubSample);
 		} else {
@@ -265,7 +266,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 		dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("file_type", getFileType(object)));
 
-		if (sampleCollectionType  != null) {
+		if (sampleCollectionType != null) {
 			// The plaform name metadata is extracted from the csv file provided from the
 			// user.
 			// samplecollectioname=SCAF45676_PRODCUT_1 where key in csv file is SCAF045676
@@ -273,11 +274,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String firstWord = sampleCollectionName.replaceAll("\\d.*", "");
 			String numberPart = sampleCollectionName.replaceAll("\\D", "");
 			String samplekey = firstWord + "0" + numberPart;
-			
-			logger.info("sample key to get the platform name {} ",samplekey);
+
+			logger.info("sample key to get the platform name {} ", samplekey);
 
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType )));
+					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType)));
 
 			threadLocalMap.set(loadCsvMetadataFile(sampleFile, "SCAF_Number"));
 
@@ -319,8 +320,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 
 		logger.info("Lab Collection Name: {}", piCollectionName);
-		
-		
+
 		return piCollectionName;
 	}
 
@@ -328,75 +328,74 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Shaffer
-		String projectName=getAttrValueWithKey(metadataFileKey, "project_id");
-		if(projectName==null) {
-            throw new DmeSyncMappingException("Excel mapping not found for " + metadataFileKey);
+		String projectName = getAttrValueWithKey(metadataFileKey, "project_id");
+		if (projectName == null) {
+			throw new DmeSyncMappingException("Excel mapping not found for " + metadataFileKey);
 		}
 		return projectName;
 	}
-	
+
 	private String getProjectPOC(StatusInfo object, String metadataFileKey) throws DmeSyncMappingException {
-        // Example: If originalFilePath is
-        /// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
-        // then return CS029391_Shaffer
-        String poc = medatadaMapFromReport.get(POC);
-            if(poc!=null) {
-                String[] pocs = poc.trim().split("\\s*,\\s*");
-                if (pocs.length > 1) {
-                    logger.info("Invalid project pocs : The project has more than one pocs {}",
-                            poc);
-                    throw new DmeSyncMappingException("Invalid project pocs : The project has more than one pocs  " + poc);
-                } 
-            }
-        String pocfromSpreadhseet=getAttrValueWithKey(metadataFileKey, "project_poc_id");
-            if(pocfromSpreadhseet==null) return poc;
-        return  pocfromSpreadhseet;
-    }
+		// Example: If originalFilePath is
+		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
+		// then return CS029391_Shaffer
+		String poc = medatadaMapFromReport.get(POC);
+		if (poc != null) {
+			String[] pocs = poc.trim().split("\\s*,\\s*");
+			if (pocs.length > 1) {
+				logger.info("Invalid project pocs : The project has more than one pocs {}", poc);
+				throw new DmeSyncMappingException("Invalid project pocs : The project has more than one pocs  " + poc);
+			}
+		}
+		String pocfromSpreadhseet = getAttrValueWithKey(metadataFileKey, "project_poc_id");
+		if (pocfromSpreadhseet == null)
+			return poc;
+		return pocfromSpreadhseet;
+	}
 
+	private String getProjectPathName(StatusInfo object) throws DmeSyncMappingException {
+		// Example: If originalFilePath is
+		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
+		// then return CS029391_Staudt_Shaffer
+		String projectpathName = getCollectionNameFromParent(object, "scaf-ccr-a-data");
 
-	 private String getProjectPathName(StatusInfo object) throws DmeSyncMappingException {
-	        // Example: If originalFilePath is
-	        /// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
-	        // then return CS029391_Staudt_Shaffer
-	        String projectpathName= getCollectionNameFromParent(object, "scaf-ccr-a-data");
-	        
-	        if (projectpathName != null) {
-	            String[] projectKeywords = projectpathName.trim().split("_");
-	            if (projectKeywords.length != 3) {
-	                logger.info("Invalid project name : The project {} name has more/less than 3 words: {}",
-	                        projectpathName, projectKeywords.length);
-	                throw new DmeSyncMappingException("Invalid project name : The project name " + projectpathName
-	                        + " has more/less than 3 words: " + object.getSourceFilePath());
-	            } else {
-	                return projectpathName;
-	            }
-
-	        }
-	        return null;
-	    }
-
-	private String getSampleCollectionType(StatusInfo object) {
-		String sampleCollectionType  = null;
-		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
-			sampleCollectionType  = FASTQ;
-			logger.info("sampleCollectionType : {}", sampleCollectionType );
-		} else if ((StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "00_FullCellrangerOutputs"))) {
-			sampleCollectionType  = PRIMARY_ANALYSIS_OUTPUT_NAME;
-			logger.info("sampleCollectionType : {}", sampleCollectionType );
+		if (projectpathName != null) {
+			String[] projectKeywords = projectpathName.trim().split("_");
+			if (projectKeywords.length != 3) {
+				logger.info("Invalid project name : The project {} name has more/less than 3 words: {}",
+						projectpathName, projectKeywords.length);
+				throw new DmeSyncMappingException("Invalid project name : The project name " + projectpathName
+						+ " has more/less than 3 words: " + object.getSourceFilePath());
+			} else {
+				return projectpathName;
+			}
 
 		}
-		return sampleCollectionType ;
+		return null;
+	}
+
+	private String getSampleCollectionType(StatusInfo object) {
+		String sampleCollectionType = null;
+		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
+			sampleCollectionType = FASTQ;
+			logger.info("sampleCollectionType : {}", sampleCollectionType);
+		} else if ((StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "00_FullCellrangerOutputs"))) {
+			sampleCollectionType = PRIMARY_ANALYSIS_OUTPUT_NAME;
+			logger.info("sampleCollectionType : {}", sampleCollectionType);
+
+		}
+		return sampleCollectionType;
 
 	}
 
-	private String getTarFileName(StatusInfo object, String sampleCollectionType ) throws DmeSyncMappingException {
+	private String getTarFileName(StatusInfo object, String sampleCollectionType) throws DmeSyncMappingException {
 		String tarFileName = null;
 		String scafNumber = getSCAFNumber(object);
 
-		if (StringUtils.equals(FASTQ, sampleCollectionType )) {
+		if (StringUtils.equals(FASTQ, sampleCollectionType)) {
 			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
 					+ getFileType(object);
-		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleCollectionType ))
+		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleCollectionType))
 			// TODO: Add Chemistry function
 			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object) + "." + getFileType(object);
 		logger.info("tarFileName: {}", tarFileName);
@@ -452,27 +451,28 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		Path path = Paths.get(object.getOriginalFilePath());
 		String chemistry = path.getParent().getFileName().toString();
 		if (chemistry != null && !chemistry.startsWith("00_FullCellrangerOutputs")) {
-	            String[] chemistryKeywords = chemistry.trim().split("_");
-	            if (chemistryKeywords.length > 2) {
-	                logger.info("Invalid chemistry name for full ranger output tars : {}",chemistry);
-	                throw new DmeSyncMappingException("Invalid chemistry name for full ranger output tars :" + chemistry);
-	            } else {
-	            	if(chemistryKeywords.length==1) {
-	        		logger.info("chemistry: {}", chemistry);
-	                return chemistry;
-	            	}
-	            	if(chemistryKeywords.length==2) {
-	            		if(StringUtils.startsWithIgnoreCase(chemistryKeywords[0], "Seq")) {
-	            			logger.info("chemistry pathname {} derived chemistry: {}",chemistry, chemistryKeywords[1]);
-                          return chemistryKeywords[1];           			
-	            		}else {
-	            			logger.info("Invalid chemistry name for full ranger output tars : {}",chemistry);
-	    	                throw new DmeSyncMappingException("Invalid chemistry name for full ranger output tars :" + chemistry);
-	            		}
-	            	}
-	            		
-	            }
-	            
+			String[] chemistryKeywords = chemistry.trim().split("_");
+			if (chemistryKeywords.length > 2) {
+				logger.info("Invalid chemistry name for full ranger output tars : {}", chemistry);
+				throw new DmeSyncMappingException("Invalid chemistry name for full ranger output tars :" + chemistry);
+			} else {
+				if (chemistryKeywords.length == 1) {
+					logger.info("chemistry: {}", chemistry);
+					return chemistry;
+				}
+				if (chemistryKeywords.length == 2) {
+					if (StringUtils.startsWithIgnoreCase(chemistryKeywords[0], "Seq")) {
+						logger.info("chemistry pathname {} derived chemistry: {}", chemistry, chemistryKeywords[1]);
+						return chemistryKeywords[1];
+					} else {
+						logger.info("Invalid chemistry name for full ranger output tars : {}", chemistry);
+						throw new DmeSyncMappingException(
+								"Invalid chemistry name for full ranger output tars :" + chemistry);
+					}
+				}
+
+			}
+
 		} else {
 			logger.info(
 					"Invalid folder structure:The chemistry metadata attribute is not able to derive from the parent folder: {}",
@@ -511,8 +511,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 							+ object.getOriginalFilePath());
 		}
 	}
-	
-
 
 	private void extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
@@ -550,7 +548,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			throw new DmeSyncMappingException("Error while retrieving metadata in the FinalReport file " + filePath);
 		}
 	}
-
 
 	private Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
@@ -607,7 +604,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		throw new DmeSyncMappingException("Error while retrieving Platform name from the final report");
 	}
 
-	private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException {
+	private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		// Combine the parent folder path with the 'other_data' folder and the file name
 		finalReportPath = null;
@@ -630,34 +627,50 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (parentFolderPath != null) {
 			logger.info("Parent folder path to get the FinalReport file = {}", parentFolderPath);
 
-			Path otherDataFolderPath = Paths.get(parentFolderPath.toString(), "Other_Data");
-			// Check if the folder exists
-			if (Files.exists(otherDataFolderPath) && Files.isDirectory(otherDataFolderPath)) {
-				try {
+			// Pattern for directories that start with 'other' (case-insensitive)
+			String pattern = "Other*"; 
 
-					// List files in the 'other_data' folder and filter by the pattern
-					finalReportPath = Files.list(otherDataFolderPath)
-							.filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
-									|| file.getFileName().toString().endsWith("Report.docx"))
-							.map(Path::toString).findFirst().orElse("");
-					logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
-					if(finalReportPath.isBlank()) {
-						logger.info("Couldn't find the FinalReport file for the project: {}", otherDataFolderPath);
-						throw new DmeSyncMappingException(
-								"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
-						
-					}
+			// Case-insensitive match using DirectoryStream
+			try (DirectoryStream<Path> stream = Files.newDirectoryStream(parentFolderPath, pattern)) {
+				for (Path otherDataFolderPath : stream) {
+					// Check if it's a directory and the name starts with "other" (case-insensitive)
+					if (Files.isDirectory(otherDataFolderPath)
+							&& otherDataFolderPath.getFileName().toString().toLowerCase().startsWith("other")) {
+						try {
 
-				} catch (IOException e) {
-					logger.info("Couldn't find the FinalReport file for the project: {}", otherDataFolderPath);
-					throw new DmeSyncMappingException(
-							"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+							// List files in the 'other_data' folder and filter by the pattern
+							finalReportPath = Files.list(otherDataFolderPath)
+									.filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
+											|| file.getFileName().toString().endsWith("Report.docx"))
+									.map(Path::toString).findFirst().orElse("");
+							logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
+							if (finalReportPath.isBlank()) {
+								logger.info("Couldn't find the FinalReport file for the project: {}",
+										otherDataFolderPath);
+								throw new DmeSyncMappingException(
+										"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+
+							}
+
+						} catch (IOException e) {
+							logger.info("Couldn't find the FinalReport file for the project in Other* folder: {}",
+									otherDataFolderPath);
+							throw new DmeSyncMappingException(
+									"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+						}
+					} 
 				}
-			} else {
-				logger.info("Couldn't find the Other_DATA folder for the project: {}", otherDataFolderPath);
+
+			} catch (IOException e) {
+				logger.info("Couldn't find the FinalReport file for the project: {}", parentFolderPath);
 				throw new DmeSyncMappingException(
-						"Couldn't find the Other_DATA  for the project: " + otherDataFolderPath);
+						"Couldn't find the FinalReport file for the project: " + parentFolderPath);
 			}
+		}
+		if (finalReportPath==null) {
+			logger.info("Couldn't find the FinalReport file for the project:");
+			throw new DmeSyncMappingException(
+					"Couldn't find the FinalReport file for the project in other* folder"  );
 
 		}
 	}
