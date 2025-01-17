@@ -88,6 +88,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor mochaProcessor;
   
   @Autowired
+  @Qualifier("mocha-pdmr")
+  private DmeSyncPathMetadataProcessor mochaPDMRProcessor;
+  
+  @Autowired
   @Qualifier("scaf")
   private DmeSyncPathMetadataProcessor scafProcessor;
   
@@ -174,6 +178,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return templateProcessor;
     } else if ("mocha".equals(doc)){
         return mochaProcessor;
+    } else if ("mocha-pdmr".equals(doc)){
+        return mochaPDMRProcessor;
     } else if ("scaf".equals(doc)){
         return scafProcessor;
     } else if ("lcp".equals(doc)){

@@ -207,7 +207,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object);
 		    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
 		    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample_Flowcell"));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object))); 
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
