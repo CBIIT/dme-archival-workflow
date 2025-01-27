@@ -531,9 +531,10 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	private boolean isFullRangerOutput(StatusInfo object) {
-		boolean isFullRangerOutput = StringUtils.equalsIgnoreCase(
-				(Paths.get(object.getSourceFilePath()).getParent().getFileName().toString()),
-				"00_FullCellrangerOutputs");
+		String parentPath=Paths.get(object.getSourceFilePath()).getParent().getFileName().toString();
+		boolean isFullRangerOutput = (StringUtils.equalsIgnoreCase(parentPath,
+				"00_FullCellrangerOutputs") || StringUtils.equalsIgnoreCase(parentPath,
+						"00_FullspacerangerOutputs")) ;
 		return isFullRangerOutput;
 
 	}
