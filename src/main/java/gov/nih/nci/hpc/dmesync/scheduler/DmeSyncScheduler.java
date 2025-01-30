@@ -760,13 +760,17 @@ public class DmeSyncScheduler {
   public void checkForCompletedRun() {
 	if(awsFlag) return;
 	
+    logger.info("[Scheduler] Checking for the Completed Run.");
+
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
       if(CollectionUtils.isEmpty(currentRun))
-        return;
+    	    logger.info("[Scheduler] CurrentRun is empty.");
+             DmeSyncApplication.shutdown();
+       // return;
     } else {
       StatusInfo latest = null;
       if(createSoftlink) {
