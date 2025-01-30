@@ -44,4 +44,14 @@ public class DmeSyncProducer {
           return total;
         });
   }
+  
+  public boolean isMainThreadActive() {
+	  
+      Thread currentThread = Thread.currentThread();
+      if (currentThread.isAlive()) {
+       return true;
+      }
+	  return false;
+	  
+  }
 }

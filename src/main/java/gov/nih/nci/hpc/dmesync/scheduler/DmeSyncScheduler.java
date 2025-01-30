@@ -767,11 +767,15 @@ public class DmeSyncScheduler {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
-      if(CollectionUtils.isEmpty(currentRun))
-    	    logger.info("[Scheduler] CurrentRun is empty.");
-             DmeSyncApplication.shutdown();
-       // return;
-    } else {
+		if (CollectionUtils.isEmpty(currentRun))
+			if (sender.isMainThreadActive() || sender.getQueueCount("inbound.queue") != 0) {
+				return;
+			} else {
+				logger.info(
+						"[Scheduler] CurrentRunId is empty and main thread is not active Shutting the application.");
+				DmeSyncApplication.shutdown();
+			}
+	} else {
       StatusInfo latest = null;
       if(createSoftlink) {
     	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
