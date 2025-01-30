@@ -51,11 +51,15 @@ public class DmeSyncProducer {
 	  
       Map<Thread, StackTraceElement[]> threadMap = Thread.getAllStackTraces();
 	  
-      //Thread currentThread = Thread.currentThread();
-      if (!threadMap.isEmpty()) {
-       return true;
+      for (Thread thread : threadMap.keySet()) {
+          // Ignore threads that are not processing tasks
+          if (thread.getState() == Thread.State.RUNNABLE || thread.getState() == Thread.State.WAITING ) {
+              if (thread.getName().equals("main")) {
+                  return true; 
+              }
+          }
       }
-	  return false;
+      return false; 
 	  
   }
 }
