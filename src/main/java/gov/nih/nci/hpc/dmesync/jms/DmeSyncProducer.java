@@ -1,6 +1,8 @@
 package gov.nih.nci.hpc.dmesync.jms;
 
 import java.util.Enumeration;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,8 +49,10 @@ public class DmeSyncProducer {
   
   public boolean isMainThreadActive() {
 	  
-      Thread currentThread = Thread.currentThread();
-      if (currentThread.isAlive()) {
+      Map<Thread, StackTraceElement[]> threadMap = Thread.getAllStackTraces();
+	  
+      //Thread currentThread = Thread.currentThread();
+      if (!threadMap.isEmpty()) {
        return true;
       }
 	  return false;
