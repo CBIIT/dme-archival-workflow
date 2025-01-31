@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.exception.dme_ccdidataSyncMappingException;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
