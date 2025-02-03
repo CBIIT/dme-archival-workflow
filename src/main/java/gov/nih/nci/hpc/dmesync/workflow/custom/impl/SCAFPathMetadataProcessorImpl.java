@@ -570,7 +570,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("metadata retrieved from the FinalReport {} values {}", filePath, medatadaMapFromReport);
 		} catch (Exception e) {
 			logger.info("Error while retrieving metadata from the FinalReport file{}", filePath);
-			throw new DmeSyncMappingException("Error while retrieving metadata in the FinalReport file " + filePath);
+			//throw new DmeSyncMappingException("Error while retrieving metadata in the FinalReport file " + filePath);
 		}
 	}
 
