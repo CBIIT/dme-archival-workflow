@@ -667,7 +667,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 							finalReportPath = Files.list(otherDataFolderPath)
 									.filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
 											|| file.getFileName().toString().endsWith("Report.docx"))
-									.map(Path::toString).findFirst().orElse("");
+									.map(Path::toString).findFirst().orElse(null);
 							logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
 							if (finalReportPath.isBlank()) {
 								logger.info("Couldn't find the FinalReport file for the project: {}",
