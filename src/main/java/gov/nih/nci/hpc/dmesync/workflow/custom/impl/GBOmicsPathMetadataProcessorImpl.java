@@ -101,14 +101,15 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesFlowcell.setPath(flowcellCollectionPath);
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("data_generating_facility", "placeholder"));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("library_strategy", "placeholder"));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(sampleId, "Type")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("platform_name", "placeholder"));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("organism", "placeholder"));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("data_generating_facility", getAttrValueWithExactKey(sampleId, "Data generating facility")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueWithExactKey(sampleId, "Library strategy")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(sampleId, "Analyte Type")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("platform_name", getAttrValueWithExactKey(sampleId, "Platform")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(sampleId, "Species")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(sampleId, "Is cell line")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("enrichment_step", getAttrValueWithExactKey(sampleId, "Enrichment step")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("reference_genome", getAttrValueWithExactKey(sampleId, "SampleRef")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(sampleId, "Date_sequenced")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(sampleId, "Run Start Date")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequencing_application_type", getAttrValueWithExactKey(sampleId, "Type of sequencing")));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
@@ -118,6 +119,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesSample.setPath(sampleCollectionPath);
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrValueWithExactKey(sampleId, "Patient ID")));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_id", getAttrValueWithExactKey(sampleId, "Library ID")));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("case_name", getAttrValueWithExactKey(sampleId, "Case Name")));
@@ -263,7 +265,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		    try {
 		    	// load the user metadata from the externally placed excel
 				if(StringUtils.isNotEmpty(metadataFile))
-					metadataMap = loadCsvMetadataFile(metadataFile, "Biomaterial ID");
+					metadataMap = loadMetadataFile(metadataFile, "Sample name");
 		    } catch (DmeSyncMappingException e) {
 		        logger.error(
 		            "Failed to initialize metadata  path metadata processor", e);
