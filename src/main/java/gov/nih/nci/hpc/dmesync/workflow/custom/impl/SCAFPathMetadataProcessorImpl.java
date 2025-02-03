@@ -6,6 +6,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -60,6 +63,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	@Value("${dmesync.sample.report:}")
 	private String sampleFile;
+	
+	@Value("${dmesync.project.report.date.file:}")
+	private String projectReportFile;
 
 	private String finalReportPath;
 
@@ -82,6 +88,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 			constructFinalReportPath(object);
+			if(finalReportPath!=null)
 			extractMetadataFromFinalReport(finalReportPath.toString());
 			String path = getProjectPathName(object);
 
@@ -158,10 +165,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Completed"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", projectCollectionName));
 
-		// TODO: project_start_date is extrated from the finalReport file in OtherData
 		// folder.
-		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_start_date", medatadaMapFromReport.get(REPORT_DATE)));
+		
 
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_poc", getProjectPOC(object, metadataFileKey)));
@@ -198,6 +203,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "Collaborators")))
 			pathEntriesProject.getPathMetadataEntries()
 					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
+		
+		pathEntriesProject.getPathMetadataEntries()
+		.add(createPathEntry("project_start_date", getProjectReportDate(object)));
 		projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -316,7 +324,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String piCollectionName = null;
 		piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
 		if (piCollectionName == null) {
-			piCollectionName = medatadaMapFromReport.get(PI);
+			piCollectionName = medatadaMapFromReport!=null?medatadaMapFromReport.get(PI):null;
 		}
 
 		logger.info("Lab Collection Name: {}", piCollectionName);
@@ -339,7 +347,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Shaffer
-		String poc = medatadaMapFromReport.get(POC);
+		String poc = medatadaMapFromReport!=null?medatadaMapFromReport.get(POC):null;
 		if (poc != null) {
 			String[] pocs = poc.trim().split("\\s*,\\s*");
 			if (pocs.length > 1) {
@@ -484,6 +492,23 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
+	private String getProjectReportDate(StatusInfo object) throws DmeSyncMappingException {
+		String reportDate= medatadaMapFromReport!=null?medatadaMapFromReport.get(REPORT_DATE):null;
+		if(reportDate == null) {
+			
+			threadLocalMap.set(loadMetadataFile(projectReportFile, "CS_Number"));
+			 String projectId = Arrays.stream(getProjectPathName(object).split("_"))
+                     .findFirst()
+                     .orElse("");
+			  String dateExcel= getAttrValueWithKey(projectId, "Date_of_Project_Delivery");
+			  DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/dd/yy");		        
+		      DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");		        
+		      LocalDate dateParsed = LocalDate.parse(dateExcel, inputFormatter);
+		      reportDate= dateParsed.format(outputFormatter);
+		}
+		logger.info("project Report Date",reportDate);
+		return reportDate;
+	}
 	private String getAttrWithKey(String key, String attrKey) {
 		if (StringUtils.isEmpty(key)) {
 			logger.error("Excel mapping not found for {}", key);
@@ -647,30 +672,30 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 							if (finalReportPath.isBlank()) {
 								logger.info("Couldn't find the FinalReport file for the project: {}",
 										otherDataFolderPath);
-								throw new DmeSyncMappingException(
-										"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+							//	throw new DmeSyncMappingException(
+							//			"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
 
 							}
 
 						} catch (IOException e) {
 							logger.info("Couldn't find the FinalReport file for the project in Other* folder: {}",
 									otherDataFolderPath);
-							throw new DmeSyncMappingException(
-									"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
+							//throw new DmeSyncMappingException(
+							//		"Couldn't find the FinalReport file for the project: " + otherDataFolderPath);
 						}
 					} 
 				}
 
 			} catch (IOException e) {
 				logger.info("Couldn't find the FinalReport file for the project: {}", parentFolderPath);
-				throw new DmeSyncMappingException(
-						"Couldn't find the FinalReport file for the project: " + parentFolderPath);
+				//throw new DmeSyncMappingException(
+				//		"Couldn't find the FinalReport file for the project: " + parentFolderPath);
 			}
 		}
 		if (finalReportPath==null) {
 			logger.info("Couldn't find the FinalReport file for the project:");
-			throw new DmeSyncMappingException(
-					"Couldn't find the FinalReport file for the project in other* folder"  );
+			//throw new DmeSyncMappingException(
+			//		"Couldn't find the FinalReport file for the project in other* folder"  );
 
 		}
 	}
