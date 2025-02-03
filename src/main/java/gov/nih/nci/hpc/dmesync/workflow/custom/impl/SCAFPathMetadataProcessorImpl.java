@@ -669,7 +669,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 											|| file.getFileName().toString().endsWith("Report.docx"))
 									.map(Path::toString).findFirst().orElse(null);
 							logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
-							if (finalReportPath.isBlank()) {
+							if (finalReportPath==null) {
 								logger.info("Couldn't find the FinalReport file for the project: {}",
 										otherDataFolderPath);
 							//	throw new DmeSyncMappingException(
