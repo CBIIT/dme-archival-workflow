@@ -241,9 +241,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "organism_strain")))
 				pathEntriesSample.getPathMetadataEntries().add(
 						createPathEntry("organism_strain", getAttrValueWithKey(metadataFileKey, "organism_strain")));
-			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "gender")))
+			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "sex")))
 				pathEntriesSample.getPathMetadataEntries()
-						.add(createPathEntry("gender", getAttrValueWithKey(metadataFileKey, "gender")));
+						.add(createPathEntry("sex", getAttrValueWithKey(metadataFileKey, "sex")));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
 
@@ -501,10 +501,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
                      .findFirst()
                      .orElse("");
 			  String dateExcel= getAttrValueWithKey(projectId, "Date_of_Project_Delivery");
+			  if(dateExcel!=null) {
 			  DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/dd/yy");		        
 		      DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");		        
 		      LocalDate dateParsed = LocalDate.parse(dateExcel, inputFormatter);
 		      reportDate= dateParsed.format(outputFormatter);
+			  }
 		}
 		logger.info("project Report Date",reportDate);
 		return reportDate;
