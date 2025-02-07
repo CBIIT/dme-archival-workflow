@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,6 +81,8 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("DataTransferRate(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("Error");
       header.createCell(colCount++).setCellValue("RetryCount");
+
+      metadataInfo.sort(Comparator.comparing(MetadataInfo::getMetaDataKey));
 
       Set<String> set = new HashSet<>(metadataInfo.size());
       metadataInfo.stream().filter(p -> set.add(p.getMetaDataKey())).collect(Collectors.toList());
