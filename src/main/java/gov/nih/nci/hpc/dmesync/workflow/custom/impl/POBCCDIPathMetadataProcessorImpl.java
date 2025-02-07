@@ -386,7 +386,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getSubCollectionName(StatusInfo object) {
 		String parentCollectionType = null;
 		// Example: If originalFilePath is
-		// /data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/tarfile
+		// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/tarfile
 		// then the subCollectionName will be Fastq and all other path will comes under
 		// analysis
 		String path = object.getOriginalFilePath();
@@ -421,7 +421,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	 * that project in Fastq paths --- 
 	 * Folder : Path 
 	 * Fastq: Original File Path ,
-	 * Analysis: Parent_file_path from parent keyword "dme_ccdidata" (project path)
+	 * Analysis: Parent_file_path from parent keyword "dme_test" (project path)
 	 * Geonome: Original File Path
 	 * raw data & metric files : parent file path which
 	 * is project path
@@ -434,19 +434,19 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		if (StringUtils.equals(getSubCollectionName(object), FASTQ)) {
 
 			if (isRawDataFile(object)) {
-				parentPath = getPathFromParent(object, "dme_ccdidata");
+				parentPath = getPathFromParent(object, "dme_test");
 				logger.info("Path key to search metadata file for rawData file {}", parentPath);
 			} else {
 				// path is equal to parent file path which is
-				// /data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
+				// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/01_DemultiplexedFastqs/Seq1_GEX/
 				parentPath = fullPath.getParent().toString();
 				logger.info("Path key to search metadata file for fastq folder {}", parentPath);
 
 			}
 		} else {
 			// for Analysis, path is substring of path which is project folder path
-			// /data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX
-			parentPath = getPathFromParent(object, "dme_ccdidata");
+			// /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX
+			parentPath = getPathFromParent(object, "dme_test");
 			logger.info("Path key to search metadata file for Extracted data files {}", parentPath);
 
 			if (!isMetricsFile(object)) {
@@ -463,7 +463,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 					String geonomeType = getGenomeCollectionName(object);
 					if (geonomeType != null) {
 						// For geonome path is parent path
-						/// data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX/02_PrimaryAnalysisOutput/GRCh37/
+						/// data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/02_PrimaryAnalysisOutput/GRCh37/
 						parentPath = getGenomeCollectionPath(object);
 						logger.info("Path key to search metadata file for geonome folder {}", parentPath);
 
@@ -500,9 +500,9 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getPathFromParent(StatusInfo object, String parentName) {
 		/*
 		 * Example originalFilepath -
-		 * /data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX/PrimaryAnalysisInputFiles /
-		 * tarfile parent name: dme_ccdidata then parent path:
-		 * /data/CCRCCDI/dme_ccdidata/CS035485_Shern_Zhang_3PGEX
+		 * /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX/PrimaryAnalysisInputFiles /
+		 * tarfile parent name: dme_test then parent path:
+		 * /data/CCRCCDI/dme_test/CS035485_Shern_Zhang_3PGEX
 		 */
 		Path fullFilePath = Paths.get(object.getOriginalFilePath());
 		logger.info("Full File Path = {}", fullFilePath);
