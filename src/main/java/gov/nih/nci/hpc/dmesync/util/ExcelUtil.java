@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -84,9 +85,10 @@ public class ExcelUtil {
 
       metadataInfo.sort(Comparator.comparing(MetadataInfo::getMetaDataKey));
 
-      Set<String> set = new HashSet<>(metadataInfo.size());
+      Set<String> set = new LinkedHashSet<>(metadataInfo.size());
       metadataInfo.stream().filter(p -> set.add(p.getMetaDataKey())).collect(Collectors.toList());
-
+      
+      
       for (String key : set) {
         header.createCell(colCount++).setCellValue(key);
       }
