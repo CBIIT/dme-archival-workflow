@@ -1,6 +1,8 @@
 package gov.nih.nci.hpc.dmesync.jms;
 
 import java.util.Enumeration;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,5 +45,21 @@ public class DmeSyncProducer {
           }
           return total;
         });
+  }
+  
+  public boolean isMainThreadActive() {
+	  
+      Map<Thread, StackTraceElement[]> threadMap = Thread.getAllStackTraces();
+	  
+      for (Thread thread : threadMap.keySet()) {
+          // Ignore threads that are not processing tasks
+          if (thread.getState() == Thread.State.RUNNABLE || thread.getState() == Thread.State.WAITING ) {
+              if (thread.getName().equals("main")) {
+                  return true; 
+              }
+          }
+      }
+      return false; 
+	  
   }
 }

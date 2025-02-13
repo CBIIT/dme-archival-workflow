@@ -1,9 +1,12 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncFileSystemUploadTaskImpl fileSystemUploadTask;
   @Autowired private DmeSyncAWSS3UploadTaskImpl awsS3UploadTask;
   @Autowired private DmeSyncMetadataTaskImpl metadataTask;
+  @Autowired private DmeSyncProcessMultipleTarsTaskImpl processMultipleTarsTask;
   @Autowired private DmeSyncTarTaskImpl tarTask;
   @Autowired private DmeSyncCompressTaskImpl compressTask;
   @Autowired private DmeSyncUntarTaskImpl untarTask;
@@ -85,11 +89,20 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.source.aws:false}")
   private boolean awsFlag;
   
+  @Value("${dmesync.process.multiple.tars:false}")
+  private boolean processMultipleTars;
+  
+  @Value("${dmesync.multiple.tars.dir.folders:}")
+  private String multpleTarsFolders;
+  
+  
+  
   @PostConstruct
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
     if (!awsFlag) {
+    	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
 	    if (tar || tarIndividualFiles) tasks.add(tarTask);
 	    else if (compress) tasks.add(compressTask);
 	    if (untar) tasks.add(untarTask);
@@ -134,8 +147,17 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       statusInfo.setError("");
       statusInfo.setStartTimestamp(new Date());
       
+      String sourceDirLeafNode = statusInfo.getSourceFilePath() != null
+				? ((Paths.get(statusInfo.getSourceFilePath())).getFileName()).toString()
+				: null;
+      
       for (DmeSyncTask task : tasks) {
-        statusInfo = task.processTask(statusInfo);
+    	   statusInfo = task.processTask(statusInfo);
+    	   // This condition is used when we want to peform specific task and complete the workflow
+    	   if((StringUtils.equalsIgnoreCase(multpleTarsFolders, sourceDirLeafNode)) &&
+    			   StringUtils.equals("COMPLETED", statusInfo.getStatus()) ){
+    		   break;
+    	   }
       }
       
       dmeSyncWorkflowService.getService(access).completeWorkflow(statusInfo);

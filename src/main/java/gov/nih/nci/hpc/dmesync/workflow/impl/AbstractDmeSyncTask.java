@@ -65,6 +65,18 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
     dmeSyncWorkflowService.getService(access).saveTaskInfo(task);
   }
   
+  protected void upsertTaskByTaskName(Long objectId, String taskMapName) {
+	    
+	    TaskInfo task = dmeSyncWorkflowService.getService(access).findFirstTaskInfoByObjectIdAndTaskName(objectId, taskMapName);
+	    if (task == null) {
+	      task = new TaskInfo();
+	      task.setObjectId(objectId);
+	      task.setTaskName(taskMapName);
+	    }
+	    task.setCompleted(true);
+	    dmeSyncWorkflowService.getService(access).saveTaskInfo(task);
+	  }
+  
   public String getTaskName() {
     return taskName;
   }

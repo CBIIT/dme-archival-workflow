@@ -72,6 +72,17 @@ public interface DmeSyncWorkflowService {
    */
   StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
       String originalFilePath, String sourceFileName, String status);
+  
+  /**
+   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
+   *
+   * @param originalFilePath the original file path
+   * @param sourceFileName the source file name
+   * @param status the null
+   * @return the StatusInfo object
+   */
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+      String originalFilePath, String sourceFileName);
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
@@ -82,12 +93,21 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNotNull
+   * findTopStatusInfoByDocAndSourceFilePath
    * @param doc the doc
-   * @param baseDir the base directory
+   * @param sourceFilePath
    * @return the StatusInfo object
    */
-  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
+  StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath);
+
+  /**
+   * findTopByDocAndSourceFilePathAndRunId
+   * @param doc the doc
+   * @param sourceFilePath
+   * @param runId
+   * @return the StatusInfo object
+   */
+  StatusInfo findTopByDocAndSourceFilePathAndRunId( String doc,String sourceFilePath, String runId) ;
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc
@@ -97,14 +117,14 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc);
   
   /**
-   * findTopBySourceFilePathAndRunId
+   * findTopBySourceFileNameAndRunId
    *
-   * @param sourceFilepath
+   * @param sourceFileName
    * @param runId the runId
    * @return the StatusInfo object
    */
   
-   StatusInfo findTopBySourceFilePathAndRunId( String originalFilePath,  String runId);
+   StatusInfo findTopBySourceFileNameAndRunId( String sourceFileName,  String runId);
 
   /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
@@ -118,22 +138,14 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status, String runId);
   
   /**
-   * CountOfFilesinAllTarsForOriginalFilePath
-   *
+   * findAllByDocAndRunIdAndLikeOriginalFilePath
+   * @param doc the doc
+   * @param runId the runId
    * @param originalFilePath the original file path
    * @return the list of StatusInfo objects
    */
-  Long totalFilesinAllTarsForOriginalFilePath(
-      String originalFilePath);
+   List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String doc, String runId, String originalFilePath);
 
-  /**
-   * CountOfFilesinAllTarsForOriginalFilePathAndRunId
-   *
-   * @param originalFilePath the original file path
-   * @return the list of StatusInfo objects
-   */
-  Long totalFilesinAllTarsForOriginalFilePathAndRunId(
-      String originalFilePath,String runId);
   /**
    * findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc
    *
@@ -284,4 +296,10 @@ public interface DmeSyncWorkflowService {
    * @return the list of StatusInfo objects
    */
   List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
+
+  /**
+   * Delete StatusInfo rows
+   * @param List of object Ids.
+   */
+   void deleteStatusInfoByIds(List<Long> ids);
 }

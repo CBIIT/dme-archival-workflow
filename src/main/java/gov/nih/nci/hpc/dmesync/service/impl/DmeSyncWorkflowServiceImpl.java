@@ -84,15 +84,23 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
     return statusInfoDao.findFirstByOriginalFilePathAndSourceFileNameAndStatus(
         originalFilePath, sourceFileName, status);
   }
+  
+  @Override
+  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+      String originalFilePath, String sourceFileName) {
+    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusNull(
+        originalFilePath, sourceFileName);
+  }
 
+  
   @Override
   public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir) {
     return statusInfoDao.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, baseDir);
   }
   
   @Override
-  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir) {
-    return statusInfoDao.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc, baseDir);
+  public StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath) {
+    return statusInfoDao.findTopStatusInfoByDocAndSourceFilePath(doc, sourceFilePath);
   }
   
   @Override
@@ -103,22 +111,22 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public Long totalFilesinAllTarsForOriginalFilePath(
-	      String originalFilePath){
-	  return statusInfoDao.totalFilesinAllTarsForOriginalFilePath(originalFilePath);
+  public List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String doc, String runId, String originalFilePath){
+	  return statusInfoDao.findAllByDocAndRunIdAndLikeOriginalFilePath(doc,runId,originalFilePath);
   }
-  @Override
-  public Long totalFilesinAllTarsForOriginalFilePathAndRunId(
-	      String originalFilePath, String runId){
-	  return statusInfoDao.totalFilesinAllTarsForOriginalFilePathAndRunId(originalFilePath, runId);
-  }
-
+ 
   
   @Override
-  public StatusInfo findTopBySourceFilePathAndRunId(
-      String originalFilePath, String runId) {
-    return statusInfoDao.findTopBySourceFilePathAndRunId(
-        originalFilePath, runId);
+  public StatusInfo findTopBySourceFileNameAndRunId(
+      String sourceFileName, String runId) {
+    return statusInfoDao.findTopBySourceFileNameAndRunId(
+    		sourceFileName, runId);
+  }
+  
+  @Override
+  public StatusInfo findTopByDocAndSourceFilePathAndRunId( String doc,String sourceFilePath, String runId) {
+    return statusInfoDao.findTopStatusInfoByDocAndSourceFilePathAndRunId(doc,
+    		sourceFilePath, runId);
   }
 
   @Override
@@ -170,6 +178,12 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public StatusInfo saveStatusInfo(StatusInfo statusInfo) {
     return statusInfoDao.save(statusInfo);
   }
+  
+  @Override
+   public void deleteStatusInfoByIds(List<Long> ids) {
+	  statusInfoDao.deleteStatusInfoByIds(ids);
+  }
+
 
   @Override
   public TaskInfo findFirstTaskInfoByObjectIdAndTaskName(Long id, String taskName) {

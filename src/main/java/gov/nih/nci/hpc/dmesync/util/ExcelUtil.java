@@ -82,6 +82,7 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("DataTransferRate(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("Error");
       header.createCell(colCount++).setCellValue("RetryCount");
+      header.createCell(colCount++).setCellValue("SourceFileName");
 
       metadataInfo.sort(Comparator.comparing(MetadataInfo::getMetaDataKey));
 
@@ -103,16 +104,15 @@ public class ExcelUtil {
         row.createCell(colCount++).setCellValue(data.getFilesize());
         row.createCell(colCount++).setCellValue(humanReadableByteCount(data.getFilesize().doubleValue(), true));
         row.createCell(colCount++).setCellValue(data.getStatus());
+        if (data.getTarContentsCount() != null) {
+			row.createCell(colCount++).setCellValue(data.getTarContentsCount());
+		} else {
+			row.createCell(colCount++).setCellValue("");
+		}
         if (data.getTarStartTimestamp() != null && data.getTarEndTimestamp() != null) {
-			if (data.getTarContentsCount() != null) {
-				row.createCell(colCount++).setCellValue(data.getTarContentsCount());
-			} else {
-				row.createCell(colCount++).setCellValue("");
-			}
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarStartTimestamp()));
           row.createCell(colCount++).setCellValue(sdf.format(data.getTarEndTimestamp()));
         } else {
-		  row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
           row.createCell(colCount++).setCellValue("");
         }
@@ -140,6 +140,7 @@ public class ExcelUtil {
         }
         row.createCell(colCount++).setCellValue(data.getError());
         row.createCell(colCount++).setCellValue(data.getRetryCount());
+        row.createCell(colCount++).setCellValue(data.getSourceFileName());
         for (String key : set) {
           boolean found = false;
           for (MetadataInfo metadata : metadataInfo) {

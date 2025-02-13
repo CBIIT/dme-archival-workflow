@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.dao;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Long> {
@@ -43,24 +44,27 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   @Query("select s from StatusInfo s where s.originalFilePath like ?2 and s.doc =?1")
   List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String Doc,String originalFilePath);
-
-  /**
-   * totalFilesinAllTarsForOriginalFilePath
-   * 
-   * @param originalFilePath the original file path
-   * @return the sum of tarContentsCount for the records.
-   */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.error is null")
-  Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath );
+  
   
   /**
-   * totalFilesinAllTarsForOriginalFilePath
+   * findAllLikeOriginalFilePathandRun_id
    * 
    * @param originalFilePath the original file path
-   * @return the sum of tarContentsCount for the records.
+   * @param doc the docName
+   * @return the list of StatusInfo objects
    */
-  @Query("select sum(s.tarContentsCount) from StatusInfo s where s.originalFilePath like ?1 and s.runId=?2 and s.error is null")
-  Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath , String runId);
+  @Query("select s from StatusInfo s where  s.doc =?1 and s.runId=?2 and s.originalFilePath like ?3 ")
+  List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
+  
+  /**
+   * findByOriginalFilePathAndSourceFileNameAndStatusNull
+   * 
+   * @param originalFilePath the original file path
+   * @param sourceFileName the sourceFileName
+   * @return the list of StatusInfo objects which matches sourceFileName  and status is null
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and s.status is null")
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath, String sourceFileName);
   
   /**
    * findByRunId
@@ -79,6 +83,8 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   StatusInfo findFirstByOriginalFilePathAndSourceFileNameAndStatus(
       String originalFilePath, String sourceFileName, String status);
+  
+  
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
@@ -89,12 +95,21 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull
+   * findTopStatusInfoByDocAndSourceFilePath
    * @param doc the doc
-   * @param baseDir the base directory
+   * @param sourceFilePath 
    * @return the original StatusInfo object for multiple tars 
    */
-  StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir);
+  StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath);
+
+  /**
+   * findTopStatusInfoByDocAndSourceFilePathAndRunId
+   * @param doc the doc
+   * @param runId the runId
+   * @param sourceFilePath 
+   * @return the original StatusInfo object for multiple tars 
+   */
+  StatusInfo findTopStatusInfoByDocAndSourceFilePathAndRunId( String doc,String sourceFilePath, String runId) ;
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc
@@ -117,12 +132,12 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   /**
    * findTopBySourceFilePathAndRunId
    * 
-   * @param originalFilePath the original file path
+   * @param sourceFileName the source file name
    * @param runId the runId
    * @return  the StatusInfo object
    */
-  StatusInfo findTopBySourceFilePathAndRunId(
-      String originalFilePath, String runId);
+  StatusInfo findTopBySourceFileNameAndRunId(
+      String sourceFileName, String runId);
 
   /**
    * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
@@ -140,5 +155,17 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @return  the list of StatusInfo objects
    */
   List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status);
+  
+  /**
+   * Delete mainly used to remove the duplicate rows for multiple tars design
+   * @param List of ids
+   * 
+   */
+  
+  @Modifying
+  @Query("delete from StatusInfo s where s.id in ?1")
+  void deleteStatusInfoByIds(List<Long> ids);
+  
+  
 
 }

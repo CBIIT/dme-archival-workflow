@@ -81,6 +81,24 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     sender.send(message);
     return "SUCCESS";
   }
+  
+  @Override
+  public String sendErrorMail(String subject, String text) {
+    MimeMessage message = sender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(message);
+
+    try {
+      helper.setFrom("hpcdme-sync");
+      helper.setTo("HPC_DME_Admin@mail.nih.gov");
+      helper.setText(text);
+      helper.setSubject(subject);
+    } catch (MessagingException e) {
+      logger.error("Error while sending mail", e);
+      return "ERROR";
+    }
+    sender.send(message);
+    return "SUCCESS";
+  }
 
   @Override
   public void sendResult(String runId) {
@@ -145,6 +163,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       if(exceedsMaxRecommendedFileSize)
     	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
       String updatedBody=body;
+      
       if("csb".equals(doc)) {
 
 			Set<String> folderPaths = statusInfo.stream().map(StatusInfo::getOriginalFilePath)
@@ -154,6 +173,11 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 				if (name.contains("movies")) {
 					List<StatusInfo> allUploads = dmeSyncWorkflowService.getService(access)
 							.findAllByDocAndLikeOriginalFilePath(doc, name);
+					// Removing the movies folder, tar contents file since we are only displaying the data for tars
+					allUploads.removeIf(file -> {
+			            String filename = file.getSourceFileName();
+			            return !filename.isEmpty() && (filename.endsWith(".txt") || filename.equalsIgnoreCase("movies"));
+			        });					
 					// Fetch details for each folder name
 					DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
 					File directory = new File(name);
@@ -161,12 +185,12 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					int expectedTars = (files.length + filesPerTar - 1) / filesPerTar;
 					folder.setFolderName(name);
 					folder.setFilesCount(files.length);
-					// adding + 1 to include tarMapping notes files
-					folder.setExpectedTars(expectedTars + 1);
+					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
+					folder.setExpectedTars(expectedTars );
 					folder.setCreatedTars(allUploads.size());
-					folder.setUploadedTars(allUploads.stream().filter(tar -> "COMPLETED".equals(tar.getStatus())) 
+					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()))) 
 							.count());
-					folder.setFailedTars(allUploads.stream().filter(tar -> tar.getStatus() == null) 
+					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null ))
 							.count());
 					folders.add(folder);
 				}

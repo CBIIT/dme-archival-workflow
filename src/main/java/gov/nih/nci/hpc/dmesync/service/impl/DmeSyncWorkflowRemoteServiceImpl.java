@@ -91,26 +91,16 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	
 	
 	@Override
-    public Long totalFilesinAllTarsForOriginalFilePath(String originalFilePath) {
+    public List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String doc, String runId, String originalFilePath) {
         final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
-                .path("/api/totalFilesinAllTarsForOriginalFilePath")
-                .queryParam("originalFilePath", originalFilePath).build().encode().toUri();
-        ResponseEntity<Long> response = restTemplateFactory
-                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, Long.class);
-        Long totalCount = response.getBody();
-        return totalCount;
+                .path("/api/findAllByDocAndRunIdAndLikeOriginalFilePath")
+                .queryParam("doc", doc).queryParam("runId", runId).queryParam("originalFilePath", originalFilePath).build().encode().toUri();
+        ResponseEntity<StatusInfo[]> response = restTemplateFactory
+                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
+        StatusInfo[] statusInfoArray = response.getBody();
+        return new ArrayList<>(Arrays.asList(statusInfoArray));
     }
 	
-	@Override
-    public Long totalFilesinAllTarsForOriginalFilePathAndRunId(String originalFilePath, String runId) {
-        final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
-                .path("/api/totalFilesinAllTarsForOriginalFilePathAndRunId")
-                .queryParam("originalFilePath", originalFilePath).build().encode().toUri();
-        ResponseEntity<Long> response = restTemplateFactory
-                .getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, Long.class);
-        Long totalCount = response.getBody();
-        return totalCount;
-    }
 	 @Override
 	  public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
 		 final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
@@ -142,7 +132,20 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);
 	}
+	
+	@Override
+	public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath,
+			String sourceFileName) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findByOriginalFilePathAndSourceFileNameAndStatusNull")
+				.queryParam("originalFilePath", originalFilePath).queryParam("sourceFileName", sourceFileName).build().encode().toUri();
+		ResponseEntity<StatusInfo[]> response = restTemplateFactory
+				.getRestTemplate(new RestTemplateResponseErrorHandler()).getForEntity(finalUrl, StatusInfo[].class);
+		StatusInfo[] statusInfoArray = response.getBody();
+		return new ArrayList<>(Arrays.asList(statusInfoArray));
+	}
 
+	
 	@Override
 	public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc,
 			String baseDir) {
@@ -259,6 +262,15 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).postForObject(finalUrl,
 				entity, StatusInfo.class);
 	}
+	
+	@Override
+	public void deleteStatusInfoByIds(List<Long> objectIds) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl).path("/api/deleteStatusInfoByIds").build()
+				.encode().toUri();
+		final HttpEntity<List<Long>> entity = new HttpEntity<>(objectIds);
+		restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).exchange(finalUrl, HttpMethod.POST,
+				entity, Object.class);
+	}
 
 	@Override
 	public TaskInfo findFirstTaskInfoByObjectIdAndTaskName(Long id, String taskName) {
@@ -324,19 +336,26 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 	}
 
 	@Override
-	  public StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(String doc, String baseDir) {
+	  public StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
-				.path("/api/findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull")
-				.queryParam("doc", doc).queryParam("baseDir", baseDir).build().encode().toUri();
+				.path("/api/findTopStatusInfoByDocAndSourceFilePath")
+				.queryParam("doc", doc).queryParam("baseDir", sourceFilePath).build().encode().toUri();
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);	  }
 	
 	
 	@Override
-	  public StatusInfo findTopBySourceFilePathAndRunId(String doc, String baseDir) {
+	  public StatusInfo findTopBySourceFileNameAndRunId(String sourceFileName, String runId) {
 		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
 				.path("/api/findTopBySourceFilePathAndRunId")
-				.queryParam("doc", doc).queryParam("baseDir", baseDir).build().encode().toUri();
+				.queryParam("sourceFileName", sourceFileName).queryParam("runId", runId).build().encode().toUri();
+		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
+				StatusInfo.class);	  }
+	@Override
+	  public StatusInfo findTopByDocAndSourceFilePathAndRunId(String doc,String sourceFilePath, String runId) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findTopStatusInfoByDocAndSourceFilePathAndRunId")
+				.queryParam("sourceFilePath", sourceFilePath).queryParam("doc", doc).queryParam("runId", runId).build().encode().toUri();
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);	  }
 	

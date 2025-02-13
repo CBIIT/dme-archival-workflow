@@ -7,6 +7,7 @@ import org.apache.commons.compress.archivers.tar.TarFile;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.BufferedInputStream;
@@ -99,18 +100,32 @@ public class TarUtil {
    * @param workDir the work directory
    * @throws IOException on IO error
    */
-  public static void deleteTar(String tarFile, String workDir) throws IOException {
+  public static void deleteTarFile(String tarFile, String workDir , String doc) throws IOException {
     Path filePath = Paths.get(tarFile);
     Path basePath = Paths.get(workDir).toRealPath();
 
     // Make sure we are removing from the work directory ONLY
     if (!filePath.startsWith(basePath)) return;
+    if (filePath == null || filePath.endsWith(basePath)) return;
 
-    //Delete the tar file and the parent dir until the work base directory if there are no other files
-    removeFileAndParentsIfEmpty(filePath, basePath);
+    if (filePath.toFile().isFile()) {
+      Files.deleteIfExists(filePath);
+    }
+    
+  }
+  
+  public static void deleteTarAndParentsIfEmpty(String tarFile, String workDir , String doc) throws IOException {
+	    Path filePath = Paths.get(tarFile);
+	    Path basePath = Paths.get(workDir).toRealPath();
+
+	    // Make sure we are removing from the work directory ONLY
+	    if (!filePath.startsWith(basePath)) return;
+
+	    //Delete the tar file and the parent dir until the work base directory if there are no other files
+	    removeFileAndParentsIfEmpty(filePath, basePath , doc);
   }
 
-  private static void removeFileAndParentsIfEmpty(Path path, Path basePath) throws IOException {
+  private static void removeFileAndParentsIfEmpty(Path path, Path basePath , String doc) throws IOException {
     if (path == null || path.endsWith(basePath)) return;
 
     if (path.toFile().isFile()) {
@@ -118,14 +133,16 @@ public class TarUtil {
     } else if (path.toFile().isDirectory()) {
       try {
         Files.delete(path);
+        logger.info("{} Deleted the folder path", path);
       } catch (DirectoryNotEmptyException | NoSuchFileException e ) {
         //There could be common parent for the files being processed, the last one processing will remove the parent work folder.
         //Another thread might have removed it
         return;
       }
     }
+    
+      	removeFileAndParentsIfEmpty(path.getParent(), basePath , doc);
 
-    removeFileAndParentsIfEmpty(path.getParent(), basePath);
   }
 
   /**
@@ -170,10 +187,12 @@ public class TarUtil {
    */
   public static int countFilesinTar(String name) throws IOException {
 	  try (TarFile tarFile = new TarFile(new File(name))) {
+		  
           return tarFile!=null?tarFile.getEntries().size():0;     
 	  }catch (IOException e) {
-          // Handle cases where the TAR file might be corrupted or truncated
-          System.out.println("Exception during TAR processing: " + e.getMessage());
+	      logger.info("{} have issues or corrupted"
+	      		+ "", name ,e.getMessage());
+
           return 0; // Indicate that the TAR file could not be processed
       }
   }

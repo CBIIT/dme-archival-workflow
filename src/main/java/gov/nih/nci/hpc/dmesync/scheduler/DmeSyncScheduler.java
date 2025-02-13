@@ -125,6 +125,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multpleTarsFolders;
   
+  @Value("${dmesync.process.multiple.tars:false}")
+  private boolean processMultpleTars;
+
   @Value("${dmesync.file.exist.under.basedir:false}")
   private boolean checkExistsFileUnderBaseDir;
   
@@ -252,7 +255,17 @@ public class DmeSyncScheduler {
                   continue;
               }
             }
-            folders.add(pathAttr);
+			if (processMultpleTars) {
+				// Only add the folder if the folder is not empty.
+				File folder = new File(pathAttr.getAbsolutePath());
+				if (folder.list() != null && folder.list().length > 0) {
+					folders.add(pathAttr);
+				} else {
+					logger.info("[Scheduler] There are no files in the Folder  {}", pathAttr.getAbsolutePath());
+				}
+			} else {
+				folders.add(pathAttr);
+			}
           } else {
             files.add(pathAttr);
           }
@@ -280,9 +293,10 @@ public class DmeSyncScheduler {
           syncBaseDir);
       //Check to see if any records are being processed for this run, if not send email
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+      String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(syncBaseDirFolders)?" in "+syncBaseDirFolders+" folders":"")+ ".";
       if(CollectionUtils.isEmpty(currentRun))
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
-  				"There were no files/folders found for processing.");
+    			  emailBody);
       
     } catch (Exception e) {
       //Send email notification
@@ -478,18 +492,19 @@ public class DmeSyncScheduler {
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
 		} else if (tar && filesPerTar > 0  && multpleTarsFolders != null
-				&& StringUtils.contains( multpleTarsFolders, file.getName())) {
+				&& StringUtils.containsIgnoreCase( multpleTarsFolders, file.getName())) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
-			List<StatusInfo> statusInfoList = dmeSyncWorkflowService.getService(access)
+			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
-			if (!statusInfoList.isEmpty()) {
+			
+			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
-						.findTopStatusInfoByDocAndOriginalFilePathStartsWithAndTarEndTimestampNull(doc,
+						.findTopStatusInfoByDocAndSourceFilePath(doc,
 								file.getAbsolutePath());
-				List<StatusInfo> statusInfoNotCompletedList = statusInfoList.stream().filter(c -> c.getStatus() == null)
+				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
-				if (!statusInfoNotCompletedList.isEmpty()) {
+				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
 					// use the same status Info rows with new Run Id for reupload
 					for (StatusInfo object : statusInfoNotCompletedList) {
 						if (object != null) {
@@ -745,14 +760,16 @@ public class DmeSyncScheduler {
   public void checkForCompletedRun() {
 	if(awsFlag) return;
 	
+    logger.info("[Scheduler] Checking for the Completed Run.");
+
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
       if(CollectionUtils.isEmpty(currentRun))
-        return;
-    } else {
+          return;
+	 } else {
       StatusInfo latest = null;
       if(createSoftlink) {
     	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
