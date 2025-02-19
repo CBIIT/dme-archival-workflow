@@ -16,6 +16,8 @@ import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -25,8 +27,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
@@ -42,6 +46,10 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
+	
+	
+	@Value("${dmesync.doc.name}")
+	private String doc;
 
 	@Value("${dmesync.compress:false}")
 	private boolean compress;
@@ -78,6 +86,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
+	
+	@Value("${dmesync.tar.contents.file:false}")
+	private boolean createTarContentsFile;
 
 	@PostConstruct
 	public boolean init() {
@@ -91,8 +102,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Autowired
 	private DmeSyncProducer sender;
-
-
 
 	@Override
 	public StatusInfo process(StatusInfo object)
@@ -163,6 +172,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					}
 				}
 
+			
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
 				object.setFilesize(createdTarFile.length());
@@ -170,6 +180,36 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				
+				if (createTarContentsFile) {
+
+					File tarMappingFile = new File(tarWorkDir + "/" + tarFileName + "_TarContentsFile.txt");
+					logger.info("[{}] Creating Tar contents file {}", super.getTaskName(),
+							tarMappingFile.getAbsolutePath());
+
+					BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
+					// TODO: Include the files in the subfolder too.
+					File[] files = directory.listFiles();
+					if (files != null && files.length > 0) {
+						Arrays.sort(files, Comparator.comparing(File::lastModified));
+						// List<File> fileList = new ArrayList<>(Arrays.asList(files));
+						List<File> fileList = new ArrayList<>();
+
+						// Using Files.walk() to traverse the directory and subdirectories
+						try (Stream<Path> stream = Files.walk(sourceDirPath)) {
+							fileList = stream.filter(Files::isRegularFile).map(Path::toFile)
+									.collect(Collectors.toList());
+						}
+						boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
+								object.getOriginalFilePath(), fileList);
+						if (contentsFileCheck) {
+							sendContentsFileRequestToJms(tarMappingFile, object);
+						}
+
+					}
+				}
+				
+
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
@@ -273,5 +313,62 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}
 		return (threadLocalMap.get().get(key) == null ? null : threadLocalMap.get().get(key).get(attrKey));
 	}
+	
+	
+	// This method validate and sends content file request to JMS if contents file is not uploaded to DME
+	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
+
+		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
+				.findTopStatusInfoByDocAndSourceFilePath(doc, tarMappingFile.getAbsolutePath());
+
+		StatusInfo contentsFileRecord = null;
+
+		if ("local".equals(verifyPrevUpload) && checkForUploadedContentsFile != null) {
+
+			if (StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
+				// Tar contents file request have already uplaoded in previous run
+				logger.info("[{}] Tar Contents file already uploaded to DME  {} ,{} ,{}", super.getTaskName(),
+						checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
+						checkForUploadedContentsFile.getStatus());
+			} else {
+				contentsFileRecord = checkForUploadedContentsFile;
+			}
+		} else {
+			// If there is no content files record in DB, create a new one.
+			logger.info("[{}]Inserting the new contents file upload request {}", super.getTaskName(),
+					tarMappingFile.getName());
+			// add new row in status info table for uploading tarContentsFile.
+			contentsFileRecord = insertNewRowForContentsFile(tarMappingFile, object);
+		}
+
+		if (contentsFileRecord != null) {
+
+			upsertTaskByTaskName(contentsFileRecord.getId(), "TarTask");
+			// This contentsFileRecord objectId is send to the message queue in the cleanup
+			DmeSyncMessageDto message = new DmeSyncMessageDto();
+			message.setObjectId(contentsFileRecord.getId());
+			sender.send(message, "inbound.queue");
+			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+		}
+
+	}
+
+	private StatusInfo insertNewRowForContentsFile(File tarMappingFile, StatusInfo object) {
+		StatusInfo statusInfo = new StatusInfo();
+		statusInfo.setRunId(object.getRunId());
+		statusInfo.setOrginalFileName(object.getOrginalFileName());
+		statusInfo.setOriginalFilePath(object.getOriginalFilePath());
+		statusInfo.setSourceFileName(tarMappingFile.getName());
+		statusInfo.setStartTimestamp(new Date());
+		statusInfo.setDoc(object.getDoc());
+		statusInfo.setSourceFilePath(tarMappingFile.getAbsolutePath());
+		statusInfo.setFilesize(tarMappingFile.length());
+
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+
+		return statusInfo;
+
+	}
+
 
 }
