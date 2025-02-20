@@ -57,7 +57,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		if(isDATA() || isONT())
 			archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
 				+ "/Flowcell_" + getFlowcell(object) 
-				+ (!getSample(object).startsWith("Sample_") ? "/Sample_": "") + getSample(object) + "/" + fileName;
+				+ (!getSample(object).startsWith("Sample_") ? "/Sample_": "/") + getSample(object) + "/" + fileName;
 		else
 			archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/Project_" + getProjectCollectionName(object)
 			+ (createSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object) : "/Analysis") + "/" + fileName;
@@ -100,12 +100,12 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// Add path metadata entries for "Date" folder
 			String sampleId = getSample(object);
 			String flowcellId = getFlowcell(object);
-			String key = isONT() ? sampleId + "_" + flowcellId : sampleId;
+			String key = isONT() ? flowcellId : sampleId;
 			String dateCollectionPath = dataCollectionPath + "/Year_" + getYear(object);
 			HpcBulkMetadataEntry pathEntriesDate = new HpcBulkMetadataEntry();
 			pathEntriesDate.setPath(dateCollectionPath);
 			pathEntriesDate.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Date"));
-			pathEntriesDate.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(key)));
+			pathEntriesDate.getPathMetadataEntries().add(createPathEntry("year", getYear(object)));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesDate);
 			
 			// Add path metadata entries for "Flowcell" collection
@@ -124,10 +124,11 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("reference_genome", getAttrValueWithExactKey(key, "SampleRef")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(key, "Run Start Date")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequencing_application_type", getAttrValueWithExactKey(key, "Type of sequencing")));
+			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(key)));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
 			// Add path metadata entries for "Sample" collection
-			String sampleCollectionPath = flowcellCollectionPath + (!sampleId.startsWith("Sample_") ? "/Sample_": "") + sampleId;
+			String sampleCollectionPath = flowcellCollectionPath + (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId;
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 			pathEntriesSample.setPath(sampleCollectionPath);
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
@@ -207,7 +208,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		//For /data/khanlab3/gb_omics/projects/caplen, it will return caplen.
 		String piFolder = null;
 		if(isONT()) {
-			String key = getSample(object) + "_" + getFlowcell(object);
+			String key = getFlowcell(object);
 			piFolder = getAttrValueWithExactKey(key, "PI");
 		}
 		else if(createSoftlink)
@@ -239,15 +240,13 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			flowcellId = getAttrValueWithExactKey(getSample(object), "FCID");
 		}
 		else {
-			String folderName = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
-			flowcellId = StringUtils.substringBeforeLast(folderName, "_");
-			flowcellId = StringUtils.substringAfterLast(flowcellId, "_");
+			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		}
 		return flowcellId;
 	}
 	
 	private String getYear(StatusInfo object) throws DmeSyncMappingException {
-		String key = isONT() ? getSample(object) + "_" + getFlowcell(object) : getSample(object);
+		String key = isONT() ? getFlowcell(object) : getSample(object);
 		String runDate = getAttrValueWithExactKey(key, "Run Start Date");
 		String year = "";
 		if(StringUtils.isNotBlank(runDate) && StringUtils.contains(runDate, "/")) {
@@ -297,9 +296,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 			sampleId = getAttrKeyFromKeyInSearchString(fileName);
 		} else {
-			String folderName = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
-			sampleId = StringUtils.substringBefore(folderName, "_N_");
-			sampleId = StringUtils.substringBefore(sampleId, "_T_");
+			sampleId = getAttrValueWithExactKey(getFlowcell(object), "Sample name");
 		}
 		return sampleId;
 	}
@@ -344,7 +341,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				if(StringUtils.isNotEmpty(metadataFile) && !isONT())
 					metadataMap = loadMetadataFile(metadataFile, "Sample name");
 				else if (StringUtils.isNotEmpty(metadataFile) && isONT())
-					metadataMap = loadMetadataFile(metadataFile, "Sample name", "FCID");
+					metadataMap = loadMetadataFile(metadataFile, "FCID");
 		    } catch (DmeSyncMappingException e) {
 		        logger.error(
 		            "Failed to initialize metadata  path metadata processor", e);
