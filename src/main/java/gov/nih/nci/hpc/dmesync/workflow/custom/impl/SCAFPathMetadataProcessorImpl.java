@@ -369,7 +369,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		if (projectpathName != null) {
 			String[] projectKeywords = projectpathName.trim().split("_");
-			if (projectKeywords.length != 3) {
+			if (projectKeywords.length < 3) {
 				logger.info("Invalid project name : The project {} name has more/less than 3 words: {}",
 						projectpathName, projectKeywords.length);
 				throw new DmeSyncMappingException("Invalid project name : The project name " + projectpathName
