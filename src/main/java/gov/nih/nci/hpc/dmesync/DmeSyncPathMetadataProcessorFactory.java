@@ -139,6 +139,7 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("cio")
   private DmeSyncPathMetadataProcessor cioProcessor;
 
+  @Autowired
   @Qualifier("pob")
   private DmeSyncPathMetadataProcessor pobCcdiProcessor;
   
