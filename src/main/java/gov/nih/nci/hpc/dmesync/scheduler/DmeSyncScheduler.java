@@ -614,8 +614,8 @@ public class DmeSyncScheduler {
 			
 			if (daysBetween(folderModifiedDate, new Date()) <= Integer.parseInt(lastModfiedDays)) {
 				logger.info(
-						"[Scheduler] Skipping: {} File/folder has been modified within the last {} days. Last modified date: {}.",
-						subPath1.toAbsolutePath(), lastModfiedDays,folderModifiedDate);
+						"[Scheduler] Skipping: {} folder has been modified within the last {} days for child folder {}. Last modified date: {}.",
+						checkExistFilePath.toAbsolutePath(),lastModfiedDays ,filePath.getFileName(),folderModifiedDate);
 				continue;
 			}
 		}
