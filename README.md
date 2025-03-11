@@ -211,6 +211,10 @@ The following properties can be set in `application.properties` file:
   * Recommended run id example: `Run_YYYYMMDDHHMISS`
 * `dmesync.last.modified.days=[1,2,...]`
   * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
+* `dmesync.last.modified.under.basedir=[true|false]`
+  * If specified, checks modified date of the folder in the base directory instead of folder/file
+* `dmesync.last.modified.under.basedir.depth=[1,2,...]`
+  * If specified, it will check for the last modified folder under the specified depth from the basedir.
 * `dmesync.replace.modified.files=[true|false]`
   * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
 * `dmesync.tar.file.exist=<filename>`
