@@ -225,7 +225,19 @@ The following properties can be set in `application.properties` file:
   * Check if the marker file specified in dmesync.tar.file.exist.ext is directly under the base directory.
 * `dmesync.file.exist.under.basedir.depth=[1,2,...]`
   * If specified, it will check for the file under the specified depth from the basedir.
-  
+* `dmesync.tar.filename.excel.exist=[true|false]`
+  * If specified, it will retrieve the tar name from the excel spreadsheet.
+* `dmesync.tar.contents.file=[true|false]`
+  * If specified, it will create the content file which includes files in the each tar and archive.
+
+* `dmesync.process.multiple.tars=[true|false]`
+  * If specified, it will create batch tars for the folder with the count specified by below property.
+* `dmesync.multiple.tars.files.count=[50,..]`
+  * If specified, it will create the tars for every specified batch files in the folder.
+* `dmesync.multiple.tars.dir.folders=[<dir>]`
+  * If specified, it will create the batch tars for the folders specified.
+
+
 * `dmesync.admin.emails=<comma separated email addrresses>`
   * Once a run completes, the run result will be emailed to this address.
 
