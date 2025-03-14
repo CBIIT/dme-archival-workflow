@@ -232,8 +232,8 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
           threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
           String materialType = getAttrValueWithExactKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithExactKey(key, "Material_Type");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
-          String gender = getAttrValueWithExactKey(key, "Gender") == null ? "Unspecified": getAttrValueWithExactKey(key, "Gender");
-          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("sex", gender));
+          String sex = getAttrValueWithExactKey(key, "Sex") == null ? "Unspecified": getAttrValueWithExactKey(key, "Sex");
+          pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("sex", sex));
           String surgicalCase = getAttrValueWithExactKey(key, "Surgical_Case") == null ? "Unspecified": getAttrValueWithExactKey(key, "Surgical_Case");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("surgical_case", surgicalCase));
           String diagnosis = getAttrValueWithExactKey(key, "Diagnosis") == null ? "Unspecified": getAttrValueWithExactKey(key, "Diagnosis");
