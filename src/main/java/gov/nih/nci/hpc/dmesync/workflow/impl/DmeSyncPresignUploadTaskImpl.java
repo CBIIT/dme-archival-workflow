@@ -97,6 +97,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Value("${dmesync.replace.modified.files:false}")
   private boolean replaceModifiedFiles;
   
+  @Value("${dmesync.upload.modified.files:false}")
+  private boolean uploadModifiedFiles;
+  
   @Value("${dmesync.destination.s3.archive.configuration.id:}")
   private String s3ArchiveConfigurationId;
   
@@ -206,6 +209,28 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath());
     		throw new DmeSyncWorkflowException(errorResponse.getMessage());
     	}
+    	
+		if (uploadModifiedFiles && errorResponse.getMessage().contains("already archived")) {
+			// upload the file with a configurable extension if the file size and checksum
+			// does not match with what was previously uploaded to the DME path. 
+			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
+					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), "COMPLETED");
+			if (uploadedFileInfo != null) {
+				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
+						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+					String updatedFilePath = object.getFullDestinationPath() + "_recent";
+					object.setFullDestinationPath(updatedFilePath);
+					object.getDataObjectRegistrationRequestDTO().getMetadataEntries()
+							.removeIf(entry -> entry.getAttribute().equals("source_checksum"));
+					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+					logger.info("[{}] Uploading modified file with extension _recent for DME Path{}",
+							super.getTaskName(), object.getFullDestinationPath());
+					process(object);
+					return object;
+
+				}
+			}
+		}
 	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
 	    throw new DmeSyncVerificationException(errorResponse.getMessage());
     	

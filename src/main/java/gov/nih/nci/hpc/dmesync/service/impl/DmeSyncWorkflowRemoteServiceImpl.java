@@ -66,6 +66,15 @@ public class DmeSyncWorkflowRemoteServiceImpl implements DmeSyncWorkflowService 
 		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
 				StatusInfo.class);
 	}
+	
+	@Override
+	public StatusInfo findFirstStatusInfoByFullDestinationPathAndStatus(String fullDestinationPath, String status) {
+		final URI finalUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/api/findFirstStatusInfoByFullDestinationPathAndStatus")
+				.queryParam("fullDestinationPath", fullDestinationPath).queryParam("status", status).build().encode().toUri();
+		return restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler()).getForObject(finalUrl,
+				StatusInfo.class);
+	}
 
 	@Override
 	public List<StatusInfo> findAllStatusInfoByOriginalFilePathAndStatus(String originalFilePath, String status) {

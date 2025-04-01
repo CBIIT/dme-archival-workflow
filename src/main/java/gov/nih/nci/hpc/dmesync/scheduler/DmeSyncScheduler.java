@@ -760,8 +760,6 @@ public class DmeSyncScheduler {
   public void checkForCompletedRun() {
 	if(awsFlag) return;
 	
-    logger.info("[Scheduler] Checking for the Completed Run.");
-
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
