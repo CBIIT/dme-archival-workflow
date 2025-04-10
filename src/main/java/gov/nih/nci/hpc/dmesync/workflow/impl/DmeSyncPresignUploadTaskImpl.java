@@ -161,6 +161,8 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	  HpcMetadataEntry objectEntry = new HpcMetadataEntry();
     	  objectEntry.setAttribute("source_checksum");
     	  objectEntry.setValue(object.getChecksum());
+    	  
+    	  object.getDataObjectRegistrationRequestDTO().setEditMetadata(false);
     	  object.getDataObjectRegistrationRequestDTO().getMetadataEntries().add(objectEntry);
     	  if(!multipartUpload) {
     		  String md5Checksum = BaseEncoding.base64().encode(Hex.decodeHex(object.getChecksum()));
@@ -213,11 +215,14 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 		if (uploadModifiedFiles && errorResponse.getMessage().contains("already archived")) {
 			// upload the file with a configurable extension if the file size and checksum
 			// does not match with what was previously uploaded to the DME path. 
+		    logger.info("[{}] Checking if the previous uploaded file matches the checksum and size {}", super.getTaskName());
+
 			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
 					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), "COMPLETED");
 			if (uploadedFileInfo != null) {
 				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
 						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+
 					String updatedFilePath = object.getFullDestinationPath() + "_recent";
 					object.setFullDestinationPath(updatedFilePath);
 					object.getDataObjectRegistrationRequestDTO().getMetadataEntries()

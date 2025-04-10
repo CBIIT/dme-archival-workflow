@@ -213,6 +213,8 @@ The following properties can be set in `application.properties` file:
   * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
 * `dmesync.replace.modified.files=[true|false]`
   * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
+* `dmesync.upload.modified.files=[true|false]`
+  * If `true`, the system will compare the new file checksum and file length with archived file and if doesn't match will append _recent to the filename and archive to DME.
 * `dmesync.tar.file.exist=<filename>`
   * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
 * `dmesync.tar.file.exist.ext=<ext>`
