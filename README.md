@@ -190,6 +190,9 @@ The following properties can be set in `application.properties` file:
 * `dmesync.cleanup=[true|false]`
   * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
   * Default: `false` 
+* ` dmesync.check.end.workflow=[true|false]`
+  * If true, the system will check for endWorkflow flag to end task processing if no further processing is necessary.
+  * Default: `false` 
 * `dmesync.verify.prev.upload=[none|local]`
   * If `none`, it does not check whether it has previously been uploaded.
   * If `local`, it will check the local db if it has previously been uploaded, and skip the file.

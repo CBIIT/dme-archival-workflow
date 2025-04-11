@@ -77,6 +77,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.check.end.workflow:false}")
+  private boolean checkEndWorkflow;
+  
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
@@ -157,7 +160,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       for (DmeSyncTask task : tasks) {
     	   statusInfo = task.processTask(statusInfo);
     	   // This condition is used when we want to peform specific task and complete the workflow
-    	   if((checkEndWorkflowFlag(statusInfo.getId())) ){
+    	   if((checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
+    		      logger.info("[Workflow] End Workflow Flag is set to true , so no further task processing is required");
     		   break;
     	   }
       }
