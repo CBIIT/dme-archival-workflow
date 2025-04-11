@@ -4,6 +4,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+
 import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -154,8 +157,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       for (DmeSyncTask task : tasks) {
     	   statusInfo = task.processTask(statusInfo);
     	   // This condition is used when we want to peform specific task and complete the workflow
-    	   if((StringUtils.equalsIgnoreCase(multpleTarsFolders, sourceDirLeafNode)) &&
-    			   StringUtils.equals("COMPLETED", statusInfo.getStatus()) ){
+    	   if((checkEndWorkflowFlag(statusInfo.getId())) ){
     		   break;
     	   }
       }
@@ -188,4 +190,11 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     }
   }
 
+  private boolean checkEndWorkflowFlag(Long objectId) {
+
+	  Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(objectId);
+
+	  return (statusInfo.isPresent() && statusInfo.get().isEndWorkflow()!=null &&
+			  Boolean.TRUE.equals(statusInfo.get().isEndWorkflow()));
+	  }
 }
