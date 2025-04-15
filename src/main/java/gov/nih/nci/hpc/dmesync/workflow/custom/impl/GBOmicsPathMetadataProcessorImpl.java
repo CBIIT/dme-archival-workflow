@@ -45,6 +45,9 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	@Value("${dmesync.source.softlink.file:}")
 	private String softlinkFile;
 	
+	@Value("${dmesync.db.access:local}")
+	  protected String access;
+	
 	// DOC GB OMICS logic for DME path construction and meta data creation
 
 	@Override
@@ -53,12 +56,34 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		logger.info("[PathMetadataTask] GB OMICS getArchivePath called");
 
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		String archivePath;
-		if(isDATA() || isONT())
-			archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
-				+ "/Flowcell_" + getFlowcell(object) 
-				+ (!getSample(object).startsWith("Sample_") ? "/Sample_": "/") + getSample(object) + "/" + fileName;
-		else
+		String archivePath = "";
+		if(isDATA() || isONT()) {
+			String sampleId = "";
+			try {
+				sampleId = getSample(object);
+				archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
+					+ "/Flowcell_" + getFlowcell(object) 
+					+ (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId + "/" + fileName;
+			} catch (DmeSyncMappingException e) {
+				if(StringUtils.isEmpty(sampleId)) {
+					//This path might not be in the master file. If it is not, we want to ignore this path for now.
+					try {
+						searchPathInMasterFile(object.getOriginalFilePath());
+					} catch (DmeSyncMappingException me) {
+						//This path is not in the master file, so log the path and complete the workflow
+						logger.info("No need to upload file : {}", object.getOriginalFilePath());
+						// update the current status info row as completed so this workflow is completed and next task won't be processed.
+						object.setRunId(object.getRunId() + "_IGNORED");
+						object.setEndWorkflow(true);
+						object.setError("No need to upload");
+						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+						return "";
+					}
+					// If path is found, this means that the sample metadata is not available, so raise exception
+					throw e;
+				}
+			}
+		} else
 			archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/Project_" + getProjectCollectionName(object)
 			+ (createSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object) : "/Analysis") + "/" + fileName;
 
@@ -76,6 +101,11 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
+		//This is the case where this file is not listed in the master file path.
+		if(StringUtils.isBlank(object.getFullDestinationPath())) {
+			return dataObjectRegistrationRequestDTO;
+		}
+		
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -313,6 +343,22 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	    String key = null;
 	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
 	        if(StringUtils.contains(searchString, entry.getKey())) {
+	          //Partial key match.
+	          key = entry.getKey();
+	          break;
+	        }
+	    }
+	    if(StringUtils.isEmpty(key)) {
+	      logger.error("Excel mapping not found for search string {}", searchString);
+	      throw new DmeSyncMappingException("Excel mapping not found for " + searchString);
+	    }
+	    return key;
+    }
+	
+	private String searchPathInMasterFile(String searchString) throws DmeSyncMappingException {
+	    String key = null;
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	        if(StringUtils.contains(searchString, getAttrValueWithExactKey(entry.getKey(), "PI") + File.separator + getAttrValueWithExactKey(entry.getKey(), "Path"))) {
 	          //Partial key match.
 	          key = entry.getKey();
 	          break;
