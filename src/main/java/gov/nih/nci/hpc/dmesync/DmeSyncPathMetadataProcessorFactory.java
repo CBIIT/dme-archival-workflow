@@ -143,6 +143,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("pob")
   private DmeSyncPathMetadataProcessor pobCcdiProcessor;
   
+  @Autowired
+  @Qualifier("lco")
+  private DmeSyncPathMetadataProcessor ccrLcoProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -210,6 +214,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return cioProcessor;
     } else if ("pob".equals(doc)){
         return pobCcdiProcessor;
+    }else if ("lco".equals(doc)){
+        return ccrLcoProcessor;
     } else {
         return defaultProcessor;
     }
