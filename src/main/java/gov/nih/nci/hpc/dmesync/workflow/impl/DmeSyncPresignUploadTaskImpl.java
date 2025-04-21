@@ -9,6 +9,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -222,8 +224,13 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 			if (uploadedFileInfo != null) {
 				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
 						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+					 // get file last modified date to MMddyyyy
+		            File newFile = new File(object.getOriginalFilePath());
+		            long lastModifiedMillis = newFile.lastModified();
+		            SimpleDateFormat sdf = new SimpleDateFormat("MMddyyyy");
+		            String lastModifieddate = sdf.format(lastModifiedMillis);
 
-					String updatedFilePath = object.getFullDestinationPath() + "_recent";
+					String updatedFilePath = object.getFullDestinationPath() + "-vr-"+lastModifieddate;
 					object.setFullDestinationPath(updatedFilePath);
 					object.getDataObjectRegistrationRequestDTO().getMetadataEntries()
 							.removeIf(entry -> entry.getAttribute().equals("source_checksum"));
