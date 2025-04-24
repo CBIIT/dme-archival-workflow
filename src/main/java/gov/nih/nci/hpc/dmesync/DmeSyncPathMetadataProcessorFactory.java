@@ -104,6 +104,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor pclProcessor;
   
   @Autowired
+  @Qualifier("pcl-retro")
+  private DmeSyncPathMetadataProcessor pclRetroProcessor;
+  
+  @Autowired
   @Qualifier("gb")
   private DmeSyncPathMetadataProcessor gbProcessor;
   
@@ -194,7 +198,9 @@ public class DmeSyncPathMetadataProcessorFactory {
         return lcpProcessor;
     } else if ("pcl".equals(doc)){
         return pclProcessor;
-    } else if ("gb".equals(doc)){
+    } else if ("pcl-retro".equals(doc)){
+        return pclRetroProcessor;
+    }  else if ("gb".equals(doc)){
         return gbProcessor;
     } else if ("lcbg-sds".equals(doc)){
         return lcbgSdsProcessor;
