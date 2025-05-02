@@ -230,12 +230,12 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 		            SimpleDateFormat sdf = new SimpleDateFormat("MMddyyyy");
 		            String lastModifieddate = sdf.format(lastModifiedMillis);
 
-					String updatedFilePath = object.getFullDestinationPath() + "-vr-"+lastModifieddate;
+					String updatedFilePath = object.getFullDestinationPath() + "-ver-"+lastModifieddate;
 					object.setFullDestinationPath(updatedFilePath);
 					object.getDataObjectRegistrationRequestDTO().getMetadataEntries()
 							.removeIf(entry -> entry.getAttribute().equals("source_checksum"));
 					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-					logger.info("[{}] Uploading modified file with extension _recent for DME Path{}",
+					logger.info("[{}] Uploading modified file with extension -ver- for DME Path{}",
 							super.getTaskName(), object.getFullDestinationPath());
 					process(object);
 					return object;
