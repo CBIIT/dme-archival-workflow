@@ -49,23 +49,25 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String archivePath;
 
 		logger.info("File Path " + filePath);
+		String projectName=getFolderNameFromPathContaining(filePath, "Project");
+		String sampleName=getCollectionNameFromParent(filePath, projectName);
 		// Build path based on Analysis or Raw_Data
-		if (object.getSourceFilePath().contains("fast5")) {
-
+		if (isSequencingData(object))
+		{
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Project") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Sample") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Run") + "/" + "fast5/" + fileName;
+					+ projectName + "/"
+					+ sampleName + "/Run_"
+					+ getRunInstrumentName(filePath, sampleName) + "/" + "Sequencing_data/" + fileName;
 		} else {
 			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Project") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Sample") + "/"
-					+ getFolderNameFromPathContaining(filePath, "Run") + "/" + "Sequencing_Reports/" + fileName;
+					+ projectName + "/"
+					+ sampleName + "/Run_"
+					+ getRunInstrumentName(filePath, sampleName) + "/" + "Processed_data/" + fileName;
 		}
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
-
+		logger.info("CDSL Archival path= {}", archivePath);
 		return archivePath;
 	}
 
@@ -79,48 +81,18 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
 		String filePath = object.getOriginalFilePath();
+		
+		String projectName=getFolderNameFromPathContaining(filePath, "Project");
+
 
 		// Construct location of user metadata csv file
 		String ownerMetadataCsvFile = getPathToFolderContaining(object.getOriginalFilePath(), "DataOwner").getParent()
 				.toString() + "/owner_metadata.csv";
 		String projectMetadataCsvFile = getPathToFolderContaining(object.getOriginalFilePath(), "Project").getParent()
 				.toString() + "/project_metadata.csv";
-		String sampleMetadataCsvFile = getPathToFolderContaining(object.getOriginalFilePath(), "Sample").getParent()
+		String sampleMetadataCsvFile = getCollectionPathFromParent(object.getOriginalFilePath(), projectName ).getParent()
 				.toString() + "/sample_metadata.csv";
-
-		// Construct location of excel file in work dir
-	    Path baseDirPath;
-	    Path workDirPath;
-	    /*Path ownerMetadataExcelFile;
-	    Path projectMetadataExcelFile;
-	    Path sampleMetadataExcelFile;
 	    
-		try {
-			baseDirPath = Paths.get(sourceDir).toRealPath();
-			workDirPath = Paths.get(workDir).toRealPath();
-
-		    Path sourceDirPath = Paths.get(object.getOriginalFilePath());
-		    Path relativePath = baseDirPath.relativize(sourceDirPath);
-		    String workDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
-			ownerMetadataExcelFile = Paths.get(getPathToFolderContaining(workDir, "DataOwner").getParent()
-					.toString() + "/owner_metadata.xls");
-			projectMetadataExcelFile = Paths.get(getPathToFolderContaining(workDir, "Project").getParent()
-					.toString() + "/project_metadata.xls");
-			sampleMetadataExcelFile = Paths.get(getPathToFolderContaining(workDir, "Sample").getParent()
-					.toString() + "/sample_metadata.xls");
-	
-		    Files.createDirectories(ownerMetadataExcelFile.getParent());
-		    Files.createDirectories(projectMetadataExcelFile.getParent());
-		    Files.createDirectories(sampleMetadataExcelFile.getParent());
-		    
-		} catch (IOException e) {
-			throw new DmeSyncMappingException("Source directory or work directory not defined.");
-		}
-		
-		createExcelFile(ownerMetadataCsvFile, ownerMetadataExcelFile.toString());
-		createExcelFile(projectMetadataCsvFile, projectMetadataExcelFile.toString());
-		createExcelFile(sampleMetadataCsvFile, sampleMetadataExcelFile.toString()); */
-
 		// Add path metadata entries for DataOwner_Lab collection
 		String piCollectionPath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner");
 		piCollectionPath = piCollectionPath.replace(" ", "_");
@@ -138,7 +110,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for Project collection
-		String projectCollectionPath = piCollectionPath + "/" + getFolderNameFromPathContaining(filePath, "Project");
+		String projectCollectionPath = piCollectionPath + "/" + projectName;
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.setPath(projectCollectionPath);
@@ -168,14 +140,17 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.add(createPathEntry("project_poc_email", "mikhail.kolmogorov@nih.gov"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility", "NIH CARD"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
-
+		
+		
+		String sampleName=getCollectionNameFromParent(filePath, projectName);
+		
 		// Add path metadata entries for Sample collection section
-		String sampleCollectionPath = projectCollectionPath + "/" + getFolderNameFromPathContaining(filePath, "Sample");
+		String sampleCollectionPath = projectCollectionPath + "/" + sampleName;
 		HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 		pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 		pathEntriesSample.setPath(sampleCollectionPath);
 		threadLocalMap.set(loadCsvMetadataFile(sampleMetadataCsvFile.toString(), "sample_id"));
-		String sampleKey = getFolderNameFromPathContaining(filePath, "Sample");
+		String sampleKey = sampleName;
 		String partKey[] = sampleKey.split("_");
 		sampleKey = partKey[1];
 
@@ -187,23 +162,23 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
 
 		// Add path metadata entries for Run collection section
-		String runCollectionPath = sampleCollectionPath + "/" + getFolderNameFromPathContaining(filePath, "Run");
+		String runCollectionPath = sampleCollectionPath + "/Run_" + getRunInstrumentName(filePath, sampleName);
 		HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
 		pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
 		pathEntriesRun.setPath(runCollectionPath);
 		pathEntriesRun.getPathMetadataEntries()
-				.add(createPathEntry("run_id", getFolderNameFromPathContaining(filePath, "Run")));
+				.add(createPathEntry("run_id", getRunInstrumentName(filePath, sampleName)));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
-		if (object.getSourceFilePath().contains("fast5")) {
-			String rawDataCollectionPath = runCollectionPath + "/" + "fast5";
+		if (isSequencingData(object)) {
+			String rawDataCollectionPath = runCollectionPath + "/" + "Sequencing_data";
 			HpcBulkMetadataEntry pathEntriesRawData = new HpcBulkMetadataEntry();
 
-			pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
+			pathEntriesRawData.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sequencing_Data"));
 			pathEntriesRawData.setPath(rawDataCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRawData);
 		} else {
-			String analysisCollectionPath = runCollectionPath + "/" + "Sequencing_Reports";
+			String analysisCollectionPath = runCollectionPath + "/" + "Processed_data";
 			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
 			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
 
@@ -277,6 +252,33 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return folderName;
 
 	}
+	
+	private String getCollectionNameFromParent(String path, String parentName) {
+		Path fullFilePath = Paths.get(path);
+		logger.info("Full File Path = {}", fullFilePath);
+		int count = fullFilePath.getNameCount();
+		for (int i = 0; i <= count; i++) {
+			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+				return fullFilePath.getFileName().toString();
+			}
+			fullFilePath = fullFilePath.getParent();
+		}
+		return null;
+	}
+	
+	private Path getCollectionPathFromParent(String path, String parentName) {
+		Path fullFilePath = Paths.get(path);
+		logger.info("Full File Path = {}", fullFilePath);
+		int count = fullFilePath.getNameCount();
+		for (int i = 0; i <= count; i++) {
+			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+				return fullFilePath;
+			}
+			fullFilePath = fullFilePath.getParent();
+		}
+		return null;
+	}
+
 
 	private Path getPathToFolderContaining(String filePath, String token) {
 
@@ -288,6 +290,15 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			fullPath = fullPath.getParent();
 		}
 		return fullPath;
+	}
+	
+	private String getRunInstrumentName(String filePath, String sampleName) {
+		String runInstrumentName=getCollectionNameFromParent(filePath, sampleName);
+		
+		if (runInstrumentName == null || runInstrumentName.isEmpty()) {
+            return null;
+        }
+        return runInstrumentName.substring(0, 1).toUpperCase() + runInstrumentName.substring(1);
 	}
 
 	private void createExcelFile(String originalCsvPath, String destinationExcelPath) throws DmeSyncMappingException {
@@ -302,6 +313,16 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			throw new DmeSyncMappingException(
 					"Can't convert CSV file :  " + originalCsvPath + " to excel " + destinationExcelPath, e);
 		}
+
+	}
+	
+	private boolean isSequencingData(StatusInfo object) {
+		if (object.getSourceFilePath().contains("fast5") || object.getSourceFilePath().contains("fastq")
+				|| object.getSourceFilePath().contains("bam") || object.getSourceFilePath().contains("ubam")
+				|| object.getSourceFilePath().contains("fasta")) {
+			return true;
+		}
+		return false;
 
 	}
 
