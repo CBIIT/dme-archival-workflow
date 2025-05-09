@@ -56,20 +56,17 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// O'Neill/Kyung-Lee/Kyung-Lee_2021_03-17_Klara-Pongorne-Kirsch_Plk1_Maura-O'Neill
 
 		Path filePath = Paths.get(object.getSourceFilePath());
-		String fileName = filePath.toFile().getName();
+		String fileName = filePath.toFile().getName().replace("\"", "");
 
-		String parentFolderName = filePath.getParent().getFileName().toString();
+		String parentFolderName = filePath.getParent().getFileName().toString().replace("\"", "");
 	
 
 		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(parentFolderName) + "/POC_"
 				+ getPOCCollectionName(parentFolderName) + "/Staff_" + getStaffCollectionName(parentFolderName) + "/Year_"
 				+ getYearCollectionName(parentFolderName, true) + "/Project_" + getProjectCollectionName(parentFolderName) + "/" + fileName;
 
-		// replace spaces with underscore
-		archivePath = archivePath.replace(" ", "_");
-		// remove single quotes
-		archivePath = archivePath.replace("'", "_");
-		archivePath = archivePath.replace("-", "_");
+		// replace spaces with underscore , singleQuotes
+		archivePath = replaceCharacters(archivePath);
 
 
 		logger.info("Archive path for {} : {}", object.getOriginalFilePath(), archivePath);
@@ -83,7 +80,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		Path filePath = Paths.get(object.getSourceFilePath());
 		String fileName = filePath.toFile().getName();
-		String folderName = filePath.getParent().getFileName().toString();
+		String folderName = filePath.getParent().getFileName().toString().replace("\"", "");
 		String[] piName = getFieldFromFolderName(folderName, FOLDER_FIELD_PI).split("-");
 		String piFirstName = piName[0];
 		String piLastName = piName[1];
@@ -109,24 +106,24 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		String piCollectionName = getPiCollectionName(folderName);
 		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
-		String metadataFileKey= fileName.replace(".tar", "");
+		//String metadataFileKey= fileName.replace(".tar", "");
 
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
 		pathEntriesPI.getPathMetadataEntries()
-				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
+				.add(createPathEntry("data_owner", getAttrValueWithExactKey(folderName, "data_owner")));
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
-				getAttrValueWithExactKey(metadataFileKey, "data_owner_affiliation")));
+				getAttrValueWithExactKey(folderName, "data_owner_affiliation")));
 		pathEntriesPI.getPathMetadataEntries().add(
-				createPathEntry("data_owner_email", getAttrValueWithExactKey(metadataFileKey, "data_owner_email")));
+				createPathEntry("data_owner_email", getAttrValueWithExactKey(folderName, "data_owner_email")));
 		
-		if (getAttrValueWithExactKey(metadataFileKey, "data_owner_designee") != null) {
+		if (getAttrValueWithExactKey(folderName, "data_owner_designee") != null) {
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee",
-					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee")));
+					getAttrValueWithExactKey(folderName, "data_owner_designee")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email",
-					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_email")));
+					getAttrValueWithExactKey(folderName, "data_owner_designee_email")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation",
-					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_affiliation ")));
+					getAttrValueWithExactKey(folderName, "data_owner_designee_affiliation ")));
 		}
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
 				.add(pathEntriesPI);
@@ -140,11 +137,11 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesPOC.setPath(pocCollectionPath);
 		pathEntriesPOC.getPathMetadataEntries().add(createPathEntry("collection_type", "Researcher"));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", getAttrValueWithExactKey(metadataFileKey, "project_poc")));
+				.add(createPathEntry("project_poc", getAttrValueWithExactKey(folderName, "project_poc")));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_affiliation",getAttrValueWithExactKey(metadataFileKey, "project_poc_affiliation")));
+				.add(createPathEntry("project_poc_affiliation",getAttrValueWithExactKey(folderName, "project_poc_affiliation")));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_email", getAttrValueWithExactKey(metadataFileKey, "project_poc_email")));
+				.add(createPathEntry("project_poc_email", getAttrValueWithExactKey(folderName, "project_poc_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPOC);
 
 		// Add path metadata entries for "Staff_XXX" collection
@@ -152,12 +149,13 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesStaff = new HpcBulkMetadataEntry();
 		String staffCollectionName = getStaffCollectionName(folderName);
 		String staffCollectionPath = pocCollectionPath + "/Staff_" + staffCollectionName;
+		pathEntriesStaff.getPathMetadataEntries().add(createPathEntry("collection_type", "Staff"));
 		pathEntriesStaff.setPath(staffCollectionPath);
 		pathEntriesStaff.getPathMetadataEntries()
 				.add(createPathEntry("staff_name", staffLastName + ", " + staffFirstName));
-		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "staff_email")))
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(folderName, "staff_email")))
 			pathEntriesStaff.getPathMetadataEntries().add(createPathEntry("staff_email",
-					getAttrValueWithExactKey(metadataFileKey, "staff_email")));
+					getAttrValueWithExactKey(folderName, "staff_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesStaff);
 		
 
@@ -188,21 +186,21 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", descriptor));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", year + "-" + monthDay));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_description", getAttrValueWithExactKey(metadataFileKey, "project_description")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(metadataFileKey,  "organism")));
+				.add(createPathEntry("project_description", getAttrValueWithExactKey(folderName, "project_description")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(folderName,  "organism")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("study_disease", getAttrValueWithExactKey(metadataFileKey, "study_disease")));
+				.add(createPathEntry("study_disease", getAttrValueWithExactKey(folderName, "study_disease")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("platform_name", getAttrValueWithExactKey(metadataFileKey,  "platform_name")));
-		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "project_completed_date")))
+				.add(createPathEntry("platform_name", getAttrValueWithExactKey(folderName,  "platform_name")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(folderName, "project_completed_date")))
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
-					getAttrValueWithExactKey(metadataFileKey, "project_completed_date")));
-		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "pubmed_id")))
+					getAttrValueWithExactKey(folderName, "project_completed_date")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(folderName, "pubmed_id")))
 			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("pubmed_id", getAttrValueWithExactKey(metadataFileKey, "pubmed_id")));
-		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "Collaborators")))
+					.add(createPathEntry("pubmed_id", getAttrValueWithExactKey(folderName, "pubmed_id")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(folderName, "Collaborators")))
 			pathEntriesProject.getPathMetadataEntries().add(
-					createPathEntry("Collaborators", getAttrValueWithExactKey(metadataFileKey, "Collaborators")));
+					createPathEntry("Collaborators", getAttrValueWithExactKey(folderName, "Collaborators")));
 
 
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -231,12 +229,14 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getPiCollectionName(String parentFolderName) throws DmeSyncMappingException {
 		String piName = getFieldFromFolderName(parentFolderName, FOLDER_FIELD_PI);
-		piName = piName.replace("-", "_");
+		piName = replaceCharacters(piName);
 		return piName;
 	}
 
 	private String getProjectCollectionName(String parentFolderName) throws DmeSyncMappingException {
-		return getFieldFromFolderName(parentFolderName, FOLDER_FIELD_DESCRIPTOR) ;
+		String projectName=getFieldFromFolderName(parentFolderName, FOLDER_FIELD_DESCRIPTOR) ;
+		  projectName=replaceCharacters(projectName);
+		return projectName;
 	}
 
 	private String getYearCollectionName(String parentFolderName , boolean onlyYear) {
@@ -250,13 +250,13 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getStaffCollectionName(String parentFolderName) {
 		String staffName = getFieldFromFolderName(parentFolderName, FOLDER_FIELD_STAFF);
-		staffName = staffName.replace("-", "_");
+		staffName = replaceCharacters(staffName);
 		return staffName;
 	}
 
 	private String getPOCCollectionName(String parentFolderName) {
 		String pocName = getFieldFromFolderName(parentFolderName, FOLDER_FIELD_POSTDOC);
-		pocName = pocName.replace("-", "_");
+		pocName = replaceCharacters(pocName);
 		return pocName;
 	}
 	
@@ -278,6 +278,15 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				logger.error("Failed to initialize metadata  path metadata processor", e);
 			}
 		}
+	}
+	
+	private String replaceCharacters(String collectionName) {
+		// replace spaces with underscore
+		collectionName = collectionName.replace(" ", "_");
+		// remove single quotes
+		collectionName = collectionName.replace("'", "_");
+		collectionName = collectionName.replace("-", "_");
+		return collectionName;
 	}
 
 }
