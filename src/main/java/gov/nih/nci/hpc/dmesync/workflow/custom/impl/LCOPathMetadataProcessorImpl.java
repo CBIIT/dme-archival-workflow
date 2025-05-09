@@ -49,7 +49,10 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String fileName = filePath.toFile().getName();
 		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Study_"
 				+ getStudyCollectionName(metadataFileKey) + "/Period_" + getPeriodCollectionName(metadataFileKey) + "/"
-				+ getJournalCollectionName(metadataFileKey) + "/" + fileName;
+				+ getJournalCollectionName(metadataFileKey) + "/" + fileName; 
+		
+		/*String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Study_"
+				+ getStudyCollectionName(metadataFileKey) +"/Period_" + getPeriodCollectionName(metadataFileKey)+ "/" + fileName;*/
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
 		archivePath = archivePath.replace("-", "_");
@@ -110,18 +113,18 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.add(createPathEntry("project_start_date", getAttrValueWithExactKey(metadataFileKey, "project_start_date")));
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_title", getAttrValueWithExactKey(metadataFileKey, "project_title")));
-		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("project_description", getAttrValueWithExactKey(metadataFileKey, "project_description")));
+		//pathEntriesProject.getPathMetadataEntries().add(
+		//		createPathEntry("project_description", getAttrValueWithExactKey(metadataFileKey, "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
 				getAttrValueWithExactKey(metadataFileKey, "data_generating_facility")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(metadataFileKey, "organism")));
 		pathEntriesProject.getPathMetadataEntries()
 		.add(createPathEntry("study_disease", getAttrValueWithExactKey(metadataFileKey, "study_disease")));
-		pathEntriesPI.getPathMetadataEntries()
+		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("data_generator", getAttrValueWithExactKey(metadataFileKey, "data_generator")));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
 				getAttrValueWithExactKey(metadataFileKey, "data_generator_affiliation")));
-		pathEntriesPI.getPathMetadataEntries().add(
+		pathEntriesProject.getPathMetadataEntries().add(
 				createPathEntry("data_generator_email", getAttrValueWithExactKey(metadataFileKey, "data_generator_email")));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -139,7 +142,7 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String journal = getJournalCollectionName(metadataFileKey);
 		String journalCollectionPath = periodCollectionPath + "/" + journal;
 		HpcBulkMetadataEntry pathEntriesJournal = new HpcBulkMetadataEntry();
-		pathEntriesPeriod.setPath(journalCollectionPath);
+		pathEntriesJournal.setPath(journalCollectionPath);
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry("journal_name", journal));
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry("pubmed_id", getAttrValueWithExactKey(metadataFileKey, "pubmed_id")));
@@ -152,9 +155,9 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add object metadata
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
-		dataObjectRegistrationRequestDTO.getMetadataEntries()
-				.add(createPathEntry("source_path", object.getOriginalFilePath()));
+		//dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
+		//dataObjectRegistrationRequestDTO.getMetadataEntries()
+		//		.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
 		return dataObjectRegistrationRequestDTO;
 	}
