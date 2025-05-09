@@ -1,7 +1,13 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -28,6 +34,14 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public static final int FOLDER_FIELD_POSTDOC = 3;
 	public static final int FOLDER_FIELD_DESCRIPTOR = 4;
 	public static final int FOLDER_FIELD_STAFF = 5;
+	
+	
+	@Value("${dmesync.doc.name}")
+	private String doc;
+	
+
+	@Value("${dmesync.additional.metadata.excel:}")
+	private String metadataFile;
 
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
@@ -95,15 +109,28 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		String piCollectionName = getPiCollectionName(folderName);
 		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String metadataFileKey= fileName.replace(".tar", "");
 
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", piLastName + ", " + piFirstName));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee", ""));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email", ""));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation", "CCR PCL"));
+		pathEntriesPI.getPathMetadataEntries()
+				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
+				getAttrValueWithExactKey(metadataFileKey, "data_owner_affiliation")));
+		pathEntriesPI.getPathMetadataEntries().add(
+				createPathEntry("data_owner_email", getAttrValueWithExactKey(metadataFileKey, "data_owner_email")));
+		
+		if (getAttrValueWithExactKey(metadataFileKey, "data_owner_designee") != null) {
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee",
+					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email",
+					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_email")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation",
+					getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_affiliation ")));
+		}
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
-				.add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "pcl"));
+				.add(pathEntriesPI);
+		
 
 		// Add path metadata entries for "POC_XXX" collection
 
@@ -113,11 +140,11 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesPOC.setPath(pocCollectionPath);
 		pathEntriesPOC.getPathMetadataEntries().add(createPathEntry("collection_type", "Researcher"));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", postDocLastName + ", " + postDocFirstName));
+				.add(createPathEntry("project_poc", getAttrValueWithExactKey(metadataFileKey, "project_poc")));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_affiliation", postDocLastName + ", " + postDocFirstName));
+				.add(createPathEntry("project_poc_affiliation",getAttrValueWithExactKey(metadataFileKey, "project_poc_affiliation")));
 		pathEntriesPOC.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_email", postDocLastName + ", " + postDocFirstName));
+				.add(createPathEntry("project_poc_email", getAttrValueWithExactKey(metadataFileKey, "project_poc_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPOC);
 
 		// Add path metadata entries for "Staff_XXX" collection
@@ -128,7 +155,11 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesStaff.setPath(staffCollectionPath);
 		pathEntriesStaff.getPathMetadataEntries()
 				.add(createPathEntry("staff_name", staffLastName + ", " + staffFirstName));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "staff_email")))
+			pathEntriesStaff.getPathMetadataEntries().add(createPathEntry("staff_email",
+					getAttrValueWithExactKey(metadataFileKey, "staff_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesStaff);
+		
 
 		// Add path metadata entries for "Year_XXX" collection
 
@@ -136,6 +167,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String yearCollectionName = getYearCollectionName(folderName,true);
 		String yearCollectionPath = staffCollectionPath + "/Year_" + yearCollectionName;
 		pathEntriesYear.setPath(yearCollectionPath);
+		pathEntriesYear.getPathMetadataEntries().add(createPathEntry("collection_type", "Date"));
 		pathEntriesYear.getPathMetadataEntries().add(createPathEntry("year", year));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesYear);
 
@@ -156,12 +188,22 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", descriptor));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", year + "-" + monthDay));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_description", getAttrValueWithKey(folderName, "project_description")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithKey(folderName, "organism")));
+				.add(createPathEntry("project_description", getAttrValueWithExactKey(metadataFileKey, "project_description")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(metadataFileKey,  "organism")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("study_disease", getAttrValueWithKey(folderName, "study_disease")));
+				.add(createPathEntry("study_disease", getAttrValueWithExactKey(metadataFileKey, "study_disease")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("platform_name", getAttrValueWithKey(folderName, "platform_name")));
+				.add(createPathEntry("platform_name", getAttrValueWithExactKey(metadataFileKey,  "platform_name")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "project_completed_date")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
+					getAttrValueWithExactKey(metadataFileKey, "project_completed_date")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "pubmed_id")))
+			pathEntriesProject.getPathMetadataEntries()
+					.add(createPathEntry("pubmed_id", getAttrValueWithExactKey(metadataFileKey, "pubmed_id")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(metadataFileKey, "Collaborators")))
+			pathEntriesProject.getPathMetadataEntries().add(
+					createPathEntry("Collaborators", getAttrValueWithExactKey(metadataFileKey, "Collaborators")));
+
 
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
@@ -216,6 +258,26 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String pocName = getFieldFromFolderName(parentFolderName, FOLDER_FIELD_POSTDOC);
 		pocName = pocName.replace("-", "_");
 		return pocName;
+	}
+	
+	public String getAttrValueWithExactKey(String key, String attrKey) {
+		if (StringUtils.isEmpty(key)) {
+			logger.error("Excel mapping not found for {}", key);
+			return null;
+		}
+		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
+	}
+
+	@PostConstruct
+	private void init() throws IOException {
+		if ("pcl".equalsIgnoreCase(doc)) {
+			try {
+				// load the user metadata from the externally placed excel
+				metadataMap = loadMetadataFile(metadataFile, "Folder");
+			} catch (DmeSyncMappingException e) {
+				logger.error("Failed to initialize metadata  path metadata processor", e);
+			}
+		}
 	}
 
 }
