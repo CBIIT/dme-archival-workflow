@@ -37,27 +37,22 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
 
-	// DOC CCR LCO logic for DME path construction and meta data creation
+	// DOC CCR CIO logic for DME path construction and meta data creation
 
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
+		// load the user metadata from the externally placed excel
+		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
 		logger.info("[PathMetadataTask] LCO getArchivePath called");
-		Path filePath = Paths.get(object.getSourceFilePath());
 		String metadataFileKey = getMetadataKeyPath(object);
 
-		String fileName = filePath.toFile().getName();
+		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Study_"
-				+ getStudyCollectionName(metadataFileKey) + "/Period_" + getPeriodCollectionName(metadataFileKey) + "/"
-				+ getJournalCollectionName(metadataFileKey) + "/" + fileName; 
-		
-		/*String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Study_"
-				+ getStudyCollectionName(metadataFileKey) +"/Period_" + getPeriodCollectionName(metadataFileKey)+ "/" + fileName;*/
+				+ getStudyCollectionName(metadataFileKey) + "/Period_" + getPeriodCollectionName(metadataFileKey) +
+				"/" + getJournalCollectionName(metadataFileKey) + "/" + fileName;
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
-		archivePath = archivePath.replace("-", "_");
-
-		
 		logger.info("[PathMetadataTask] LCO ArchivePath  " + archivePath);
 
 		return archivePath;
@@ -69,9 +64,9 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		logger.info("[PathMetadataTask] LCO getMetaDataJson called");
 
-		Path path = Paths.get(object.getOriginalFilePath());
-		String metadataFileKey = getMetadataKeyPath(object);
-
+		// load the user metadata from the externally placed excel
+		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+		  
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
 		// Add to HpcBulkMetadataEntries for path attributes
@@ -79,75 +74,71 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
+		String metadataFileKey = getMetadataKeyPath(object);
 		String studyCollectionName = getStudyCollectionName(metadataFileKey);
+
 		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
-		pathEntriesPI.getPathMetadataEntries()
-				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
-				getAttrValueWithExactKey(metadataFileKey, "data_owner_affiliation")));
-		pathEntriesPI.getPathMetadataEntries()
-				.add(createPathEntry("data_owner_email", getAttrValueWithExactKey(metadataFileKey, "data_owner_email")));
-		pathEntriesPI.getPathMetadataEntries().add(
-				createPathEntry("data_owner_designee", getAttrValueWithExactKey(metadataFileKey, "data_owner_designee")));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation",
-				getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_affiliation")));
-		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email",
-				getAttrValueWithExactKey(metadataFileKey, "data_owner_designee_email")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(metadataFileKey, "data_owner")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation", getAttrValueWithKey(metadataFileKey, "data_owner_affiliation")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email", getAttrValueWithKey(metadataFileKey, "data_owner_email")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee", getAttrValueWithKey(metadataFileKey, "data_generator")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation", getAttrValueWithKey(metadataFileKey, "data_generator_affiliation")));
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email", getAttrValueWithKey(metadataFileKey, "data_generator_email")));
 		pathEntriesPI.setPath(piCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for "Project" collection
-		String projectCollectionPath = piCollectionPath + "/Study_" + studyCollectionName;
+		String projectCollectionPath = piCollectionPath + "/Study_" + studyCollectionName.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", getAttrValueWithExactKey(metadataFileKey, "project_poc")));
+				.add(createPathEntry("project_poc", getAttrValueWithKey(metadataFileKey, "project_poc")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",
-				getAttrValueWithExactKey(metadataFileKey, "project_poc_affiliation")));
+				getAttrValueWithKey(metadataFileKey, "project_poc_affiliation")));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc_email", getAttrValueWithExactKey(metadataFileKey, "project_poc_email")));
+				.add(createPathEntry("project_poc_email", getAttrValueWithKey(metadataFileKey, "project_poc_email")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", studyCollectionName));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_start_date", getAttrValueWithExactKey(metadataFileKey, "project_start_date")));
+				.add(createPathEntry("project_start_date", getAttrValueWithKey(metadataFileKey, "project_start_date"), "MM/dd/yy"));
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_title", getAttrValueWithExactKey(metadataFileKey, "project_title")));
-		//pathEntriesProject.getPathMetadataEntries().add(
-		//		createPathEntry("project_description", getAttrValueWithExactKey(metadataFileKey, "project_description")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
-				getAttrValueWithExactKey(metadataFileKey, "data_generating_facility")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(metadataFileKey, "organism")));
-		pathEntriesProject.getPathMetadataEntries()
-		.add(createPathEntry("study_disease", getAttrValueWithExactKey(metadataFileKey, "study_disease")));
-		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("data_generator", getAttrValueWithExactKey(metadataFileKey, "data_generator")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
-				getAttrValueWithExactKey(metadataFileKey, "data_generator_affiliation")));
+				.add(createPathEntry("project_title", getAttrValueWithKey(metadataFileKey, "project_title")));
 		pathEntriesProject.getPathMetadataEntries().add(
-				createPathEntry("data_generator_email", getAttrValueWithExactKey(metadataFileKey, "data_generator_email")));
+				createPathEntry("project_description", getAttrValueWithKey(metadataFileKey, "project_description")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
+				getAttrValueWithKey(metadataFileKey, "data_generating_facility")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithKey(metadataFileKey, "organism")));
+		pathEntriesProject.getPathMetadataEntries()
+		.add(createPathEntry("study_disease", getAttrValueWithKey(metadataFileKey, "study_disease")));
+		pathEntriesProject.getPathMetadataEntries()
+				.add(createPathEntry("data_generator", getAttrValueWithKey(metadataFileKey, "data_generator")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
+				getAttrValueWithKey(metadataFileKey, "data_generator_affiliation")));
+		pathEntriesProject.getPathMetadataEntries().add(
+				createPathEntry("data_generator_email", getAttrValueWithKey(metadataFileKey, "data_generator_email")));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
-
-		// Add path metadata entries for "Date" folder
+		
+		// Add path metadata entries for "Case" folder
 		String period = getPeriodCollectionName(metadataFileKey);
 		String periodCollectionPath = projectCollectionPath + "/Period_" + period;
-		HpcBulkMetadataEntry pathEntriesPeriod = new HpcBulkMetadataEntry();
-		pathEntriesPeriod.setPath(periodCollectionPath);
-		pathEntriesPeriod.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Date"));
-		pathEntriesPeriod.getPathMetadataEntries().add(createPathEntry("year", period));
-		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPeriod);
-
-		// Add path metadata entries for "journal" folder
+		HpcBulkMetadataEntry pathEntriesCase = new HpcBulkMetadataEntry();
+		pathEntriesCase.setPath(periodCollectionPath);
+		pathEntriesCase.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Date"));
+		pathEntriesCase.getPathMetadataEntries().add(createPathEntry("year", period));
+		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCase);
+		
+		// Add path metadata entries for "Journal" folder
 		String journal = getJournalCollectionName(metadataFileKey);
-		String journalCollectionPath = periodCollectionPath + "/" + journal;
+		String journalCollectionPath = periodCollectionPath + "/" + journal.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesJournal = new HpcBulkMetadataEntry();
 		pathEntriesJournal.setPath(journalCollectionPath);
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry("journal_name", journal));
 		pathEntriesJournal.getPathMetadataEntries().add(createPathEntry("pubmed_id", getAttrValueWithExactKey(metadataFileKey, "pubmed_id")));
-
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesJournal);
+		
 
 		// Set it to dataObjectRegistrationRequestDTO
 		dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
@@ -155,9 +146,14 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add object metadata
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		//dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
-		//dataObjectRegistrationRequestDTO.getMetadataEntries()
-		//		.add(createPathEntry("source_path", object.getOriginalFilePath()));
+		String fileType = StringUtils.substringBefore(fileName, ".gz");
+	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
+		dataObjectRegistrationRequestDTO.getMetadataEntries()
+				.add(createPathEntry("object_name", fileName));
+		dataObjectRegistrationRequestDTO.getMetadataEntries()
+        		.add(createPathEntry("file_type", fileType));
+		dataObjectRegistrationRequestDTO.getMetadataEntries()
+				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
 		return dataObjectRegistrationRequestDTO;
 	}
@@ -180,19 +176,19 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getStudyCollectionName(String metadataPathKey) throws DmeSyncMappingException {
-		String studyName = getAttrValueWithExactKey(metadataPathKey, "study_name");
+		String studyName = getAttrValueWithKey(metadataPathKey, "study_name");
 		logger.info("Study name = {}", studyName);
 		return studyName;
 	}
 
 	private String getPeriodCollectionName(String metadataPathKey) throws DmeSyncMappingException {
-		String periodYear = getAttrValueWithExactKey(metadataPathKey, "period");
+		String periodYear = getAttrValueWithKey(metadataPathKey, "period");
 		logger.info("period year = {}", periodYear);
 		return periodYear;
 	}
 
 	private String getJournalCollectionName(String metadataPathKey) throws DmeSyncMappingException {
-		String journalName = getAttrValueWithExactKey(metadataPathKey, "journal_name");
+		String journalName = getAttrValueWithKey(metadataPathKey, "journal_name");
 		logger.info("Journal Name = {}", journalName);
 		return journalName;
 	}
@@ -204,26 +200,6 @@ public class LCOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("metadata key path = {}", metadataKeyPath.toString());
 		return metadataKeyPath.toString();
 
-	}
-
-	public String getAttrValueWithExactKey(String key, String attrKey) {
-		if (StringUtils.isEmpty(key)) {
-			logger.error("Excel mapping not found for {}", key);
-			return null;
-		}
-		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
-	}
-
-	@PostConstruct
-	private void init() throws IOException {
-		if ("lco".equalsIgnoreCase(doc)) {
-			try {
-				// load the user metadata from the externally placed excel
-				metadataMap = loadMetadataFile(metadataFile, "path");
-			} catch (DmeSyncMappingException e) {
-				logger.error("Failed to initialize metadata  path metadata processor", e);
-			}
-		}
 	}
 
 }
