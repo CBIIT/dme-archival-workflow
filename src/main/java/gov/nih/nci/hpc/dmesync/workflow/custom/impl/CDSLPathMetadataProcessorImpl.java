@@ -152,8 +152,8 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		threadLocalMap.set(loadCsvMetadataFile(sampleMetadataCsvFile.toString(), "sample_id"));
 		String sampleKey = sampleName;
 		String partKey[] = sampleKey.split("_");
-		sampleKey = partKey[1];
-
+		//sampleKey = partKey[1];
+         sampleKey=sampleKey.replace("Sample_","");
 		pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleKey));
 		pathEntriesSample.getPathMetadataEntries()
 				.add(createPathEntry("library_strategy", getAttrValueWithKey(sampleKey, "library_strategy")));
