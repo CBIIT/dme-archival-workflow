@@ -188,6 +188,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("project_description", getAttrValueWithExactKey(folderName, "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(folderName,  "organism")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKey(folderName, "study_disease")))
 		pathEntriesProject.getPathMetadataEntries()
 				.add(createPathEntry("study_disease", getAttrValueWithExactKey(folderName, "study_disease")));
 		pathEntriesProject.getPathMetadataEntries()
