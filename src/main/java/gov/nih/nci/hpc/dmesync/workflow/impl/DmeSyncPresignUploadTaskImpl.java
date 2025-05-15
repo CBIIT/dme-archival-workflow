@@ -182,8 +182,6 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
       body.add("dataObjectRegistration", jsonHttpEntity);
 
-	  logger.info("[{}] Body request sending to DME {}", super.getTaskName(), body);
-
       response =
           restTemplateFactory
               .getRestTemplate(new RestTemplateResponseErrorHandler())
