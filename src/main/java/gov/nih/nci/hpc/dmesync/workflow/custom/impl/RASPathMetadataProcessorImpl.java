@@ -79,36 +79,32 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "Project" collection
 		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
+		projectCollectionPath = projectCollectionPath.replace(" ", "_");
+
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "Trent_Balius"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "CRTP"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", "trent.balius@nih.gov"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(projectCollectionName, "project_start_date")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithExactKey(projectCollectionName, "project_title")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKey(projectCollectionName, "project_description")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility", getAttrValueWithExactKey(projectCollectionName, "data_generating_facility")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("platform_name", getAttrValueWithExactKey(projectCollectionName, "platform_name")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(projectCollectionName, "organism")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(projectCollectionName, "is_cell_line")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(tarFilePath, "project_start_date")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithExactKey(tarFilePath, "project_title")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKey(tarFilePath, "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", getAttrValueWithExactKey(projectCollectionName, "origin")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("target_protein", getAttrValueWithExactKey(projectCollectionName, "target_protein")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", getAttrValueWithExactKey(projectCollectionName, "method")));
-
-		
-
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", getAttrValueWithExactKey(tarFilePath, "origin")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("target_protein", getAttrValueWithExactKey(tarFilePath, "target_protein")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", getAttrValueWithExactKey(tarFilePath, "method")));
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 		
 		// Add path metadata entries for "Case" folder
 		String runId = getRunID(object,tarFilePath);
 		String runCollectionPath = projectCollectionPath + "/Run_" + runId;
+		runCollectionPath = runCollectionPath.replace(" ", "_");
+
 		HpcBulkMetadataEntry pathEntriesRun = new HpcBulkMetadataEntry();
 		pathEntriesRun.setPath(runCollectionPath);
 		pathEntriesRun.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
-		pathEntriesRun.getPathMetadataEntries().add(createPathEntry("calculation_type", getAttrValueWithExactKey(projectCollectionName, "calculation_type")));
+		pathEntriesRun.getPathMetadataEntries().add(createPathEntry("calculation_type", getAttrValueWithExactKey(tarFilePath, "calculation_type")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRun);
 
 		// Set it to dataObjectRegistrationRequestDTO
@@ -126,15 +122,15 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-		.add(createPathEntry("run_date", getAttrValueWithExactKey(projectCollectionName, "run_date")));
+		.add(createPathEntry("run_date", getAttrValueWithExactKey(tarFilePath, "run_date")));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-		.add(createPathEntry("run_description", getAttrValueWithExactKey(projectCollectionName, "run_description")));
+		.add(createPathEntry("run_description", getAttrValueWithExactKey(tarFilePath, "run_description")));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-		.add(createPathEntry("software_version", getAttrValueWithExactKey(projectCollectionName, "software_version")));
+		.add(createPathEntry("software_version", getAttrValueWithExactKey(tarFilePath, "software_version")));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-		.add(createPathEntry("database_size", getAttrValueWithExactKey(projectCollectionName, "database_size")));
+		.add(createPathEntry("database_size", getAttrValueWithExactKey(tarFilePath, "database_size")));
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
-		.add(createPathEntry("database_date", getAttrValueWithExactKey(projectCollectionName, "database_date")));
+		.add(createPathEntry("database_date", getAttrValueWithExactKey(tarFilePath, "database_date")));
 
 		return dataObjectRegistrationRequestDTO;
 	}
@@ -163,7 +159,7 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getRunID(StatusInfo object, String tarFilePath) throws DmeSyncMappingException {
-		String runId = getAttrValueWithExactKey(tarFilePath, "run_type");
+		String runId = getAttrValueWithExactKey(tarFilePath, "run_name");
 		logger.info("Run Name {}",runId);
 		//return runId;
 		return "dock prep";
