@@ -12,14 +12,8 @@ public class DmeSyncWorkflowServiceFactory {
   @Qualifier("local")
   private DmeSyncWorkflowService localService;
 
-  @Autowired
-  @Qualifier("remote")
-  private DmeSyncWorkflowService remoteService;
-
+  
   public DmeSyncWorkflowService getService(String access) {
-    if ("remote".equals(access)) {
-      return remoteService;
-    } else
       return localService;
   }
 }

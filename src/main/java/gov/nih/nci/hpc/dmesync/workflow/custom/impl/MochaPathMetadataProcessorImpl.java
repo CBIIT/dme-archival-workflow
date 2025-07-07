@@ -368,8 +368,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		flowcellCollectionName = getCollectionNameFromParent(object, "mocha_static");
 	} else if (path.contains("mocha_ngs") && path.contains("Dragen_TSO500")) {
 		flowcellCollectionName = getCollectionNameFromParent(object, "dragen_bcl2fastqconvert");
-		if (flowcellCollectionName != null)
-			flowcellCollectionName=flowcellCollectionName.replace("Dragen_BCL_", "");
+		//if (flowcellCollectionName != null)
+		///	flowcellCollectionName=flowcellCollectionName.replace("Dragen_BCL_", "");
 	}
 	return flowcellCollectionName;
   }
