@@ -81,12 +81,6 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		Path filePath = Paths.get(object.getSourceFilePath());
 		String fileName = filePath.toFile().getName();
 		String folderName = filePath.getParent().getFileName().toString().replace("\"", "");
-		String[] piName = getFieldFromFolderName(folderName, FOLDER_FIELD_PI).split("-");
-		String piFirstName = piName[0];
-		String piLastName = piName[1];
-		String[] postDocName = getFieldFromFolderName(folderName, FOLDER_FIELD_POSTDOC).split("-");
-		String postDocFirstName = postDocName[0];
-		String postDocLastName = postDocName[1];
 		String[] staffName = getFieldFromFolderName(folderName, FOLDER_FIELD_STAFF).split("-");
 		String staffFirstName = staffName[0];
 		String staffLastName = staffName[1];
@@ -110,8 +104,18 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
+		String dataOwnerFullName=getAttrValueWithExactKey(folderName, "data_owner");
+		String[] dataOwnerFullNameParts = dataOwnerFullName.split(" ");
+		String formattedPIName=null;
+        if (dataOwnerFullNameParts.length == 2) {
+            String pIFirstName = dataOwnerFullNameParts[0];
+            String pIlastName = dataOwnerFullNameParts[1];
+             formattedPIName = pIlastName + "," + pIFirstName;
+        }else {
+        	formattedPIName=dataOwnerFullName;
+        }
 		pathEntriesPI.getPathMetadataEntries()
-				.add(createPathEntry("data_owner", getAttrValueWithExactKey(folderName, "data_owner")));
+				.add(createPathEntry("data_owner", formattedPIName));
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
 				getAttrValueWithExactKey(folderName, "data_owner_affiliation")));
 		pathEntriesPI.getPathMetadataEntries().add(
