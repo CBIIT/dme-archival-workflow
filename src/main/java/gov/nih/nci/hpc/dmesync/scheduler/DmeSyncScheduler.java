@@ -164,6 +164,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.source.aws.region:}")
   private String awsRegion;
   
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
+  
   private String runId;
 
   /**
@@ -540,7 +543,13 @@ public class DmeSyncScheduler {
 				statusInfo = null;
 			}
 
-		}else {
+		}else if (createTarContentsFile) {
+			// to check the status of the folder itself instead of the the contents file record.
+			statusInfo =
+		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
+		                  file.getAbsolutePath(), file.getAbsolutePath(), "COMPLETED");
+		}
+		else {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
                   file.getAbsolutePath(), "COMPLETED");
