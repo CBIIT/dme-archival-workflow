@@ -572,6 +572,11 @@ public class DmeSyncScheduler {
         	statusInfo =
                     dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
                         file.getAbsolutePath());
+        	if(createTarContentsFile) {
+        		statusInfo =
+                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathOrderByStartTimestampDesc(
+                            file.getAbsolutePath(),file.getAbsolutePath());
+        	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);

@@ -302,4 +302,7 @@ public interface DmeSyncWorkflowService {
    * @param List of object Ids.
    */
    void deleteStatusInfoByIds(List<Long> ids);
+
+StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathOrderByStartTimestampDesc(String originalFilePath,
+		String sourceFilePath);
 }

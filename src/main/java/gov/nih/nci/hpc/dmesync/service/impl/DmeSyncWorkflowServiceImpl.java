@@ -215,6 +215,14 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
       String originalFilePath) {
     return statusInfoDao.findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(originalFilePath);
   }
+  
+  @Override
+  public StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathOrderByStartTimestampDesc(
+      String originalFilePath, String sourceFilePath) {
+    return statusInfoDao.findFirstStatusInfoByOriginalFilePathAndSourceFilePathOrderByStartTimestampDesc(originalFilePath,sourceFilePath);
+  }
+  
+  
 
   @Override
   public StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc) {
