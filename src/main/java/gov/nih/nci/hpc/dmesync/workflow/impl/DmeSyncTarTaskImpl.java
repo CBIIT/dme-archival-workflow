@@ -2,9 +2,11 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,6 +27,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
@@ -89,6 +94,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.tar.contents.file:false}")
 	private boolean createTarContentsFile;
+	
+	@Value("${dmesync.tar.excluded.contents.file:false}")
+	private boolean createTarExcludedContentsFile;
 
 	@PostConstruct
 	public boolean init() {
@@ -186,27 +194,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					File tarMappingFile = new File(tarWorkDir + "/" + tarFileName + "_TarContentsFile.txt");
 					logger.info("[{}] Creating Tar contents file {}", super.getTaskName(),
 							tarMappingFile.getAbsolutePath());
-
-					BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
-					// TODO: Include the files in the subfolder too.
-					File[] files = directory.listFiles();
-					if (files != null && files.length > 0) {
-						Arrays.sort(files, Comparator.comparing(File::lastModified));
-						// List<File> fileList = new ArrayList<>(Arrays.asList(files));
-						List<File> fileList = new ArrayList<>();
-
-						// Using Files.walk() to traverse the directory and subdirectories
-						try (Stream<Path> stream = Files.walk(sourceDirPath)) {
-							fileList = stream.filter(Files::isRegularFile).map(Path::toFile)
-									.collect(Collectors.toList());
-						}
-						boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-								object.getOriginalFilePath(), fileList);
-						if (contentsFileCheck) {
-							sendContentsFileRequestToJms(tarMappingFile, object);
-						}
-
+					File tarExcludedFile =null;
+					if(createTarExcludedContentsFile) {
+						 tarExcludedFile = new File(tarWorkDir + "/" + tarFileName + "_TarExcludedContentsFile.txt");
+						logger.info("[{}] Creating Tar excluded contents file {}", super.getTaskName(),
+								tarExcludedFile.getAbsolutePath());
 					}
+
+					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile);
 				}
 				
 
@@ -351,6 +346,73 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 		}
 
+	}
+	
+	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile)
+			throws IOException, DmeSyncMappingException {
+
+		BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
+
+		File[] files = sourceDirPath.toFile().listFiles();
+		if (files != null && files.length > 0) {
+			Arrays.sort(files, Comparator.comparing(File::lastModified));
+			// List<File> fileList = new ArrayList<>(Arrays.asList(files));
+
+			// Using Files.walk() to traverse the directory and subdirectories
+			 List<File> includedTarFiles = new ArrayList<>();
+		     List<File> excludedTarFiles = new ArrayList<>();
+
+		        try {
+		            Files.walk(sourceDirPath, FileVisitOption.FOLLOW_LINKS)
+		                .forEach(path -> {
+		                    try {
+		                        if (Files.isDirectory(path)) {
+		                            return; // Skip directories
+		                        }
+
+		                        if (Files.isSymbolicLink(path)) {
+		                            try {
+		                                Path target = Files.readSymbolicLink(path);
+		                                Path resolved = path.getParent().resolve(target).normalize();
+
+		                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
+		                                    includedTarFiles.add(path.toFile());  // Valid symlink
+		                                } else {
+		                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
+		                                }
+		                            } catch (IOException e) {
+		                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
+		                            }
+		                        } else if (Files.isReadable(path)) {
+		                            includedTarFiles.add(path.toFile()); // Regular readable file
+		                        } else {
+		                        	excludedTarFiles.add(path.toFile()); // Not readable
+		                        }
+
+		                    } catch (Exception e) {
+		                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
+		                    }
+		                });
+
+		        } catch (IOException e) {
+		            throw new RuntimeException("Error walking directory: " + e.getMessage(), e);
+		        }
+			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
+					object.getOriginalFilePath(), includedTarFiles);
+			if (contentsFileCheck) {
+				sendContentsFileRequestToJms(tarMappingFile, object);
+			}
+			if(tarExcludedFile!=null ) {
+				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
+				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
+						object.getOriginalFilePath(), excludedTarFiles);
+
+				if (excludedContentsFileCheck) {
+					sendContentsFileRequestToJms(tarExcludedFile, object);
+				}
+			}
+
+		}
 	}
 
 	private StatusInfo insertNewRowForContentsFile(File tarMappingFile, StatusInfo object) {

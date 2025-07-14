@@ -153,8 +153,9 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @parama sourceFilePath
    * @return the StatusInfo object
    */
-  StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathOrderByStartTimestampDesc(
-      String originalFilePath,String sourceFilePath);
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath not like concat('%', ?2) order by s.uploadStartTimestamp desc ")
+  List<StatusInfo> findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
+      String originalFilePath,String sourceFilePath );
 
   
   
