@@ -378,14 +378,17 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
 		                                    includedTarFiles.add(path.toFile());  // Valid symlink
 		                                } else {
+		                                    logger.error("{} is not supported", path.toString());
 		                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
 		                                }
 		                            } catch (IOException e) {
+	                                    logger.error("{} is not supported", path.toString());
 		                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
 		                            }
 		                        } else if (Files.isReadable(path)) {
 		                            includedTarFiles.add(path.toFile()); // Regular readable file
 		                        } else {
+                                    logger.error("{} is not readable", path.toString());
 		                        	excludedTarFiles.add(path.toFile()); // Not readable
 		                        }
 
