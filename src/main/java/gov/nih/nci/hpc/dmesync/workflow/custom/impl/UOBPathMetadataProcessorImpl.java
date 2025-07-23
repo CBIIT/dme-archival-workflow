@@ -125,7 +125,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
-	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", getAttrValueWithKey(path, "Gender")));
+	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sex", getAttrValueWithKey(path, "Gender")));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("age_at_procurement", getAttrValueWithKey(path, "Age_at_procurement")));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("race", getAttrValueWithKey(path, "Race")));
 	      pathEntriesSample.getPathMetadataEntries().add(createPathEntry("histology", getAttrValueWithKey(path, "Histology")));

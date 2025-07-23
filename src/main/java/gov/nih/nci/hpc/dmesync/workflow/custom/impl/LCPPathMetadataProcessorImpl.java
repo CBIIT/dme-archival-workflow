@@ -161,7 +161,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    if(getAttrWithKey(sampleId, applicationType, "Organism") != null)
 	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism_strain", getAttrWithKey(sampleId, applicationType, "Organism")));
 	    if(getAttrWithKey(sampleId, applicationType, "Sex") != null)
-	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("gender", getAttrWithKey(sampleId, applicationType, "Sex")));
+	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sex", getAttrWithKey(sampleId, applicationType, "Sex")));
 	    if(getAttrWithKey(sampleId, applicationType, "Is FFPE") != null)
 	    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_ffpe", getAttrWithKey(sampleId, applicationType, "Is FFPE")));
 	    if(getAttrWithKey(sampleId, applicationType, "Is Tumor") != null)

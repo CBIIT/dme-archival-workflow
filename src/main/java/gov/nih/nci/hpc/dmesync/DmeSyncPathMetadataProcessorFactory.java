@@ -88,6 +88,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor mochaProcessor;
   
   @Autowired
+  @Qualifier("mocha-pdmr")
+  private DmeSyncPathMetadataProcessor mochaPDMRProcessor;
+  
+  @Autowired
   @Qualifier("scaf")
   private DmeSyncPathMetadataProcessor scafProcessor;
   
@@ -127,6 +131,14 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("dctd-pcl")
   private DmeSyncPathMetadataProcessor dctdPclProcessor;
   
+  @Autowired
+  @Qualifier("gb-omics")
+  private DmeSyncPathMetadataProcessor gbOmicsProcessor;
+  
+  @Autowired
+  @Qualifier("cio")
+  private DmeSyncPathMetadataProcessor cioProcessor;
+
   @Autowired
   @Qualifier("pob")
   private DmeSyncPathMetadataProcessor pobCcdiProcessor;
@@ -170,6 +182,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return templateProcessor;
     } else if ("mocha".equals(doc)){
         return mochaProcessor;
+    } else if ("mocha-pdmr".equals(doc)){
+        return mochaPDMRProcessor;
     } else if ("scaf".equals(doc)){
         return scafProcessor;
     } else if ("lcp".equals(doc)){
@@ -190,6 +204,10 @@ public class DmeSyncPathMetadataProcessorFactory {
         return nextProcessor;
     } else if ("dctd-pcl".equals(doc)){
         return dctdPclProcessor;
+    } else if ("gb-omics".equals(doc)){
+        return gbOmicsProcessor;
+    } else if ("cio".equals(doc)){
+        return cioProcessor;
     } else if ("pob".equals(doc)){
         return pobCcdiProcessor;
     } else {

@@ -217,6 +217,56 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	return metdataMap;
   }
   
+ /**
+   * Reads the JSON file and returns a map containing all entries with the specified key.
+   *
+   * @param filePath Path to the JSON file.
+   * @param key      The key to filter the entries by.
+   * @return A map containing all entries for the provided key.
+   * @throws IOException If there's an issue reading the file or parsing the JSON.
+ * @throws DmeSyncMappingException 
+   */
+  public Map<String, Map<String, String>> loadAttributesJsonMetadataFile(String filePath, String key,  Map<String, Map<String, String>> metdataMap) throws  DmeSyncMappingException {
+	  
+	  ObjectMapper mapper = new ObjectMapper();
+	  
+	  try {
+      // Read the JSON into a JsonNode
+      JsonNode rootNode = mapper.readTree(new File(filePath));
+
+      // Extract the metadataEntries array from the root node
+      JsonNode metadataEntries = rootNode.path("metadataEntries");
+
+      // Iterate through the metadataEntries and collect all entries 
+      if (metadataEntries.isArray()) {
+          Iterator<JsonNode> elements = metadataEntries.iterator();
+          Map<String, String> innerMap = new HashMap<>();
+          while (elements.hasNext()) {
+              JsonNode entry = elements.next();
+
+              if (entry.has("attribute")) {
+                  // Create a map with the "value" from the entry
+                  innerMap.put(entry.get("attribute").asText(), entry.get("value").asText());
+
+                 
+              }
+          }
+          if (metdataMap.containsKey(key)) {
+              Map<String, String> existingPairs = metdataMap.get(key); 
+              innerMap.putAll(existingPairs);              
+          }
+          // Add the entry to the result map (allowing for multiple entries with the same key)
+          metdataMap.put(key, innerMap);
+      }
+	  }catch (JsonProcessingException e) {
+			throw new DmeSyncMappingException("Failed to load json metadata from file");
+	  } catch (IOException e) {
+			throw new DmeSyncMappingException("Failed to parse json metadata from file");
+	  }
+      return metdataMap;
+  }
+
+  
   public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key1, String key2) throws DmeSyncMappingException {
     return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
   }

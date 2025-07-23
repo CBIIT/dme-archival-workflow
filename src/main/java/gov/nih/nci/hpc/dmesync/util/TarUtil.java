@@ -76,7 +76,11 @@ public class TarUtil {
         if (entry.isDirectory()) {
           continue;
         }
-        File curfile = new File(outFile, entry.getName());
+        
+        File curfile = new File(outFile, entry.getName()).getCanonicalFile();
+        if (!curfile.getPath().startsWith(outFile.getCanonicalPath())) {
+            throw new IOException("Invalid tar entry: " + entry.getName());
+          }
         File parent = curfile.getParentFile();
         if (!parent.exists()) {
           parent.mkdirs();

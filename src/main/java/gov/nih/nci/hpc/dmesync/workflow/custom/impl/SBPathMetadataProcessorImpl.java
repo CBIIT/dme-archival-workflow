@@ -234,7 +234,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // For now, we are adding mandatory metadata which are TBD
     //pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_name", unknownEncrypted));
     //pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("date_of_birth", unknownEncrypted));
-    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("gender", getBiologicalSex(object)));
+    pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("sex", getBiologicalSex(object)));
     
     pathEntriesPatient.setPath(patientCollectionPath);
     hpcBulkMetadataEntries

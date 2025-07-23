@@ -6,10 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -82,9 +84,12 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("RetryCount");
       header.createCell(colCount++).setCellValue("SourceFileName");
 
-      Set<String> set = new HashSet<>(metadataInfo.size());
-      metadataInfo.stream().filter(p -> set.add(p.getMetaDataKey())).collect(Collectors.toList());
+      metadataInfo.sort(Comparator.comparing(MetadataInfo::getMetaDataKey));
 
+      Set<String> set = new LinkedHashSet<>(metadataInfo.size());
+      metadataInfo.stream().filter(p -> set.add(p.getMetaDataKey())).collect(Collectors.toList());
+      
+      
       for (String key : set) {
         header.createCell(colCount++).setCellValue(key);
       }

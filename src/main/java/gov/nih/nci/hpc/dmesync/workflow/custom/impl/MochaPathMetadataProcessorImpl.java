@@ -207,7 +207,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object);
 		    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
 		    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample_Flowcell"));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object))); 
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
@@ -366,6 +366,10 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		flowcellCollectionName = getCollectionNameFromParent(object, "NovaSeq");
 	} else if (path.contains("static")) {
 		flowcellCollectionName = getCollectionNameFromParent(object, "mocha_static");
+	} else if (path.contains("mocha_ngs") && path.contains("Dragen_TSO500")) {
+		flowcellCollectionName = getCollectionNameFromParent(object, "dragen_bcl2fastqconvert");
+		//if (flowcellCollectionName != null)
+		///	flowcellCollectionName=flowcellCollectionName.replace("Dragen_BCL_", "");
 	}
 	return flowcellCollectionName;
   }
