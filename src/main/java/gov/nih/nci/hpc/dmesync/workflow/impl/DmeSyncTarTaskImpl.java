@@ -326,6 +326,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 						checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
 						checkForUploadedContentsFile.getStatus());
 			} else {
+				checkForUploadedContentsFile.setRunId(object.getRunId());
+				checkForUploadedContentsFile.setError("");
+				checkForUploadedContentsFile.setRetryCount(0L);
+				checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 				contentsFileRecord = checkForUploadedContentsFile;
 			}
 		} else {
