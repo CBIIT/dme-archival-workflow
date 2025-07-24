@@ -27,9 +27,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
@@ -404,12 +401,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		        } catch (IOException e) {
 		            throw new RuntimeException("Error walking directory: " + e.getMessage(), e);
 		        }
+		    if(!includedTarFiles.isEmpty()) {
 			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
 					object.getOriginalFilePath(), includedTarFiles);
 			if (contentsFileCheck) {
 				sendContentsFileRequestToJms(tarMappingFile, object);
 			}
-			if(tarExcludedFile!=null ) {
+		    }
+			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
 				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
 				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
 						object.getOriginalFilePath(), excludedTarFiles);
