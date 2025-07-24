@@ -35,6 +35,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.jms.DmeSyncConsumer;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 
 /**
@@ -52,6 +53,7 @@ public class DmeSyncScheduler {
   private final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMddHHmmss");
 
   @Autowired private DmeSyncProducer sender;
+  @Autowired private DmeSyncConsumer consumer;
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
@@ -794,12 +796,15 @@ public class DmeSyncScheduler {
       if(latest != null)
         currentRunId = latest.getRunId();
     }
+    
+
 
     //Check to make sure scheduler is completed, run has occurred and the queue is empty
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0) {
+        && sender.getQueueCount("inbound.queue") == 0
+        && !consumer.isProcessing()) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -842,7 +847,8 @@ public class DmeSyncScheduler {
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0) {
+        && sender.getQueueCount("inbound.queue") == 0
+        && !consumer.isProcessing()) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);

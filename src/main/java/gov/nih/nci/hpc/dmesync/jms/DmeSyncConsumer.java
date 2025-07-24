@@ -36,6 +36,12 @@ public class DmeSyncConsumer {
   @Autowired private DmeSyncWorkflow dmeSyncWorkflow;
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  
+  private volatile boolean processing = false;
+
+  public boolean isProcessing() {
+      return processing;
+  }
 
   @JmsListener(destination = "inbound.queue")
   public String receiveMessage(
@@ -46,12 +52,12 @@ public class DmeSyncConsumer {
       throws DmeSyncWorkflowException {
 
     log.debug("[JMS Listener] Received message <{}>", syncMessage);
+    processing = true;
 
     try {
 
       // Get StatusInfo from DB
       Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
-
       if(!statusInfo.isPresent()) {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);
         return null;
@@ -65,6 +71,7 @@ public class DmeSyncConsumer {
 
     } finally {
       MDC.clear();
+      processing = false;
     }
 
     return null;
