@@ -216,7 +216,9 @@ The following properties can be set in `application.properties` file:
   * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
 * `dmesync.replace.modified.files=[true|false]`
   * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
-* `dmesync.tar.file.exist=<filename>`
+* `dmesync.tar.excluded.contents.file=[true|false]`
+  * If `true`, the system will  enable creation of a tar contents file to list the files that are included in a tar archive which are broken symlinks.
+=* `dmesync.tar.file.exist=<filename>`
   * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
 * `dmesync.tar.file.exist.ext=<ext>`
   * If specified, it will check whether a file with the specified file extension exists before tar operation is performed.
