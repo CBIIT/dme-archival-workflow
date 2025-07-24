@@ -239,7 +239,6 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				pathEntriesFlowcell.setPath(flowcellCollectionPath);
 				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell_Link"));
 				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_path", StringUtils.substringBefore(object.getOriginalFilePath(), flowcellId) + flowcellId));
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 			}
 	    }
