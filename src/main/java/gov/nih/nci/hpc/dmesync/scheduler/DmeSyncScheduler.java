@@ -775,7 +775,7 @@ public class DmeSyncScheduler {
     return statusInfo;
   }
 
-  @Scheduled(cron = "0 0/1 * * * ?")
+  @Scheduled(cron = "0/10 * * * * ?")
   public void checkForCompletedRun() {
 	if(awsFlag) return;
     String currentRunId = null;
@@ -798,14 +798,14 @@ public class DmeSyncScheduler {
     }
     
 
-    logger.info("checking if scheduler is completed with queue count {} and active threads {} ", sender.getQueueCount("inbound.queue"), consumer.isProcessing());
+    logger.info("checking if scheduler is completed with queue count {} and active threads {} ", sender.getQueueCount("inbound.queue"), consumer.isAllDone());
 
     //Check to make sure scheduler is completed, run has occurred and the queue is empty
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
         && sender.getQueueCount("inbound.queue") == 0
-        && !consumer.isProcessing()) {
+        && consumer.isAllDone()) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -849,7 +849,7 @@ public class DmeSyncScheduler {
         && currentRunId != null
         && !currentRunId.isEmpty()
         && sender.getQueueCount("inbound.queue") == 0
-        && !consumer.isProcessing()) {
+        && consumer.isAllDone()) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);

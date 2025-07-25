@@ -1,6 +1,8 @@
 package gov.nih.nci.hpc.dmesync.jms;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.jms.Message;
 import javax.jms.Session;
 import org.slf4j.Logger;
@@ -37,10 +39,18 @@ public class DmeSyncConsumer {
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
-  private volatile boolean processing = false;
+  private final AtomicInteger activeTasks = new AtomicInteger(0);
 
-  public boolean isProcessing() {
-      return processing;
+  public void taskStarted() {
+      activeTasks.incrementAndGet();
+  }
+
+  public void taskCompleted() {
+      activeTasks.decrementAndGet();
+  }
+
+  public boolean isAllDone() {
+      return activeTasks.get() == 0;
   }
 
   @JmsListener(destination = "inbound.queue")
@@ -52,7 +62,7 @@ public class DmeSyncConsumer {
       throws DmeSyncWorkflowException {
 
     log.debug("[JMS Listener] Received message <{}>", syncMessage);
-    processing = true;
+    taskStarted();
 
     try {
 
@@ -71,7 +81,8 @@ public class DmeSyncConsumer {
 
     } finally {
       MDC.clear();
-      processing = false;
+      log.info("Thread completed execution {}");
+      taskCompleted();
     }
 
     return null;
