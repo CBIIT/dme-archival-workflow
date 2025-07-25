@@ -798,6 +798,7 @@ public class DmeSyncScheduler {
     }
     
 
+    logger.info("checking if scheduler is completed with queue count {} and active threads {} ", sender.getQueueCount("inbound.queue"), consumer.isProcessing())
 
     //Check to make sure scheduler is completed, run has occurred and the queue is empty
     if (runId == null
