@@ -775,7 +775,7 @@ public class DmeSyncScheduler {
     return statusInfo;
   }
 
-  @Scheduled(cron = "0/10 * * * * ?")
+  @Scheduled(cron = "0 0/1 * * * ?")
   public void checkForCompletedRun() {
 	if(awsFlag) return;
     String currentRunId = null;
