@@ -39,18 +39,18 @@ public class DmeSyncConsumer {
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
-  private final AtomicInteger activeTasks = new AtomicInteger(0);
+  private final AtomicInteger activeThreads = new AtomicInteger(0);
 
-  public void taskStarted() {
-      activeTasks.incrementAndGet();
+  public void threadStarted() {
+	  activeThreads.incrementAndGet();
   }
 
-  public void taskCompleted() {
-      activeTasks.decrementAndGet();
+  public void threadCompleted() {
+	  activeThreads.decrementAndGet();
   }
 
-  public boolean isAllDone() {
-      return activeTasks.get() == 0;
+  public boolean isAllThreadsCompleted() {
+      return activeThreads.get() == 0;
   }
 
   @JmsListener(destination = "inbound.queue")
@@ -62,7 +62,7 @@ public class DmeSyncConsumer {
       throws DmeSyncWorkflowException {
 
     log.debug("[JMS Listener] Received message <{}>", syncMessage);
-    taskStarted();
+    threadStarted();
 
     try {
 
@@ -82,7 +82,7 @@ public class DmeSyncConsumer {
     } finally {
       MDC.clear();
       log.info("Thread completed execution {}");
-      taskCompleted();
+      threadCompleted();
     }
 
     return null;
