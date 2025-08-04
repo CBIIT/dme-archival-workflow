@@ -34,6 +34,9 @@ public class RestartController {
     if (runId == null || runId.isEmpty()) {
       //find the latest runId
       runId = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir).getRunId();
+    } else if (!runId.matches("^[a-zA-Z0-9_-]+$")) { 
+    	// Validate runId format
+    	throw new IllegalArgumentException("Invalid runId");
     }
     mailServiceFactory.getService(doc).sendResult(runId);
   }

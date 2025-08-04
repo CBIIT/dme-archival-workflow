@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,7 +55,13 @@ public class ExcelUtil {
       String runId, List<StatusInfo> statusInfo, List<MetadataInfo> metadataInfo, String path) {
 
     final String fileName = path + File.separatorChar + runId + ".xlsx";
-
+    
+    Path safeDirectory = Paths.get(path).getParent().toAbsolutePath().normalize();
+    Path filePath = Paths.get(fileName).toAbsolutePath().normalize();
+    if (!filePath.startsWith(safeDirectory)) {
+  	  logger.info("Generated file path is outside the safe directory");
+        throw new IllegalArgumentException("Generated file path is outside the safe directory");
+    }
     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 
     SXSSFWorkbook workbook = new SXSSFWorkbook(100);

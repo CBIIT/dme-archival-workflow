@@ -113,6 +113,13 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
       
+      Path safeDirectory = path.getParent().toAbsolutePath().normalize();
+      Path filePath = Paths.get(excelFile).toAbsolutePath().normalize();
+      if (!filePath.startsWith(safeDirectory)) {
+    	  logger.info("Generated file path is outside the safe directory");;
+          throw new IllegalArgumentException("Generated file path is outside the safe directory");
+      }
+      
       MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
       helper.setFrom("hpcdme-sync");
       helper.setTo(adminEmails.split(","));
