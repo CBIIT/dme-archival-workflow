@@ -149,7 +149,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesDataset.getPathMetadataEntries()
 					.add(createPathEntry("dataset_name", getAttrValueWithKey("dataset", "datasetname")));
 			pathEntriesDataset.getPathMetadataEntries()
-					.add(createPathEntry("dataset_owner", getAttrValueWithKey("dataset", "ownername")));
+					.add(createPathEntry("dataset_owner", getPiCollectionName()));
 			if(StringUtils.isNotBlank(getAttrValueWithKey("dataset", "collaborator")))
 				pathEntriesDataset.getPathMetadataEntries()
 					.add(createPathEntry("pi_collaborator", getAttrValueWithKey("dataset", "collaborator")));
