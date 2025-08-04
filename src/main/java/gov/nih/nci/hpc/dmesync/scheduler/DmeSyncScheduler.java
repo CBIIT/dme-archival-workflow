@@ -109,6 +109,12 @@ public class DmeSyncScheduler {
   @Value("${dmesync.last.modified.days:}")
   private String lastModfiedDays;
 
+  @Value("${dmesync.last.modified.under.basedir:false}")
+  private boolean checklastModifiedFileUnderBaseDir;
+  
+  @Value("${dmesync.last.modified.under.basedir.depth:0}")
+  private String checklastModifiedFileUnderBaseDirDepth;
+  
   @Value("${dmesync.replace.modified.files:false}")
   private boolean replaceModifiedFiles;
   
@@ -129,12 +135,13 @@ public class DmeSyncScheduler {
   
   @Value("${dmesync.process.multiple.tars:false}")
   private boolean processMultpleTars;
-
+  
   @Value("${dmesync.file.exist.under.basedir:false}")
   private boolean checkExistsFileUnderBaseDir;
-  
+    
   @Value("${dmesync.file.exist.under.basedir.depth:0}")
   private String checkExistsFileUnderBaseDirDepth;
+ 
   
   @Value("${logging.file.name}")
   private String logFile;
@@ -602,7 +609,7 @@ public class DmeSyncScheduler {
       }
       
       //If file has been modified with in days specified, skip
-      if (!lastModfiedDays.isEmpty()
+      if (!checklastModifiedFileUnderBaseDir && !lastModfiedDays.isEmpty()
           && daysBetween(file.getUpdatedDate(), new Date()) <= Integer.parseInt(lastModfiedDays)) {
         logger.info(
             "[Scheduler] Skipping: {} File/folder has been modified within the last {} days. Last modified date: {}.",
@@ -611,6 +618,26 @@ public class DmeSyncScheduler {
             file.getUpdatedDate());
         continue;
       }
+      
+      //If parent folder has been modified with in days specified, skip
+      
+		if (checklastModifiedFileUnderBaseDir && !lastModfiedDays.isEmpty()) {
+			// Find the directory being archived under the base dir
+			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
+			Path filePath = Paths.get(file.getAbsolutePath());
+			Path relativePath = baseDirPath.relativize(filePath);
+			Path subPath1 = relativePath.subpath(0, Integer.parseInt(checklastModifiedFileUnderBaseDirDepth) + 1);
+	        Path checkExistFilePath = baseDirPath.resolve(subPath1);
+
+			Date folderModifiedDate=new Date(Files.getLastModifiedTime(checkExistFilePath).toMillis());
+			
+			if (daysBetween(folderModifiedDate, new Date()) <= Integer.parseInt(lastModfiedDays)) {
+				logger.info(
+						"[Scheduler] Skipping: {} folder has been modified within the last {} days for child folder {}. Last modified date: {}.",
+						checkExistFilePath.toAbsolutePath(),lastModfiedDays ,filePath.getFileName(),folderModifiedDate);
+				continue;
+			}
+		}
 
 		// If folder does not contain a specified file, skip
 		if (!checkExistsFileUnderBaseDir
