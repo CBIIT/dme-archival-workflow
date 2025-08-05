@@ -368,6 +368,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		                .forEach(path -> {
 		                    try {
 		                        if (Files.isDirectory(path)) {
+		                           if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(path.toFile().getName())) {
+		                        	      logger.info("{} is excluded for tar", path.toFile().getName());
+		                        	      excludedTarFiles.add(path.toFile());
+		                           }	
 		                            return; // Skip directories
 		                        }
 
@@ -375,6 +379,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		                            try {
 		                                Path target = Files.readSymbolicLink(path);
 		                                Path resolved = path.getParent().resolve(target).normalize();
+		                                
 
 		                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
 		                                    includedTarFiles.add(path.toFile());  // Valid symlink
