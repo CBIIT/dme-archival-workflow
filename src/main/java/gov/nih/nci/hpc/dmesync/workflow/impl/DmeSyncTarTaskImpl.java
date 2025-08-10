@@ -7,9 +7,12 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -359,53 +362,55 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			Arrays.sort(files, Comparator.comparing(File::lastModified));
 			// List<File> fileList = new ArrayList<>(Arrays.asList(files));
 
-			// Using Files.walk() to traverse the directory and subdirectories
+			// Using Files.walkFileTree() to traverse the directory and subdirectories
 			 List<File> includedTarFiles = new ArrayList<>();
 		     List<File> excludedTarFiles = new ArrayList<>();
+		     Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
+		            @Override
+		            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+		            	// Don't visit this directory or its files    
+		                if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
+                  	      logger.info("{} is excluded for tar", dir.getFileName().toString());
+                  	     // excludedTarFiles.add(dir.toFile());
+                  	    return FileVisitResult.SKIP_SUBTREE; 
+		                }                     	
+		                return FileVisitResult.CONTINUE;
+		            }
 
-		        try {
-		            Files.walk(sourceDirPath, FileVisitOption.FOLLOW_LINKS)
-		                .forEach(path -> {
-		                    try {
-		                        if (Files.isDirectory(path)) {
-		                           if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(path.toFile().getName())) {
-		                        	      logger.info("{} is excluded for tar", path.toFile().getName());
-		                        	      excludedTarFiles.add(path.toFile());
-		                           }	
-		                            return; // Skip directories
-		                        }
+		            @Override
+		            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+		            	try {
+	                        if (Files.isSymbolicLink(path)) {
+	                            try {
+	                                Path target = Files.readSymbolicLink(path);
+	                                Path resolved = path.getParent().resolve(target).normalize();
+	                                
 
-		                        if (Files.isSymbolicLink(path)) {
-		                            try {
-		                                Path target = Files.readSymbolicLink(path);
-		                                Path resolved = path.getParent().resolve(target).normalize();
-		                                
-
-		                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
-		                                    includedTarFiles.add(path.toFile());  // Valid symlink
-		                                } else {
-		                                    logger.error("{} is not supported", path.toString());
-		                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
-		                                }
-		                            } catch (IOException e) {
+	                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
+	                                    includedTarFiles.add(path.toFile());  // Valid symlink
+	                                } else {
 	                                    logger.error("{} is not supported", path.toString());
-		                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
-		                            }
-		                        } else if (Files.isReadable(path)) {
-		                            includedTarFiles.add(path.toFile()); // Regular readable file
-		                        } else {
-                                    logger.error("{} is not readable", path.toString());
-		                        	excludedTarFiles.add(path.toFile()); // Not readable
-		                        }
+	                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
+	                                }
+	                            } catch (IOException e) {
+                                    logger.error("{} is not supported", path.toString());
+	                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
+	                            }
+	                        } else if (Files.isReadable(path)) {
+	                            includedTarFiles.add(path.toFile()); // Regular readable file
+	                        } else {
+                                logger.error("{} is not readable", path.toString());
+	                        	excludedTarFiles.add(path.toFile()); // Not readable
+	                        }
 
-		                    } catch (Exception e) {
-		                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
-		                    }
-		                });
-
-		        } catch (IOException e) {
-		            throw new RuntimeException("Error walking directory: " + e.getMessage(), e);
-		        }
+	                    } catch (Exception e) {
+	                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
+	                    }
+		                return FileVisitResult.CONTINUE;
+		            }
+		        });
+		    
+		     
 		    if(!includedTarFiles.isEmpty()) {
 			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
 					object.getOriginalFilePath(), includedTarFiles);
