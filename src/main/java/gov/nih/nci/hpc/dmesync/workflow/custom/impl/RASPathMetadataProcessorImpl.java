@@ -93,7 +93,7 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithExactKey(tarFilePath, "project_title")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKey(tarFilePath, "project_description")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", getAttrValueWithExactKey(tarFilePath, "origin")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "CRTP"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("target_protein", getAttrValueWithExactKey(tarFilePath, "target_protein")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", getAttrValueWithExactKey(tarFilePath, "method")));
 		pathEntriesProject.setPath(projectCollectionPath);
@@ -182,7 +182,8 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			try {
 				// load the user metadata from the externally placed excel
 				metadataMap = loadMetadataFile(metadataFile, "Tar_file_location");
-			} catch (DmeSyncMappingException e) {
+				logger.info("Metdata map logging {}" , metadataMap );
+				} catch (DmeSyncMappingException e) {
 				logger.error("Failed to initialize metadata  path metadata processor", e);
 			}
 		}
