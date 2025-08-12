@@ -152,11 +152,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("data_generating_facility", getAttrValueWithExactKey(key, "Data generating facility")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueWithExactKey(key, "Library strategy")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(key, "Analyte Type")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("platform_name", getAttrValueWithExactKey(key, "Platform")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(key, "Species")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(key, "Is cell line")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("enrichment_step", getAttrValueWithExactKey(key, "Enrichment step")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("reference_genome", getAttrValueWithExactKey(key, "SampleRef")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(key, "Run Start Date")));
@@ -169,12 +165,22 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 			pathEntriesSample.setPath(sampleCollectionPath);
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrValueWithExactKey(key, "Patient ID")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_id", getAttrValueWithExactKey(key, "Library ID")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("case_name", getAttrValueWithExactKey(key, "Case Name")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("diagnosis", getAttrValueWithExactKey(key, "Diagnosis")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueWithExactKey(key, "Library strategy")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(key, "Analyte Type")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(key, "Species")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(key, "Is cell line")));
+			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrValueWithExactKey(key, "Diagnosis")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Library ID")))
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_id", getAttrValueWithExactKey(key, "Library ID")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Case Name")))
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("case_name", getAttrValueWithExactKey(key, "Case Name")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Anatomy/Cell Type")))
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrValueWithExactKey(key, "Anatomy/Cell Type")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Type")))
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrValueWithExactKey(key, "Type")));
+			
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
 			
 		} else {
@@ -210,7 +216,6 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithExactKey(projectCollectionName, "project_poc")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", getAttrValueWithExactKey(projectCollectionName, "project_poc_email")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", getAttrValueWithExactKey(projectCollectionName, "project_poc_affiliation")));
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrValueWithExactKey(projectCollectionName, "study_disease")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(projectCollectionName, "project_start_date")));
 			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_end_date")))
