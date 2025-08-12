@@ -45,6 +45,9 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String tarFilePath = object.getOriginalFilePath();
+		logger.info("[PathMetadataTask] metadata file {} tarFilePath {}", metadataFile, tarFilePath );
+		
+
 		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object,tarFilePath) + "/Run_" + getRunID(object,tarFilePath) + "/" + fileName;
 		// replace spaces with underscore
@@ -83,9 +86,9 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "Trent_Balius"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "CRTP"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", "trent.balius@nih.gov"));
+		//pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", "Trent_Balius"));
+		//pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "CRTP"));
+		//pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", "trent.balius@nih.gov"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(tarFilePath, "project_start_date")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithExactKey(tarFilePath, "project_title")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKey(tarFilePath, "project_description")));
