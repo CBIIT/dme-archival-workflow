@@ -53,7 +53,7 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
 		
-		logger.info("RAS ArchviePath details ", archivePath);
+		logger.info("RAS ArchviePath details {} ", archivePath);
 
 		return archivePath;
 	}
@@ -164,8 +164,7 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getRunID(StatusInfo object, String tarFilePath) throws DmeSyncMappingException {
 		String runId = getAttrValueWithExactKey(tarFilePath, "run_name");
 		logger.info("Run Name {}",runId);
-		//return runId;
-		return "dock prep";
+		return runId;
 	}
 	
 	public String getAttrValueWithExactKey(String key, String attrKey) {
@@ -182,7 +181,6 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			try {
 				// load the user metadata from the externally placed excel
 				metadataMap = loadMetadataFile(metadataFile, "Tar_file_location");
-				logger.info("Metdata map logging {}" , metadataMap );
 				} catch (DmeSyncMappingException e) {
 				logger.error("Failed to initialize metadata  path metadata processor", e);
 			}
