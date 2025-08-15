@@ -556,7 +556,7 @@ public class DmeSyncScheduler {
 			// to check the status of the folder itself instead of the the contents file record.
 			StatusInfo tarFolderRecord =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
-		                  file.getAbsolutePath(), "TarContentsFile.txt");
+		                  file.getAbsolutePath(), "ContentsFile.txt");
 			if(tarFolderRecord!=null)
 			statusInfo = "COMPLETED".equals(tarFolderRecord.getStatus())? tarFolderRecord:null;
 			
@@ -587,7 +587,7 @@ public class DmeSyncScheduler {
         	if(createTarContentsFile) {
         		statusInfo =
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
-                            file.getAbsolutePath(),"TarContentsFile.txt");
+                            file.getAbsolutePath(),"ContentsFile.txt");
         	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
