@@ -153,10 +153,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("data_generating_facility", getAttrValueWithExactKey(key, "Data generating facility")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("platform_name", getAttrValueWithExactKey(key, "Platform")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("enrichment_step", getAttrValueWithExactKey(key, "Enrichment step")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("reference_genome", getAttrValueWithExactKey(key, "SampleRef")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(key, "Run Start Date")));
-			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequencing_application_type", getAttrValueWithExactKey(key, "Type of sequencing")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Enrichment step")))
+				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("enrichment_step", getAttrValueWithExactKey(key, "Enrichment step")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "SampleRef")))
+				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("reference_genome", getAttrValueWithExactKey(key, "SampleRef")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Run Start Date")))
+				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequenced_date", getAttrValueWithExactKey(key, "Run Start Date")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Type of sequencing")))
+				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("sequencing_application_type", getAttrValueWithExactKey(key, "Type of sequencing")));
 			pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(key)));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
