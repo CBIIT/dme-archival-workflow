@@ -825,7 +825,6 @@ public class DmeSyncScheduler {
     }
     
 
-    logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
 
     //Check to make sure scheduler is completed, run has occurred and the queue is empty
     if (runId == null
@@ -843,6 +842,7 @@ public class DmeSyncScheduler {
         dmeSyncMailServiceFactory.getService(doc).sendResult(currentRunId);
 
         if (shutDownFlag) {
+          logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
           logger.info("[Scheduler] Queue is empty. Shutting down the application.");
           DmeSyncApplication.shutdown();
         }

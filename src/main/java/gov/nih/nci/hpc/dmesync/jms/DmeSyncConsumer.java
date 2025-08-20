@@ -81,7 +81,6 @@ public class DmeSyncConsumer {
 
     } finally {
       MDC.clear();
-      log.info("Thread completed execution {}");
       threadCompleted();
     }
 
