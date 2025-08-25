@@ -61,9 +61,15 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String sampleId = "";
 			try {
 				sampleId = getSample(object);
-				archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
+				if(isPod5(object.getOrginalFileName())) {
+					archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
 					+ "/Flowcell_" + getFlowcell(object) 
-					+ (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId + "/" + fileName;
+					+ "/" + fileName;
+				} else {
+					archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
+						+ "/Flowcell_" + getFlowcell(object) 
+						+ (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId + "/" + fileName;
+				}
 			} catch (DmeSyncMappingException e) {
 				if(StringUtils.isEmpty(sampleId)) {
 					//This path might not be in the master file. If it is not, we want to ignore this path for now.
@@ -165,27 +171,29 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
 			// Add path metadata entries for "Sample" collection
-			String sampleCollectionPath = flowcellCollectionPath + (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId;
-			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
-			pathEntriesSample.setPath(sampleCollectionPath);
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrValueWithExactKey(key, "Patient ID")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueWithExactKey(key, "Library strategy")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(key, "Analyte Type")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(key, "Species")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(key, "Is cell line")));
-			pathEntriesSample.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrValueWithExactKey(key, "Diagnosis")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Library ID")))
-				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_id", getAttrValueWithExactKey(key, "Library ID")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Case Name")))
-				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("case_name", getAttrValueWithExactKey(key, "Case Name")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Anatomy/Cell Type")))
-				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrValueWithExactKey(key, "Anatomy/Cell Type")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Type")))
-				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrValueWithExactKey(key, "Type")));
-			
-			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
+			if (!isPod5(object.getOrginalFileName())) {
+				String sampleCollectionPath = flowcellCollectionPath + (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId;
+				HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
+				pathEntriesSample.setPath(sampleCollectionPath);
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", sampleId));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("patient_id", getAttrValueWithExactKey(key, "Patient ID")));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueWithExactKey(key, "Library strategy")));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueWithExactKey(key, "Analyte Type")));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithExactKey(key, "Species")));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("is_cell_line", getAttrValueWithExactKey(key, "Is cell line")));
+				pathEntriesSample.getPathMetadataEntries().add(createPathEntry("study_disease", getAttrValueWithExactKey(key, "Diagnosis")));
+				if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Library ID")))
+					pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_id", getAttrValueWithExactKey(key, "Library ID")));
+				if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Case Name")))
+					pathEntriesSample.getPathMetadataEntries().add(createPathEntry("case_name", getAttrValueWithExactKey(key, "Case Name")));
+				if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Anatomy/Cell Type")))
+					pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue", getAttrValueWithExactKey(key, "Anatomy/Cell Type")));
+				if(StringUtils.isNotEmpty(getAttrValueWithExactKey(key, "Type")))
+					pathEntriesSample.getPathMetadataEntries().add(createPathEntry("tissue_type", getAttrValueWithExactKey(key, "Type")));
+				
+				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
+			}
 			
 		} else {
 			String projectCollectionName = getProjectCollectionName(object);
@@ -320,7 +328,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			flowcellId = getAttrValueWithExactKey(getSample(object), "FCID");
 		}
 		else {
-			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator)));
 		}
 		return flowcellId;
 	}
@@ -390,12 +398,13 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 	
 	private String getAttrKeyFromKeyInSearchString(String searchString) throws DmeSyncMappingException {
-	    String key = null;
+	    String key = "";
 	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	    	// Iterate through the keys to find a partial string match with the highest char matches.
 	        if(StringUtils.contains(searchString, entry.getKey())) {
 	          //Partial key match.
-	          key = entry.getKey();
-	          break;
+	          if(key.length() < entry.getKey().length())
+	        	  key = entry.getKey();
 	        }
 	    }
 	    if(StringUtils.isEmpty(key)) {
@@ -427,6 +436,10 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	
 	private boolean isONT() {
 		return (StringUtils.contains(sourceBaseDir, "GB_OMICS_ONT")? true : false);
+	}
+	
+	private boolean isPod5(String originalFileName) {
+		return (isONT() && StringUtils.equals(originalFileName, "pod5")? true : false);
 	}
 	
 	@PostConstruct
