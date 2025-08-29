@@ -439,7 +439,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 	
 	private boolean isPod5(String originalFileName) {
-		return (isONT() && StringUtils.equals(originalFileName, "pod5")? true : false);
+		return (isONT() && StringUtils.contains(originalFileName, "pod5")? true : false);
 	}
 	
 	@PostConstruct
