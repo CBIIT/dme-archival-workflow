@@ -314,6 +314,8 @@ public interface DmeSyncWorkflowService {
    */
    void deleteStatusInfoByIds(List<Long> ids);
 
-   StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePath(String originalFilePath,
+   StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(String originalFilePath,
 		String sourceFilePath);
+
+   List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
 }

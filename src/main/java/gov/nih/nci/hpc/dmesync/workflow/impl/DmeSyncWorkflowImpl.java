@@ -45,6 +45,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncMetadataTaskImpl metadataTask;
   @Autowired private DmeSyncProcessMultipleTarsTaskImpl processMultipleTarsTask;
   @Autowired private DmeSyncTarTaskImpl tarTask;
+  @Autowired private DmeSyncTarContentsFileTaskImpl tarContentsfileTask;
   @Autowired private DmeSyncCompressTaskImpl compressTask;
   @Autowired private DmeSyncUntarTaskImpl untarTask;
   @Autowired private DmeSyncVerifyTaskImpl verifyTask;
@@ -101,6 +102,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multpleTarsFolders;
   
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
   
   
   @PostConstruct
@@ -109,7 +112,12 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks = new ArrayList<>();
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (tar || tarIndividualFiles) tasks.add(tarTask);
+	    if (tar || tarIndividualFiles) {
+	    	tasks.add(tarTask);
+	    	if(createTarContentsFile) {
+	    		tasks.add(tarContentsfileTask);
+	    	}
+	    }
 	    else if (compress) tasks.add(compressTask);
 	    if (untar) tasks.add(untarTask);
     }

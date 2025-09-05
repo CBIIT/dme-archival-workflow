@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
@@ -42,6 +43,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -97,6 +99,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.tar.excluded.contents.file:false}")
 	private boolean createTarExcludedContentsFile;
+	
+	@Value("${dmesync.max.recommended.file.size}")
+	private String maxRecommendedFileSize;
 
 	@PostConstruct
 	public boolean init() {
@@ -120,9 +125,22 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// Skipping this task for the contents file for multiple Tars processing
 			return object;
 			
+		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
+		   //// Skipping this task for the contents file 
+			return object;	
 		}else {
 		// Task: Create tar file in work directory for processing
 		try {
+		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+	        File Folder = new File(object.getOriginalFilePath());
+		    // check to validate is the folder to tar is less than maxFilesize
+		    // TODO: suggest error message 
+			if (FileUtils.sizeOfDirectory(Folder) > maxFileSize) {
+				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+						super.getTaskName(), object.getFilesize(), maxFileSize);
+				throw new DmeSyncStorageException("Folder that exceeds the recommended file size of "
+						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+			} else {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
 			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -180,31 +198,24 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					}
 				}
 
-			
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
+				
+				if (createdTarFile.length() > maxFileSize) {
+					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+							super.getTaskName(), object.getFilesize(), maxFileSize);
+		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+					throw new DmeSyncStorageException("Folder that exceeds the recommended file size of "
+							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+				}
+
 				object.setFilesize(createdTarFile.length());
 				object.setSourceFileName(tarFileName);
 				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-				
-				if (createTarContentsFile) {
 
-					File tarMappingFile = new File(tarWorkDir + "/" + tarFileName + "_TarContentsFile.txt");
-					logger.info("[{}] Creating Tar contents file {}", super.getTaskName(),
-							tarMappingFile.getAbsolutePath());
-					File tarExcludedFile =null;
-					if(createTarExcludedContentsFile) {
-						 tarExcludedFile = new File(tarWorkDir + "/" + tarFileName + "_TarExcludedContentsFile.txt");
-						logger.info("[{}] Creating Tar excluded contents file {}", super.getTaskName(),
-								tarExcludedFile.getAbsolutePath());
-					}
-
-					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile);
-				}
-				
-
+			}
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
@@ -309,144 +320,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		return (threadLocalMap.get().get(key) == null ? null : threadLocalMap.get().get(key).get(attrKey));
 	}
 	
-	
-	// This method validate and sends content file request to JMS if contents file is not uploaded to DME
-	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
-
-		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-				.findTopStatusInfoByDocAndSourceFilePath(doc, tarMappingFile.getAbsolutePath());
-
-		StatusInfo contentsFileRecord = null;
-
-		if ("local".equals(verifyPrevUpload) && checkForUploadedContentsFile != null) {
-
-			if (StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
-				// Tar contents file request have already uplaoded in previous run
-				logger.info("[{}] Tar Contents file already uploaded to DME  {} ,{} ,{}", super.getTaskName(),
-						checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
-						checkForUploadedContentsFile.getStatus());
-			} else {
-				checkForUploadedContentsFile.setRunId(object.getRunId());
-				checkForUploadedContentsFile.setError("");
-				checkForUploadedContentsFile.setRetryCount(0L);
-				checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
-				contentsFileRecord = checkForUploadedContentsFile;
-			}
-		} else {
-			// If there is no content files record in DB, create a new one.
-			logger.info("[{}]Inserting the new contents file upload request {}", super.getTaskName(),
-					tarMappingFile.getName());
-			// add new row in status info table for uploading tarContentsFile.
-			contentsFileRecord = insertNewRowForContentsFile(tarMappingFile, object);
-		}
-
-		if (contentsFileRecord != null) {
-
-			upsertTaskByTaskName(contentsFileRecord.getId(), "TarTask");
-			// This contentsFileRecord objectId is send to the message queue in the cleanup
-			DmeSyncMessageDto message = new DmeSyncMessageDto();
-			message.setObjectId(contentsFileRecord.getId());
-			sender.send(message, "inbound.queue");
-			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
-		}
-
-	}
-	
-	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile)
-			throws IOException, DmeSyncMappingException {
-
-		BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
-
-		File[] files = sourceDirPath.toFile().listFiles();
-		if (files != null && files.length > 0) {
-			Arrays.sort(files, Comparator.comparing(File::lastModified));
-			// List<File> fileList = new ArrayList<>(Arrays.asList(files));
-
-			// Using Files.walkFileTree() to traverse the directory and subdirectories
-			 List<File> includedTarFiles = new ArrayList<>();
-		     List<File> excludedTarFiles = new ArrayList<>();
-		     Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
-		            @Override
-		            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-		            	// Don't visit this directory or its files    
-		                if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
-                  	      logger.info("{} is excluded for tar", dir.getFileName().toString());
-                  	     // excludedTarFiles.add(dir.toFile());
-                  	    return FileVisitResult.SKIP_SUBTREE; 
-		                }                     	
-		                return FileVisitResult.CONTINUE;
-		            }
-
-		            @Override
-		            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
-		            	try {
-	                        if (Files.isSymbolicLink(path)) {
-	                            try {
-	                                Path target = Files.readSymbolicLink(path);
-	                                Path resolved = path.getParent().resolve(target).normalize();
-	                                
-
-	                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
-	                                    includedTarFiles.add(path.toFile());  // Valid symlink
-	                                } else {
-	                                    logger.error("{} is not supported", path.toString());
-	                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
-	                                }
-	                            } catch (IOException e) {
-                                    logger.error("{} is not supported", path.toString());
-	                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
-	                            }
-	                        } else if (Files.isReadable(path)) {
-	                            includedTarFiles.add(path.toFile()); // Regular readable file
-	                        } else {
-                                logger.error("{} is not readable", path.toString());
-	                        	excludedTarFiles.add(path.toFile()); // Not readable
-	                        }
-
-	                    } catch (Exception e) {
-	                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
-	                    }
-		                return FileVisitResult.CONTINUE;
-		            }
-		        });
-		    
-		     
-		    if(!includedTarFiles.isEmpty()) {
-			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-					object.getOriginalFilePath(), includedTarFiles);
-			if (contentsFileCheck) {
-				sendContentsFileRequestToJms(tarMappingFile, object);
-			}
-		    }
-			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
-				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
-				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
-						object.getOriginalFilePath(), excludedTarFiles);
-
-				if (excludedContentsFileCheck) {
-					sendContentsFileRequestToJms(tarExcludedFile, object);
-				}
-			}
-
-		}
-	}
-
-	private StatusInfo insertNewRowForContentsFile(File tarMappingFile, StatusInfo object) {
-		StatusInfo statusInfo = new StatusInfo();
-		statusInfo.setRunId(object.getRunId());
-		statusInfo.setOrginalFileName(object.getOrginalFileName());
-		statusInfo.setOriginalFilePath(object.getOriginalFilePath());
-		statusInfo.setSourceFileName(tarMappingFile.getName());
-		statusInfo.setStartTimestamp(new Date());
-		statusInfo.setDoc(object.getDoc());
-		statusInfo.setSourceFilePath(tarMappingFile.getAbsolutePath());
-		statusInfo.setFilesize(tarMappingFile.length());
-
-		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
-
-		return statusInfo;
-
-	}
 
 
 }

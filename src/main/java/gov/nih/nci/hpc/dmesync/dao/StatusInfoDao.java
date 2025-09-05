@@ -162,8 +162,10 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @return the StatusInfo object
    */
   @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath not like concat('%', ?2) order by s.uploadStartTimestamp desc ")
-  List<StatusInfo> findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
+  List<StatusInfo> findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
       String originalFilePath,String sourceFilePath );
+  
+  
 
   
   
@@ -185,6 +187,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   @Modifying
   @Query("delete from StatusInfo s where s.id in ?1")
   void deleteStatusInfoByIds(List<Long> ids);
+
+  /**
+   * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
+   * @param originalFilePath the original file path
+   * @parama sourceFilePath
+   * @return the StatusInfo object
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath like concat('%', ?2) order by s.uploadStartTimestamp desc ")
+  List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
   
   
 

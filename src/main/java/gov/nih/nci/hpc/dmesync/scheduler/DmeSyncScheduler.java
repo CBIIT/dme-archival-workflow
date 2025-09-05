@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,6 +27,7 @@ import org.springframework.util.CollectionUtils;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncAWSScanDirectory;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncDataObjectListQuery;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncVerifyTaskImpl;
@@ -175,6 +177,9 @@ public class DmeSyncScheduler {
   
   @Value("${dmesync.tar.contents.file:false}")
   private boolean createTarContentsFile;
+  
+  @Value("${dmesync.tar.excluded.contents.file:false}")
+  private boolean createTarExcludedContentsFile;
   
   private String runId;
 
@@ -553,13 +558,56 @@ public class DmeSyncScheduler {
 			}
 
 		}else if (createTarContentsFile) {
-			// to check the status of the folder itself instead of the the contents file record.
-			StatusInfo tarFolderRecord =
-		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
-		                  file.getAbsolutePath(), "ContentsFile.txt");
-			if(tarFolderRecord!=null)
-			statusInfo = "COMPLETED".equals(tarFolderRecord.getStatus())? tarFolderRecord:null;
-			
+			// to check the status of the folder and the contents
+			// file(included/excludedfiles record.
+			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
+
+			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
+					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath() + '%');
+
+			if (tarFolderRequests.isEmpty()) {
+				// No records for the path folder in database; running this folder for first time
+				statusInfo = null;
+
+			} else {
+				// Find the TAR file record
+				Optional<StatusInfo> tarRecordOpt = tarFolderRequests.stream()
+						.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+								&& !p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+						.findFirst();
+				StatusInfo tarRecord = tarRecordOpt.get();
+
+				boolean allRequestsCompleted = tarFolderRequests.stream().allMatch(p-> StringUtils.equals(p.getStatus(), WorkflowConstants.COMPLETED));
+
+				if (tarRecord != null && StringUtils.equals(tarRecord.getStatus(), WorkflowConstants.COMPLETED)
+						&& allRequestsCompleted) {
+
+					// if all the records are completed no rerun needed.
+					logger.info("[Scheduler] All the records for the folder got uploaded", file.getAbsolutePath());
+					statusInfo = tarRecord;
+
+				} else {
+
+					if (tarRecord != null && !StringUtils.equals(tarRecord.getStatus(), WorkflowConstants.COMPLETED)) {
+						// Tar folder is not uploaded - enqueue tar folder row to JMS
+						sendRequestToJms(tarRecord);
+						continue;
+					}
+					// Tar completed - enqueue all incomplete contents records
+					List<StatusInfo> tarContentRows = tarFolderRequests.stream()
+							.filter(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+									|| p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+							.collect(Collectors.toList());
+					// Find the included contents file record
+					for (StatusInfo row : tarContentRows) {
+						if (!WorkflowConstants.COMPLETED.equals(row.getStatus())) {
+							sendRequestToJms(row);
+						}
+					}
+					continue;
+
+				}
+			}
 		}
 		else {
           statusInfo =
@@ -586,8 +634,8 @@ public class DmeSyncScheduler {
                         file.getAbsolutePath());
         	if(createTarContentsFile) {
         		statusInfo =
-                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePath(
-                            file.getAbsolutePath(),"ContentsFile.txt");
+                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
+                            file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
         	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
@@ -910,5 +958,23 @@ public class DmeSyncScheduler {
   private int daysBetween(Date d1, Date d2) {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
+  
+	private void sendRequestToJms(StatusInfo statusInfo) {
+
+		statusInfo.setRunId(runId);
+		statusInfo.setError("");
+		statusInfo.setRetryCount(0L);
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+		// Delete the metadata info created for this object ID
+		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
+		// Send the incomplete objectId to the message queue for processing
+		DmeSyncMessageDto message = new DmeSyncMessageDto();
+		message.setObjectId(statusInfo.getId());
+
+		sender.send(message, "inbound.queue");
+	}
+
+
+
   
 }

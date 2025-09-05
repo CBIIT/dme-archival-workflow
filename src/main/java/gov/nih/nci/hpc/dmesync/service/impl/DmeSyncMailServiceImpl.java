@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeCSBMailBodyDto;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 @Service("defaultMailService")
 public class DmeSyncMailServiceImpl implements DmeSyncMailService {
@@ -59,6 +62,12 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   
   @Value("${dmesync.multiple.tars.files.count:0}")
   private Integer filesPerTar;
+  
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
+  
+  @Value("${dmesync.tar.excluded.contents.file:false}")
+  private boolean createTarExcludedContentsFile;
   
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
   
@@ -109,6 +118,10 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+     
+      if(createTarContentsFile) {
+    	  statusInfo=generateAggregrateRecords(statusInfo);
+      }
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
@@ -215,6 +228,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     
   }
   
+  
+  
   public String buildHtmlTable(List<DmeCSBMailBodyDto> folders) {
       StringBuilder htmlBuilder = new StringBuilder();
 
@@ -249,4 +264,98 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
       return htmlBuilder.toString();
   }
+  
+	
+  private List<StatusInfo> generateAggregrateRecords(List<StatusInfo> runIdRecords) {
+	  
+		List<StatusInfo> aggregateFolderRecords = new ArrayList<>();
+
+		Set<String> folderPaths = runIdRecords.stream().map(StatusInfo::getOriginalFilePath)
+				.collect(Collectors.toSet());
+
+		for (String folder : folderPaths) {
+
+			List<StatusInfo> folderRows = dmeSyncWorkflowService.getService(access)
+					.findAllByDocAndLikeOriginalFilePath(doc, folder);
+
+			Optional<StatusInfo> tarRecordOpt = folderRows.stream()
+					.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+							&& !p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+					.findFirst(); // Find the TAR file record
+
+			StatusInfo includedFileRecord = folderRows.stream()
+					.filter(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)).findFirst()
+					.orElse(null); // Find the included contents file record
+			StatusInfo tarRecord = tarRecordOpt.get();
+
+			// Only check for both included and excluded contents file if the property is true
+			StatusInfo excludedFileRecord = folderRows.stream().filter(
+					p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+					.findFirst().orElse(null); // Find the excluded contents file record
+			
+			// Check for the TAR record
+			if (tarRecordOpt.isPresent()) {
+
+				// Handle contents files
+				if (createTarExcludedContentsFile && excludedFileRecord!=null ) {
+
+
+					if (includedFileRecord != null 
+							&&  WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())
+							&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())
+							&&  WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+						tarRecord.setStatus("COMPLETED");
+						// tarRecord.setError(""); // No error
+					} else {
+						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
+							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"Excluded contents file not uploaded, only TAR file and Included contents file got uploaded.");
+							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"Included contents file not uploaded, only TAR file and Excluded contents file got uploaded.");
+							} else {
+								tarRecord.setStatus(
+										"Both included and excluded contents files not uploaded, only TAR file uploaded.");
+							}
+						} else {
+							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())
+									&&  WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus("Tar file not uploaded, only contents files got uploaded.");
+							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"Tar file and Included contents file not uploaded, only Excluded contents file got uploaded.");
+							} else if (includedFileRecord != null
+									&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"Tar file and Excluded  contents file not uploaded, only Included contents file got uploaded.");
+							} else {
+								tarRecord.setStatus("Tar file and both contents file not uploaded.");
+							}
+						}
+					}
+				} else {
+					// If excluded contents file is not set, just handle included contents file
+					if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())
+							&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+						tarRecord.setStatus("COMPLETED");
+						// tarRecord.setError(""); // No error
+					} else {
+						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
+							tarRecord.setStatus("Contents file not uploaded, only TAR file uploaded.");
+						} else if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+							tarRecord.setStatus("TAR file not uploaded, only contents file uploaded.");
+						} else {
+							tarRecord.setStatus("TAR file and contents file not uploaded.");
+						}
+					}
+				}
+			}
+
+			aggregateFolderRecords.add(tarRecord);
+			// Save the updated StatusInfo record back to the database
+			// StatusInfoRepository.save(StatusInfo);
+		}
+		return aggregateFolderRecords;
+      }
 }
