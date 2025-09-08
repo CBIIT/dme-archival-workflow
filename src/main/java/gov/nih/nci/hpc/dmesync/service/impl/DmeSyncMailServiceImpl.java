@@ -310,27 +310,32 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
 							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
 								tarRecord.setStatus(
-										"Excluded contents file not uploaded, only TAR file and Included contents file got uploaded.");
+										"FAILED.Excluded contents file not uploaded, only TAR file and Included contents file got uploaded.");
+								tarRecord.setError(excludedFileRecord.getError());
 							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
 								tarRecord.setStatus(
-										"Included contents file not uploaded, only TAR file and Excluded contents file got uploaded.");
+										"FAILED.Included contents file not uploaded, only TAR file and Excluded contents file got uploaded.");
+								tarRecord.setError(includedFileRecord.getError());
+
 							} else {
 								tarRecord.setStatus(
-										"Both included and excluded contents files not uploaded, only TAR file uploaded.");
+										"FAILED.Both included and excluded contents files not uploaded, only TAR file uploaded.");
+								tarRecord.setError(includedFileRecord.getError());
+
 							}
 						} else {
 							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())
 									&&  WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
-								tarRecord.setStatus("Tar file not uploaded, only contents files got uploaded.");
+								tarRecord.setStatus("FAILED.Tar file not uploaded, only contents files got uploaded.");
 							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
 								tarRecord.setStatus(
-										"Tar file and Included contents file not uploaded, only Excluded contents file got uploaded.");
+										"FAILED.Tar file and Included contents file not uploaded, only Excluded contents file got uploaded.");
 							} else if (includedFileRecord != null
 									&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
 								tarRecord.setStatus(
-										"Tar file and Excluded  contents file not uploaded, only Included contents file got uploaded.");
+										"FAILED.Tar file and Excluded  contents file not uploaded, only Included contents file got uploaded.");
 							} else {
-								tarRecord.setStatus("Tar file and both contents file not uploaded.");
+								tarRecord.setStatus("FAILED.Tar file and both contents file not uploaded.");
 							}
 						}
 					}
@@ -342,11 +347,12 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 						// tarRecord.setError(""); // No error
 					} else {
 						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
-							tarRecord.setStatus("Contents file not uploaded, only TAR file uploaded.");
+							tarRecord.setStatus("FAILED.Contents file not uploaded, only TAR file uploaded.");
+							tarRecord.setError(includedFileRecord.getError());
 						} else if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
-							tarRecord.setStatus("TAR file not uploaded, only contents file uploaded.");
+							tarRecord.setStatus("FAILED.TAR file not uploaded, only contents file uploaded.");
 						} else {
-							tarRecord.setStatus("TAR file and contents file not uploaded.");
+							tarRecord.setStatus("FAILED.TAR file and contents file not uploaded.");
 						}
 					}
 				}
