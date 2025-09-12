@@ -414,6 +414,7 @@ public class DmeSyncScheduler {
             statusInfo.setRunId(runId);
             statusInfo.setError("");
             statusInfo.setRetryCount(0L);
+            statusInfo.setEndWorkflow(false);
             statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
             // Delete the metadata info created for this object ID
             dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -529,6 +530,7 @@ public class DmeSyncScheduler {
 							object.setRunId(runId);
 							object.setError("");
 							object.setRetryCount(0L);
+							object.setEndWorkflow(false);
 							object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 							// Delete the metadata info created for this object ID
 							dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(object.getId());
@@ -541,6 +543,7 @@ public class DmeSyncScheduler {
 					statusInfo.setRunId(runId);
 					statusInfo.setError("");
 					statusInfo.setRetryCount(0L);
+					statusInfo.setEndWorkflow(false);
 					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					sender.send(message, "inbound.queue");
@@ -642,6 +645,7 @@ public class DmeSyncScheduler {
         	statusInfo.setRunId(runId);
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
+        	statusInfo.setEndWorkflow(false);
         	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
         	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
