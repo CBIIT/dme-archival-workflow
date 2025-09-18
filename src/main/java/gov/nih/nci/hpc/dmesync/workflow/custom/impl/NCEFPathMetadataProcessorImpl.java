@@ -25,11 +25,14 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //NCEF Custom logic for DME path construction and meta data creation
 
-@Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-	
-  @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	@Value("${dmesync.additional.metadata.excel:}")
+	private String metadataFile;
+
+	@Value("${dmesync.additional.pi.metadata.excel:}")
+	private String piMetadataFile;
+
+	@Override
+    public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
     logger.info("[PathMetadataTask] NCEFgetArchivePath called");
 
@@ -64,8 +67,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   @Override
   public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-	  // load the user metadata from the externally placed excel
-	  threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+
 	  
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {
@@ -80,13 +82,19 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //Example row: collectionType - PI, collectionName - Marmostein (derived)
 		  //key = pi_name, value = Ronen Marmorstein (supplied)
 		  //key = affiliation, value = UPENN (supplied)
-	     
+		  // load the PI metadata from the externally placed excel
+		  threadLocalMap.set(loadMetadataFile(piMetadataFile, "pi_collection_name"));
 	      String piCollectionName = getPiCollectionName(object);
 	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "ncef"));
+		  pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(piCollectionName,"data_owner")));
+		  pathEntriesPI.getPathMetadataEntries().add(
+					createPathEntry("data_generator", getAttrValueWithKey(piCollectionName, "data_generator")));
+		  pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation",
+					getAttrValueWithKey(piCollectionName, "affiliation")));
+		  hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - NCEF-033-007 (derived), 
@@ -100,6 +108,8 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key = summary_of_samples, value = (supplied)
 	      //key = organism, value = (supplied)
 	     
+		  // load the user metadata from the externally placed excel
+		  threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
 	      String projectCollectionName = getProjectCollectionName(object);
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 	      HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
