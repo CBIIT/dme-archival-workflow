@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
+
+import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
@@ -61,6 +63,7 @@ public class DmeSyncScheduler {
   @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
   @Autowired private DmeSyncAWSScanDirectory dmeSyncAWSScanDirectory;
   @Autowired private DmeSyncVerifyTaskImpl dmeSyncVerifyTaskImpl;
+  @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -181,6 +184,8 @@ public class DmeSyncScheduler {
   @Value("${dmesync.tar.excluded.contents.file:false}")
   private boolean createTarExcludedContentsFile;
   
+  
+  
   private String runId;
 
   /**
@@ -188,6 +193,9 @@ public class DmeSyncScheduler {
    */
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
+	  
+	  dmeMetadataBuilder.evictMetadataMap();
+	  dmeMetadataBuilder.evictPIMetadataMap();
 
 	if (moveProcessedFiles) {
 		findFilesToMove();
