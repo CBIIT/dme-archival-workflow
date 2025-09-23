@@ -114,9 +114,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String data_generator_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_generator_email");
 			if (data_generator_email != null) {
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", data_generator_email));
-				
 			}
-
 		  hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 	      
 	      //Add path metadata entries for "Project_XXX" collection
