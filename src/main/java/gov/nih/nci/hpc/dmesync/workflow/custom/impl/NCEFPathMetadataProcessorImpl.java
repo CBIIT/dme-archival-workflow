@@ -91,7 +91,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = pi_name, value = Ronen Marmorstein (supplied)
 		  //key = affiliation, value = UPENN (supplied)
 		  // load the PI metadata from the externally placed excel
-		  piMetadataMap= dmeMetadataBuilder.getPIMetadataMap(piMetadataFile,"pi_collection_name");
+		  piMetadataMap = dmeMetadataBuilder.getPIMetadataMap(piMetadataFile, "pi_collection_name");
 
 	      String piCollectionName = getPiCollectionName(object);
 	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
@@ -132,7 +132,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key = organism, value = (supplied)
 	     
 		  // load the user metadata from the externally placed excel
-		  metadataMap= dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
+		  metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
 
 	      String projectCollectionName = getProjectCollectionName(object);
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
