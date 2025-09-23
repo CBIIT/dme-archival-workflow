@@ -195,7 +195,6 @@ public class DmeSyncScheduler {
   public void findFilesToPush() {
 	  
 	  dmeMetadataBuilder.evictMetadataMap();
-	  dmeMetadataBuilder.evictPIMetadataMap();
 
 	if (moveProcessedFiles) {
 		findFilesToMove();

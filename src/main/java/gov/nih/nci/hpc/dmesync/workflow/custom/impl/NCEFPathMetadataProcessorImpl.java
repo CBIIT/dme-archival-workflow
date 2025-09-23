@@ -114,7 +114,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			}
 			String data_generator_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_generator_email");
 			if (data_generator_email != null) {
-				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation", data_generator_email));
+				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", data_generator_email));
 				
 			}
 
