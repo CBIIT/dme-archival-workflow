@@ -24,7 +24,7 @@ public class DmeMetadataBuilder {
 
 	protected Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	@Cacheable(value = "metadata")
+	@Cacheable(value = "metadata", sync = true)
 	public Map<String, Map<String, String>> getMetadataMap(String metadataFile, String key)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
@@ -32,7 +32,7 @@ public class DmeMetadataBuilder {
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
 	}
 
-	@Cacheable(value = "piMetadata")
+	@Cacheable(value = "piMetadata" , sync = true)
 	public Map<String, Map<String, String>> getPIMetadataMap(String metadataFile, String key)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 		logger.info("Parsing the PI Metadata Spreadsheet and creating Map");
