@@ -98,11 +98,12 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-		  pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueFromPIMetadataMap(piCollectionName,"data_owner")));
-		  pathEntriesPI.getPathMetadataEntries().add(
-					createPathEntry("data_generator", getAttrValueFromPIMetadataMap(piCollectionName, "data_generator")));
-		  pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation",
-				  getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_affiliation")));
+			pathEntriesPI.getPathMetadataEntries()
+					.add(createPathEntry("data_owner", getAttrValueFromPIMetadataMap(piCollectionName, "data_owner")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator",
+					getAttrValueFromPIMetadataMap(piCollectionName, "data_generator")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation",
+					getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_affiliation")));
 		  String data_owner_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_email");
 			if (data_owner_email != null) {
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email", data_owner_email));
