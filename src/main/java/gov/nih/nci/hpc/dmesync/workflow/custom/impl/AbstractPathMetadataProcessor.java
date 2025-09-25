@@ -299,15 +299,25 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
       }
   }
   
-  public String getAttrValueFromMetadataMap(String key, String attrKey) {
+	public String getAttrValueFromMetadataMap(String rowKey, String attrKey) {
+
+		String key = null;
+		if (metadataMap == null)
+			return null;
+		for (String partialKey : metadataMap.keySet()) {
+			if (StringUtils.contains(rowKey, partialKey)) {
+				key = partialKey;
+				break;
+			}
+		}
 		if (StringUtils.isEmpty(key)) {
-			logger.error("Excel mapping not found for {}", key);
+			logger.error("Excel mapping not found for {}", rowKey);
 			return null;
 		}
 		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
 	}
   
-  public String getAttrValueFromPIMetadataMap(String key, String attrKey) {
+	public String getAttrValueFromPIMetadataMap(String key, String attrKey) {
 		if (StringUtils.isEmpty(key)) {
 			logger.error("Excel mapping not found for {}", key);
 			return null;
