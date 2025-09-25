@@ -103,7 +103,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					createPathEntry("data_generator", getAttrValueFromPIMetadataMap(piCollectionName, "data_generator")));
 		  pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation",
 				  getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_affiliation")));
-		  String data_owner_email=getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_email");
+		  String data_owner_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_email");
 			if (data_owner_email != null) {
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email", data_owner_email));
 			}
