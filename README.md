@@ -250,7 +250,8 @@ The following properties can be set in `application.properties` file:
 
 * `dmesync.additional.metadata.excel=<file path to the metadata file>`
   * If specified, application will load the custom metadata excel file supplied by the user.
-
+* `dmesync.additional.pi.metadata.excel=<file path to the level PI metadata file>`
+  * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
 
