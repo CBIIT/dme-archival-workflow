@@ -1,13 +1,16 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -25,11 +28,19 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //NCEF Custom logic for DME path construction and meta data creation
 
-@Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
+	@Value("${dmesync.additional.metadata.excel:}")
+	private String metadataFile;
+
+	@Value("${dmesync.additional.pi.metadata.excel:}")
+	private String piMetadataFile;
 	
-  @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	
+	@Autowired
+	private DmeMetadataBuilder dmeMetadataBuilder;
+	
+
+	@Override
+    public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 
     logger.info("[PathMetadataTask] NCEFgetArchivePath called");
 
@@ -62,10 +73,9 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
-	  // load the user metadata from the externally placed excel
-	  threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+
 	  
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {
@@ -80,13 +90,33 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //Example row: collectionType - PI, collectionName - Marmostein (derived)
 		  //key = pi_name, value = Ronen Marmorstein (supplied)
 		  //key = affiliation, value = UPENN (supplied)
-	     
+		  // load the PI metadata from the externally placed excel
+		  piMetadataMap = dmeMetadataBuilder.getPIMetadataMap(piMetadataFile, "pi_collection_name");
+
 	      String piCollectionName = getPiCollectionName(object);
 	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
-	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "ncef"));
+			pathEntriesPI.getPathMetadataEntries()
+					.add(createPathEntry("data_owner", getAttrValueFromPIMetadataMap(piCollectionName, "data_owner")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator",
+					getAttrValueFromPIMetadataMap(piCollectionName, "data_generator")));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("affiliation",
+					getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_affiliation")));
+		  String data_owner_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_owner_email");
+			if (data_owner_email != null) {
+				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email", data_owner_email));
+			}
+			String data_generator_affiliation = getAttrValueFromPIMetadataMap(piCollectionName, "data_generator_affiliation");
+			if (data_generator_affiliation != null) {
+				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation", data_generator_affiliation));
+			}
+			String data_generator_email = getAttrValueFromPIMetadataMap(piCollectionName, "data_generator_email");
+			if (data_generator_email != null) {
+				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", data_generator_email));
+			}
+		  hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 	      
 	      //Add path metadata entries for "Project_XXX" collection
 		  //Example row: collectionType - Project, collectionName - NCEF-033-007 (derived), 
@@ -100,6 +130,9 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key = summary_of_samples, value = (supplied)
 	      //key = organism, value = (supplied)
 	     
+		  // load the user metadata from the externally placed excel
+		  metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
+
 	      String projectCollectionName = getProjectCollectionName(object);
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 	      HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
@@ -108,17 +141,17 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("submission_id", getSubmissionId(projectCollectionName)));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("method", "CryoEM"));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "start_date"), "MM/dd/yy"));
-	      String projectDescription = getAttrValueWithKey(path, "project_description");
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueFromMetadataMap(path, "start_date"), "MM/dd/yy"));
+	      String projectDescription = getAttrValueFromMetadataMap(path, "project_description");
 	      if(projectDescription != null && projectDescription.length() > 2500) {
 	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", projectDescription.substring(0, 2500)));
 	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("additional_project_description", projectDescription.substring(2500)));
 	      }
 	      else
-	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
+	    	  pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueFromMetadataMap(path, "project_description")));
 	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("origin", "NCEF"));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("summary_of_datasets", getAttrValueWithKey(path, "summary_of_datasets")));
-	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueWithKey(path, "organism")));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("summary_of_datasets", getAttrValueFromMetadataMap(path, "summary_of_datasets")));
+	      pathEntriesProject.getPathMetadataEntries().add(createPathEntry("organism", getAttrValueFromMetadataMap(path, "organism")));
 	      pathEntriesProject.setPath(projectCollectionPath);
 	      hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 	 
@@ -160,7 +193,6 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         "NCEF custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
       return dataObjectRegistrationRequestDTO;
   }
-
 
   private String getCollectionNameFromParent(StatusInfo object, String parentName) {
 	  //Example originalFilepath - /mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar
@@ -263,7 +295,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  
 	  return "Instrument2";
   }
-	  
+	 
   
 
 }

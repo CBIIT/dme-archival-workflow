@@ -2,12 +2,17 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -25,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
@@ -37,6 +43,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -89,6 +96,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.tar.contents.file:false}")
 	private boolean createTarContentsFile;
+	
+	@Value("${dmesync.tar.excluded.contents.file:false}")
+	private boolean createTarExcludedContentsFile;
+	
+	@Value("${dmesync.max.recommended.file.size}")
+	private String maxRecommendedFileSize;
 
 	@PostConstruct
 	public boolean init() {
@@ -112,9 +125,21 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// Skipping this task for the contents file for multiple Tars processing
 			return object;
 			
+		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
+		   //// Skipping this task for the contents file 
+			return object;	
 		}else {
 		// Task: Create tar file in work directory for processing
 		try {
+		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+	        File Folder = new File(object.getOriginalFilePath());
+		    // check to validate is the folder to tar is less than maxFilesize
+			if (FileUtils.sizeOfDirectory(Folder) > maxFileSize) {
+				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+						super.getTaskName(), object.getFilesize(), maxFileSize);
+				throw new DmeSyncStorageException("Folder exceeds the permitted size of "
+						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+			} else {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
 			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -172,44 +197,24 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					}
 				}
 
-			
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
+				
+				if (createdTarFile.length() > maxFileSize) {
+					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+							super.getTaskName(), object.getFilesize(), maxFileSize);
+		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+					throw new DmeSyncStorageException("Folder exceeds the permitted size of "
+							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+				}
+
 				object.setFilesize(createdTarFile.length());
 				object.setSourceFileName(tarFileName);
 				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-				
-				if (createTarContentsFile) {
 
-					File tarMappingFile = new File(tarWorkDir + "/" + tarFileName + "_TarContentsFile.txt");
-					logger.info("[{}] Creating Tar contents file {}", super.getTaskName(),
-							tarMappingFile.getAbsolutePath());
-
-					BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
-					// TODO: Include the files in the subfolder too.
-					File[] files = directory.listFiles();
-					if (files != null && files.length > 0) {
-						Arrays.sort(files, Comparator.comparing(File::lastModified));
-						// List<File> fileList = new ArrayList<>(Arrays.asList(files));
-						List<File> fileList = new ArrayList<>();
-
-						// Using Files.walk() to traverse the directory and subdirectories
-						try (Stream<Path> stream = Files.walk(sourceDirPath)) {
-							fileList = stream.filter(Files::isRegularFile).map(Path::toFile)
-									.collect(Collectors.toList());
-						}
-						boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-								object.getOriginalFilePath(), fileList);
-						if (contentsFileCheck) {
-							sendContentsFileRequestToJms(tarMappingFile, object);
-						}
-
-					}
-				}
-				
-
+			}
 			}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
@@ -314,61 +319,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		return (threadLocalMap.get().get(key) == null ? null : threadLocalMap.get().get(key).get(attrKey));
 	}
 	
-	
-	// This method validate and sends content file request to JMS if contents file is not uploaded to DME
-	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
-
-		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-				.findTopStatusInfoByDocAndSourceFilePath(doc, tarMappingFile.getAbsolutePath());
-
-		StatusInfo contentsFileRecord = null;
-
-		if ("local".equals(verifyPrevUpload) && checkForUploadedContentsFile != null) {
-
-			if (StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
-				// Tar contents file request have already uplaoded in previous run
-				logger.info("[{}] Tar Contents file already uploaded to DME  {} ,{} ,{}", super.getTaskName(),
-						checkForUploadedContentsFile.getSourceFileName(), checkForUploadedContentsFile.getId(),
-						checkForUploadedContentsFile.getStatus());
-			} else {
-				contentsFileRecord = checkForUploadedContentsFile;
-			}
-		} else {
-			// If there is no content files record in DB, create a new one.
-			logger.info("[{}]Inserting the new contents file upload request {}", super.getTaskName(),
-					tarMappingFile.getName());
-			// add new row in status info table for uploading tarContentsFile.
-			contentsFileRecord = insertNewRowForContentsFile(tarMappingFile, object);
-		}
-
-		if (contentsFileRecord != null) {
-
-			upsertTaskByTaskName(contentsFileRecord.getId(), "TarTask");
-			// This contentsFileRecord objectId is send to the message queue in the cleanup
-			DmeSyncMessageDto message = new DmeSyncMessageDto();
-			message.setObjectId(contentsFileRecord.getId());
-			sender.send(message, "inbound.queue");
-			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
-		}
-
-	}
-
-	private StatusInfo insertNewRowForContentsFile(File tarMappingFile, StatusInfo object) {
-		StatusInfo statusInfo = new StatusInfo();
-		statusInfo.setRunId(object.getRunId());
-		statusInfo.setOrginalFileName(object.getOrginalFileName());
-		statusInfo.setOriginalFilePath(object.getOriginalFilePath());
-		statusInfo.setSourceFileName(tarMappingFile.getName());
-		statusInfo.setStartTimestamp(new Date());
-		statusInfo.setDoc(object.getDoc());
-		statusInfo.setSourceFilePath(tarMappingFile.getAbsolutePath());
-		statusInfo.setFilesize(tarMappingFile.length());
-
-		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
-
-		return statusInfo;
-
-	}
 
 
 }

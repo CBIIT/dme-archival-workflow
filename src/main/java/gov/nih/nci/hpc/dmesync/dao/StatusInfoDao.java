@@ -17,6 +17,14 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   StatusInfo findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(String originalFilePath, String status);
   
   /**
+   * findFirstStatusInfoByFullDestinationPathAndStatus
+   * @param FullDestinationPath the full destination path
+   * @param status the status
+   * @return the StatusInfo object
+   */
+  StatusInfo findFirstStatusInfoByFullDestinationPathAndStatus(String fullDestinationPath, String status);
+  
+  /**
    * findAllByOriginalFilePathAndStatus
    * 
    * @param originalFilePath the original file path
@@ -146,7 +154,21 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
   StatusInfo findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
       String originalFilePath);
+  
+  /**
+   * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
+   * @param originalFilePath the original file path
+   * @parama sourceFilePath
+   * @return the StatusInfo object
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath not like concat('%', ?2) order by s.uploadStartTimestamp desc ")
+  List<StatusInfo> findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
+      String originalFilePath,String sourceFilePath );
+  
+  
 
+  
+  
   /**
    * findStatusInfoByDocAndStatus
    * 
@@ -165,6 +187,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   @Modifying
   @Query("delete from StatusInfo s where s.id in ?1")
   void deleteStatusInfoByIds(List<Long> ids);
+
+  /**
+   * findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc
+   * @param originalFilePath the original file path
+   * @parama sourceFilePath
+   * @return the StatusInfo object
+   */
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath like concat('%', ?2) order by s.uploadStartTimestamp desc ")
+  List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
   
   
 

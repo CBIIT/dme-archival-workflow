@@ -9,6 +9,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -97,6 +99,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Value("${dmesync.replace.modified.files:false}")
   private boolean replaceModifiedFiles;
   
+  @Value("${dmesync.upload.modified.files:false}")
+  private boolean uploadModifiedFiles;
+  
   @Value("${dmesync.destination.s3.archive.configuration.id:}")
   private String s3ArchiveConfigurationId;
   
@@ -158,6 +163,8 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	  HpcMetadataEntry objectEntry = new HpcMetadataEntry();
     	  objectEntry.setAttribute("source_checksum");
     	  objectEntry.setValue(object.getChecksum());
+    	  
+    	  object.getDataObjectRegistrationRequestDTO().setEditMetadata(false);
     	  object.getDataObjectRegistrationRequestDTO().getMetadataEntries().add(objectEntry);
     	  if(!multipartUpload) {
     		  String md5Checksum = BaseEncoding.base64().encode(Hex.decodeHex(object.getChecksum()));
@@ -206,6 +213,36 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath());
     		throw new DmeSyncWorkflowException(errorResponse.getMessage());
     	}
+    	
+		if (uploadModifiedFiles && errorResponse.getMessage().contains("already archived")) {
+			// upload the file with a configurable extension if the file size and checksum
+			// does not match with what was previously uploaded to the DME path. 
+		    logger.info("[{}] Checking if the previous uploaded file matches the checksum and size {}", super.getTaskName());
+
+			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
+					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), "COMPLETED");
+			if (uploadedFileInfo != null) {
+				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
+						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+					 // get file last modified date to MMddyyyy
+		            File newFile = new File(object.getOriginalFilePath());
+		            long lastModifiedMillis = newFile.lastModified();
+		            SimpleDateFormat sdf = new SimpleDateFormat("MMddyyyy");
+		            String lastModifieddate = sdf.format(lastModifiedMillis);
+
+					String updatedFilePath = object.getFullDestinationPath() + "-ver-"+lastModifieddate;
+					object.setFullDestinationPath(updatedFilePath);
+					object.getDataObjectRegistrationRequestDTO().getMetadataEntries()
+							.removeIf(entry -> entry.getAttribute().equals("source_checksum"));
+					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+					logger.info("[{}] Uploading modified file with extension -ver- for DME Path{}",
+							super.getTaskName(), object.getFullDestinationPath());
+					process(object);
+					return object;
+
+				}
+			}
+		}
 	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
 	    throw new DmeSyncVerificationException(errorResponse.getMessage());
     	

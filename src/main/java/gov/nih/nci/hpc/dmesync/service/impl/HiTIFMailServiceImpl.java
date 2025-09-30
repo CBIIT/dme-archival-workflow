@@ -114,6 +114,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     String userEmails = null;
     String allEmails = adminEmails;
     int minTarFileCount = 0; 
+    String subject;
 
     try {
 
@@ -129,13 +130,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         // Extract all users from the original file path and add to the to line.
         userEmails = extractUserEmailsFromRun(runId);
         if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, adminEmails);
-        if (sendUserEmails) {
-          helper.setTo(allEmails.split(","));
-          helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir);
-        } else {
-          helper.setTo(adminEmails.split(","));
-          helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
-        }
+
         
         String body = "<p>The attached file contains results from DME auto-archive.</p>";
         body = body + "<p>Base Path: " + syncBaseDir + "</p>";
@@ -161,7 +156,19 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       		  failedCount++;
         }
         
-        body = body.concat("<ul>"
+                                                                                                                                                                                                          	  subject = (failedCount > 0) ? "Failed " : "Completed ";
+
+      if (sendUserEmails) {
+          helper.setTo(allEmails.split(","));
+          //helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir);
+      	  helper.setSubject("DME Auto Archival " + subject + "for HiTIF - Run_ID: " + runId
+    				+ " - Base Path:  " + syncBaseDir);
+        } else {
+          helper.setTo(adminEmails.split(","));
+         // helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
+     	  helper.setSubject("DME Auto Archival " + subject + " for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
+        }
+  	  body = body.concat("<ul>"
                 				+ "<li>"+ "Total processed: " + processedCount + "</li>"
                 				+ "<li>" + "Success: " + successCount +"</li>"
                                 + "<li>" + "Failure: " + failedCount + "</li>"  

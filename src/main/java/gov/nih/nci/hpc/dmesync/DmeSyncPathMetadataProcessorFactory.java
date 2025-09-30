@@ -104,6 +104,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor pclProcessor;
   
   @Autowired
+  @Qualifier("pcl-retro")
+  private DmeSyncPathMetadataProcessor pclRetroProcessor;
+  
+  @Autowired
   @Qualifier("gb")
   private DmeSyncPathMetadataProcessor gbProcessor;
   
@@ -142,6 +146,14 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Autowired
   @Qualifier("pob")
   private DmeSyncPathMetadataProcessor pobCcdiProcessor;
+  
+  @Autowired
+  @Qualifier("lco")
+  private DmeSyncPathMetadataProcessor ccrLcoProcessor;
+  
+  @Autowired
+  @Qualifier("ras")
+  private DmeSyncPathMetadataProcessor rasLcoProcessor;
   
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
@@ -190,7 +202,9 @@ public class DmeSyncPathMetadataProcessorFactory {
         return lcpProcessor;
     } else if ("pcl".equals(doc)){
         return pclProcessor;
-    } else if ("gb".equals(doc)){
+    } else if ("pcl-retro".equals(doc)){
+        return pclRetroProcessor;
+    }  else if ("gb".equals(doc)){
         return gbProcessor;
     } else if ("lcbg-sds".equals(doc)){
         return lcbgSdsProcessor;
@@ -210,7 +224,12 @@ public class DmeSyncPathMetadataProcessorFactory {
         return cioProcessor;
     } else if ("pob".equals(doc)){
         return pobCcdiProcessor;
-    } else {
+    }else if ("lco".equals(doc)){
+        return ccrLcoProcessor;
+    }else if ("ras".equals(doc)) {
+    	return rasLcoProcessor;
+    }
+    else {
         return defaultProcessor;
     }
   }

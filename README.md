@@ -190,6 +190,9 @@ The following properties can be set in `application.properties` file:
 * `dmesync.cleanup=[true|false]`
   * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
   * Default: `false` 
+* ` dmesync.check.end.workflow=[true|false]`
+  * If true, the system will check for endWorkflow flag to end task processing if no further processing is necessary.
+  * Default: `false` 
 * `dmesync.verify.prev.upload=[none|local]`
   * If `none`, it does not check whether it has previously been uploaded.
   * If `local`, it will check the local db if it has previously been uploaded, and skip the file.
@@ -211,8 +214,16 @@ The following properties can be set in `application.properties` file:
   * Recommended run id example: `Run_YYYYMMDDHHMISS`
 * `dmesync.last.modified.days=[1,2,...]`
   * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
+* `dmesync.last.modified.under.basedir=[true|false]`
+  * If specified, checks modified date of the folder in the base directory instead of folder/file
+* `dmesync.last.modified.under.basedir.depth=[1,2,...]`
+  * If specified, it will check for the last modified folder under the specified depth from the basedir.
 * `dmesync.replace.modified.files=[true|false]`
   * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
+* `dmesync.tar.excluded.contents.file=[true|false]`
+  * If `true`, the system will  enable creation of a tar contents file to list the files that are included in a tar archive which are broken symlinks.
+* `dmesync.upload.modified.files=[true|false]`
+  * If `true`, the system will compare the new file checksum and file length with archived file and if doesn't match will append _ver_fileLastModifiedDate to the filename and archive to DME.
 * `dmesync.tar.file.exist=<filename>`
   * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
 * `dmesync.tar.file.exist.ext=<ext>`
@@ -221,13 +232,26 @@ The following properties can be set in `application.properties` file:
   * Check if the marker file specified in dmesync.tar.file.exist.ext is directly under the base directory.
 * `dmesync.file.exist.under.basedir.depth=[1,2,...]`
   * If specified, it will check for the file under the specified depth from the basedir.
-  
+* `dmesync.tar.filename.excel.exist=[true|false]`
+  * If specified, it will retrieve the tar name from the excel spreadsheet.
+* `dmesync.tar.contents.file=[true|false]`
+  * If specified, it will create the content file which includes files in the each tar and archive.
+
+* `dmesync.process.multiple.tars=[true|false]`
+  * If specified, it will create batch tars for the folder with the count specified by below property.
+* `dmesync.multiple.tars.files.count=[50,..]`
+  * If specified, it will create the tars for every specified batch files in the folder.
+* `dmesync.multiple.tars.dir.folders=[<dir>]`
+  * If specified, it will create the batch tars for the folders specified.
+
+
 * `dmesync.admin.emails=<comma separated email addrresses>`
   * Once a run completes, the run result will be emailed to this address.
 
 * `dmesync.additional.metadata.excel=<file path to the metadata file>`
   * If specified, application will load the custom metadata excel file supplied by the user.
-
+* `dmesync.additional.pi.metadata.excel=<file path to the level PI metadata file>`
+  * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
 
