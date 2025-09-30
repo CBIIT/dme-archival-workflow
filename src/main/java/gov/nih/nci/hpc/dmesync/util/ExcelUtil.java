@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,12 +22,11 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
-import org.apache.poi.hssf.usermodel.HSSFDateUtil;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.hssf.usermodel.HSSFRichTextString;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.format.CellDateFormatter;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -193,7 +191,7 @@ public class ExcelUtil {
       workbook = WorkbookFactory.create(fis);
       Sheet metadataSheet = workbook.getSheetAt(0);
       metadataMap = getMetadataMap(metadataSheet, key);
-    } catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+    } catch (EncryptedDocumentException | IOException e) {
       logger.error("Error reading metadata from excel file {}", metadataFile);
       throw new DmeSyncMappingException("Error reading metadata from excel file", e);
     } finally {
@@ -241,7 +239,7 @@ public class ExcelUtil {
     	  throw new DmeSyncMappingException(sb.toString());
       metadataMap.putAll(projectMap);
       metadataMap.putAll(sampleMap);
-    } catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+    } catch (EncryptedDocumentException  | IOException e) {
       logger.error("Error reading metadata from excel file {}", metadataFile);
       throw new DmeSyncMappingException("Error reading metadata from excel file", e);
     } finally {
@@ -276,7 +274,7 @@ public class ExcelUtil {
       workbook = WorkbookFactory.create(fis);
       Sheet metadataSheet = workbook.getSheetAt(0);
       metadataMap = getMetadataMap(metadataSheet, key1, key2);
-    } catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+    } catch (EncryptedDocumentException  | IOException e) {
       logger.error("Error reading metadata from excel file {}", metadataFile);
       throw new DmeSyncMappingException("Error reading metadata from excel file", e);
     } finally {
@@ -392,10 +390,10 @@ public class ExcelUtil {
           attrKey = currentCell.getStringCellValue().trim();
           continue;
         }
-        if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+        if (currentCell.getCellType().equals(CellType.NUMERIC)) {
           double dv = currentCell.getNumericCellValue();
-          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
-            Date date = HSSFDateUtil.getJavaDate(dv);
+          if (DateUtil.isCellDateFormatted(currentCell)) {
+            Date date = DateUtil.getJavaDate(dv);
             String df = currentCell.getCellStyle().getDataFormatString();
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
@@ -405,7 +403,7 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), value);
           }
 
-        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        } else if (currentCell.getCellType().equals(CellType.BOOLEAN)) {
         	Boolean value = currentCell.getBooleanCellValue();
         	rowMetadata.put(attrName.trim(), value.toString());
         } else {
@@ -448,10 +446,10 @@ public class ExcelUtil {
         if (attrName.equalsIgnoreCase("Sample ID") && StringUtils.isNotBlank(currentCell.getStringCellValue())) {
           attrKey = currentCell.getStringCellValue();
         }
-        if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+        if (currentCell.getCellType().equals(CellType.NUMERIC)) {
           double dv = currentCell.getNumericCellValue();
-          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
-            Date date = HSSFDateUtil.getJavaDate(dv);
+          if (DateUtil.isCellDateFormatted(currentCell)) {
+            Date date = DateUtil.getJavaDate(dv);
             String df = currentCell.getCellStyle().getDataFormatString();
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
@@ -461,7 +459,7 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), value);
           }
 
-        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        } else if (currentCell.getCellType().equals(CellType.BOOLEAN)) {
         	Boolean value = currentCell.getBooleanCellValue();
         	rowMetadata.put(attrName.trim(), value.toString());
         } else {
@@ -500,10 +498,10 @@ public class ExcelUtil {
       currentCell = currentRow.getCell(1);
       if (currentCell == null) 
     	  continue;
-      if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+      if (currentCell.getCellType().equals(CellType.NUMERIC)) {
     	  double dv = currentCell.getNumericCellValue();
-          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
-            Date date = HSSFDateUtil.getJavaDate(dv);
+          if (DateUtil.isCellDateFormatted(currentCell)) {
+            Date date = DateUtil.getJavaDate(dv);
             String df = currentCell.getCellStyle().getDataFormatString();
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
@@ -591,7 +589,7 @@ public class ExcelUtil {
         counter++;
         if (currentCell == null) continue;
         if (attrName.equalsIgnoreCase(key1)) {
-          if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+          if (currentCell.getCellType().equals(CellType.NUMERIC)) {
             double dv = currentCell.getNumericCellValue();
             attrKey1 = String.format ("%.0f", dv);
           } else
@@ -599,7 +597,7 @@ public class ExcelUtil {
           rowMetadata.put(attrName.trim(), attrKey1);
           continue;
         } else if (attrName.equalsIgnoreCase(key2)) {
-          if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+          if (currentCell.getCellType().equals(CellType.NUMERIC)) {
             double dv = currentCell.getNumericCellValue();
             attrKey2 = String.format ("%.0f", dv);
           } else
@@ -607,10 +605,10 @@ public class ExcelUtil {
           rowMetadata.put(attrName.trim(), attrKey2);
           continue;
         }
-        if (currentCell.getCellTypeEnum().equals(CellType.NUMERIC)) {
+        if (currentCell.getCellType().equals(CellType.NUMERIC)) {
           double dv = currentCell.getNumericCellValue();
-          if (HSSFDateUtil.isCellDateFormatted(currentCell)) {
-            Date date = HSSFDateUtil.getJavaDate(dv);
+          if (DateUtil.isCellDateFormatted(currentCell)) {
+            Date date = DateUtil.getJavaDate(dv);
             String df = currentCell.getCellStyle().getDataFormatString();
             String strValue = new CellDateFormatter(df).format(date);
             rowMetadata.put(attrName.trim(), strValue);
@@ -618,7 +616,7 @@ public class ExcelUtil {
             rowMetadata.put(attrName.trim(), String.format ("%.0f", dv));
           }
 
-        } else if (currentCell.getCellTypeEnum().equals(CellType.BOOLEAN)) {
+        } else if (currentCell.getCellType().equals(CellType.BOOLEAN)) {
         	Boolean dv = currentCell.getBooleanCellValue();
         	rowMetadata.put(attrName.trim(), dv.toString());
         } else {
