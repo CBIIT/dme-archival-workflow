@@ -891,6 +891,8 @@ public class DmeSyncScheduler {
         && !currentRunId.isEmpty()
         && sender.getQueueCount("inbound.queue") == 0
         && consumer.isAllThreadsCompleted()) {
+    	
+        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
