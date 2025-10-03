@@ -328,7 +328,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			flowcellId = getAttrValueWithExactKey(getSample(object), "FCID");
 		}
 		else {
-			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator)));
+			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		}
 		return flowcellId;
 	}
