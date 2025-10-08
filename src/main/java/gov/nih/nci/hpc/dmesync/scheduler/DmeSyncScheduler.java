@@ -892,7 +892,6 @@ public class DmeSyncScheduler {
         && sender.getQueueCount("inbound.queue") == 0
         && consumer.isAllThreadsCompleted()) {
     	
-        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -900,6 +899,7 @@ public class DmeSyncScheduler {
       File excel = new File(fileName);
       if (!excel.exists()) {
         //Export and send email for completed run
+        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
         dmeSyncMailServiceFactory.getService(doc).sendResult(currentRunId);
 
         if (shutDownFlag) {
