@@ -190,6 +190,9 @@ The following properties can be set in `application.properties` file:
 * `dmesync.cleanup=[true|false]`
   * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
   * Default: `false` 
+* ` dmesync.check.end.workflow=[true|false]`
+  * If true, the system will check for endWorkflow flag to end task processing if no further processing is necessary.
+  * Default: `false` 
 * `dmesync.verify.prev.upload=[none|local]`
   * If `none`, it does not check whether it has previously been uploaded.
   * If `local`, it will check the local db if it has previously been uploaded, and skip the file.
@@ -217,8 +220,10 @@ The following properties can be set in `application.properties` file:
   * If specified, it will check for the last modified folder under the specified depth from the basedir.
 * `dmesync.replace.modified.files=[true|false]`
   * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
+* `dmesync.tar.excluded.contents.file=[true|false]`
+  * If `true`, the system will  enable creation of a tar contents file to list the files that are included in a tar archive which are broken symlinks.
 * `dmesync.upload.modified.files=[true|false]`
-  * If `true`, the system will compare the new file checksum and file length with archived file and if doesn't match will append _recent to the filename and archive to DME.
+  * If `true`, the system will compare the new file checksum and file length with archived file and if doesn't match will append _ver_fileLastModifiedDate to the filename and archive to DME.
 * `dmesync.tar.file.exist=<filename>`
   * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
 * `dmesync.tar.file.exist.ext=<ext>`
@@ -245,7 +250,8 @@ The following properties can be set in `application.properties` file:
 
 * `dmesync.additional.metadata.excel=<file path to the metadata file>`
   * If specified, application will load the custom metadata excel file supplied by the user.
-
+* `dmesync.additional.pi.metadata.excel=<file path to the level PI metadata file>`
+  * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
 

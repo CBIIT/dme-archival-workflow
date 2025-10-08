@@ -412,7 +412,7 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     }
     	
     try {
-    	patientId = getCollectionNameFromParent(object, "pipelineData");
+    	patientId = getCollectionNameFromParent(object, getCollectionNameFromParent(object, "CCRSB2"));
     } catch (Exception e) {
     	patientId = getCollectionNameFromParent(object, "fastq_files");
     }

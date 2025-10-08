@@ -31,6 +31,7 @@ public class StatusInfo {
   private String error;
   private String moveDataObjectOrignalPath;
   private Integer tarContentsCount;
+  private Boolean endWorkflow;
   private HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO;
   private HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO;
 
@@ -209,6 +210,15 @@ public class StatusInfo {
 
   public void setTarIndexEnd(Integer tarIndexEnd) {
 		this.tarIndexEnd = tarIndexEnd;
+	}
+
+  
+  public Boolean isEndWorkflow() {
+		return endWorkflow;
+	}
+	
+  public void setEndWorkflow(Boolean endWorkflow) {
+		this.endWorkflow = endWorkflow;
 	}
 
 @Transient

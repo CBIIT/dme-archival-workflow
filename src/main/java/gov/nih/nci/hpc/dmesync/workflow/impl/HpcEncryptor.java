@@ -60,10 +60,10 @@ public class HpcEncryptor
     	
     	Key aesKey = new SecretKeySpec(key.getBytes(), "AES");
     	try {
-    		 encryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+    		 encryptCipher = Cipher.getInstance("AES");
     		 encryptCipher.init(Cipher.ENCRYPT_MODE, aesKey);
     		 
-    		 decryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+    		 decryptCipher = Cipher.getInstance("AES");
     		 decryptCipher.init(Cipher.DECRYPT_MODE, aesKey);
     		 
     	} catch(Exception e) {

@@ -4,6 +4,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+
 import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -42,6 +45,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncMetadataTaskImpl metadataTask;
   @Autowired private DmeSyncProcessMultipleTarsTaskImpl processMultipleTarsTask;
   @Autowired private DmeSyncTarTaskImpl tarTask;
+  @Autowired private DmeSyncTarContentsFileTaskImpl tarContentsfileTask;
   @Autowired private DmeSyncCompressTaskImpl compressTask;
   @Autowired private DmeSyncUntarTaskImpl untarTask;
   @Autowired private DmeSyncVerifyTaskImpl verifyTask;
@@ -74,6 +78,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.checksum:true}")
   private boolean checksum;
   
+  @Value("${dmesync.check.end.workflow:false}")
+  private boolean checkEndWorkflow;
+  
   @Value("${dmesync.filesystem.upload:false}")
   private boolean fileSystemUpload;
   
@@ -95,6 +102,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multpleTarsFolders;
   
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
   
   
   @PostConstruct
@@ -103,7 +112,12 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks = new ArrayList<>();
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (tar || tarIndividualFiles) tasks.add(tarTask);
+	    if (tar || tarIndividualFiles) {
+	    	tasks.add(tarTask);
+	    	if(createTarContentsFile) {
+	    		tasks.add(tarContentsfileTask);
+	    	}
+	    }
 	    else if (compress) tasks.add(compressTask);
 	    if (untar) tasks.add(untarTask);
     }
@@ -154,8 +168,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       for (DmeSyncTask task : tasks) {
     	   statusInfo = task.processTask(statusInfo);
     	   // This condition is used when we want to peform specific task and complete the workflow
-    	   if((StringUtils.equalsIgnoreCase(multpleTarsFolders, sourceDirLeafNode)) &&
-    			   StringUtils.equals("COMPLETED", statusInfo.getStatus()) ){
+    	   if((checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
+    		      logger.info("[Workflow] End Workflow Flag is set to true , so no further task processing is required");
     		   break;
     	   }
       }
@@ -188,4 +202,11 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     }
   }
 
+  private boolean checkEndWorkflowFlag(Long objectId) {
+
+	  Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(objectId);
+
+	  return (statusInfo.isPresent() && statusInfo.get().isEndWorkflow()!=null &&
+			  Boolean.TRUE.equals(statusInfo.get().isEndWorkflow()));
+	  }
 }

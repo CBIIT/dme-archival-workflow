@@ -3,6 +3,8 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -86,7 +88,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
  
   @Test
-  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/SChakrapani-NCEF-010-019-10025.tar", 
 			  "/mnt/IRODsScratch/work/SChakrapani-NCEF-010-019-10025.tar");
@@ -154,7 +156,7 @@ NCEFPathMetadataProcessorImpl ncefPathMetadataProcessorImpl;
   
   
   @Test
-  public void testGetMetadataJsonForWithRunFolder() throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public void testGetMetadataJsonForWithRunFolder() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/mnt/NCEF-CryoEM/Archive_Staging/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar",
 			  "/mnt/IRODsScratch/work/RMarmorstein-NCEF-033-007-10031/RMarmorstein-NCEF-033-007-10031-A.tar");

@@ -313,4 +313,9 @@ public interface DmeSyncWorkflowService {
    * @param List of object Ids.
    */
    void deleteStatusInfoByIds(List<Long> ids);
+
+   StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(String originalFilePath,
+		String sourceFilePath);
+
+   List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
 }

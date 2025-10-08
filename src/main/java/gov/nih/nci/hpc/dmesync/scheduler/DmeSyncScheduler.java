@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,9 +24,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
+
+import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncAWSScanDirectory;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncDataObjectListQuery;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncVerifyTaskImpl;
@@ -35,6 +39,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.jms.DmeSyncConsumer;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 
 /**
@@ -52,11 +57,13 @@ public class DmeSyncScheduler {
   private final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMddHHmmss");
 
   @Autowired private DmeSyncProducer sender;
+  @Autowired private DmeSyncConsumer consumer;
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
   @Autowired private DmeSyncAWSScanDirectory dmeSyncAWSScanDirectory;
   @Autowired private DmeSyncVerifyTaskImpl dmeSyncVerifyTaskImpl;
+  @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -171,6 +178,14 @@ public class DmeSyncScheduler {
   @Value("${dmesync.source.aws.region:}")
   private String awsRegion;
   
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
+  
+  @Value("${dmesync.tar.excluded.contents.file:false}")
+  private boolean createTarExcludedContentsFile;
+  
+  
+  
   private String runId;
 
   /**
@@ -178,6 +193,8 @@ public class DmeSyncScheduler {
    */
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
+	  
+	  dmeMetadataBuilder.evictMetadataMap();
 
 	if (moveProcessedFiles) {
 		findFilesToMove();
@@ -404,6 +421,7 @@ public class DmeSyncScheduler {
             statusInfo.setRunId(runId);
             statusInfo.setError("");
             statusInfo.setRetryCount(0L);
+            statusInfo.setEndWorkflow(false);
             statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
             // Delete the metadata info created for this object ID
             dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -519,6 +537,7 @@ public class DmeSyncScheduler {
 							object.setRunId(runId);
 							object.setError("");
 							object.setRetryCount(0L);
+							object.setEndWorkflow(false);
 							object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 							// Delete the metadata info created for this object ID
 							dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(object.getId());
@@ -531,6 +550,7 @@ public class DmeSyncScheduler {
 					statusInfo.setRunId(runId);
 					statusInfo.setError("");
 					statusInfo.setRetryCount(0L);
+					statusInfo.setEndWorkflow(false);
 					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					sender.send(message, "inbound.queue");
@@ -547,7 +567,59 @@ public class DmeSyncScheduler {
 				statusInfo = null;
 			}
 
-		}else {
+		}else if (createTarContentsFile) {
+			// to check the status of the folder and the contents
+			// file(included/excludedfiles record.
+			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
+
+			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
+					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath() + '%');
+
+			if (tarFolderRequests.isEmpty()) {
+				// No records for the path folder in database; running this folder for first time
+				statusInfo = null;
+
+			} else {
+				// Find the TAR file record
+				Optional<StatusInfo> tarRecordOpt = tarFolderRequests.stream()
+						.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+								&& !p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+						.findFirst();
+				StatusInfo tarRecord = tarRecordOpt.get();
+
+				boolean allRequestsCompleted = tarFolderRequests.stream().allMatch(p-> StringUtils.equals(p.getStatus(), WorkflowConstants.COMPLETED));
+
+				if (tarRecord != null && StringUtils.equals(tarRecord.getStatus(), WorkflowConstants.COMPLETED)
+						&& allRequestsCompleted) {
+
+					// if all the records are completed no rerun needed.
+					logger.info("[Scheduler] All the records for the folder got uploaded", file.getAbsolutePath());
+					statusInfo = tarRecord;
+
+				} else {
+
+					if (tarRecord != null && !StringUtils.equals(tarRecord.getStatus(), WorkflowConstants.COMPLETED)) {
+						// Tar folder is not uploaded - enqueue tar folder row to JMS
+						sendRequestToJms(tarRecord);
+						continue;
+					}
+					// Tar completed - enqueue all incomplete contents records
+					List<StatusInfo> tarContentRows = tarFolderRequests.stream()
+							.filter(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+									|| p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+							.collect(Collectors.toList());
+					// Find the included contents file record
+					for (StatusInfo row : tarContentRows) {
+						if (!WorkflowConstants.COMPLETED.equals(row.getStatus())) {
+							sendRequestToJms(row);
+						}
+					}
+					continue;
+
+				}
+			}
+		}
+		else {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
                   file.getAbsolutePath(), "COMPLETED");
@@ -570,11 +642,17 @@ public class DmeSyncScheduler {
         	statusInfo =
                     dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
                         file.getAbsolutePath());
+        	if(createTarContentsFile) {
+        		statusInfo =
+                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
+                            file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
+        	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
+        	statusInfo.setEndWorkflow(false);
         	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
         	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -786,7 +864,6 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "0 0/1 * * * ?")
   public void checkForCompletedRun() {
 	if(awsFlag) return;
-	
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
@@ -805,12 +882,16 @@ public class DmeSyncScheduler {
       if(latest != null)
         currentRunId = latest.getRunId();
     }
+    
+
 
     //Check to make sure scheduler is completed, run has occurred and the queue is empty
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0) {
+        && sender.getQueueCount("inbound.queue") == 0
+        && consumer.isAllThreadsCompleted()) {
+    	
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -818,9 +899,11 @@ public class DmeSyncScheduler {
       File excel = new File(fileName);
       if (!excel.exists()) {
         //Export and send email for completed run
+        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
         dmeSyncMailServiceFactory.getService(doc).sendResult(currentRunId);
 
         if (shutDownFlag) {
+          logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
           logger.info("[Scheduler] Queue is empty. Shutting down the application.");
           DmeSyncApplication.shutdown();
         }
@@ -853,7 +936,8 @@ public class DmeSyncScheduler {
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0) {
+        && sender.getQueueCount("inbound.queue") == 0
+        && consumer.isAllThreadsCompleted()) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -887,5 +971,23 @@ public class DmeSyncScheduler {
   private int daysBetween(Date d1, Date d2) {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
+  
+	private void sendRequestToJms(StatusInfo statusInfo) {
+
+		statusInfo.setRunId(runId);
+		statusInfo.setError("");
+		statusInfo.setRetryCount(0L);
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+		// Delete the metadata info created for this object ID
+		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
+		// Send the incomplete objectId to the message queue for processing
+		DmeSyncMessageDto message = new DmeSyncMessageDto();
+		message.setObjectId(statusInfo.getId());
+
+		sender.send(message, "inbound.queue");
+	}
+
+
+
   
 }

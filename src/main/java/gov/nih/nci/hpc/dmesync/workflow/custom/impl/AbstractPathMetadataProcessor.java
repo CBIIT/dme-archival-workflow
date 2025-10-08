@@ -53,6 +53,9 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
   Map<String, Map<String, String>> metadataMap = null;
+  
+  Map<String, Map<String, String>> piMetadataMap = null;
+
 
   protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
     @Override
@@ -295,4 +298,31 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
       }
   }
+  
+	public String getAttrValueFromMetadataMap(String rowKey, String attrKey) {
+
+		String key = null;
+		if (metadataMap == null)
+			return null;
+		for (String partialKey : metadataMap.keySet()) {
+			if (StringUtils.contains(rowKey, partialKey)) {
+				key = partialKey;
+				break;
+			}
+		}
+		if (StringUtils.isEmpty(key)) {
+			logger.error("Excel mapping not found for {}", rowKey);
+			return null;
+		}
+		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
+	}
+  
+	public String getAttrValueFromPIMetadataMap(String key, String attrKey) {
+		if (StringUtils.isEmpty(key)) {
+			logger.error("Excel mapping not found for {}", key);
+			return null;
+		}
+		return (piMetadataMap.get(key) == null ? null : piMetadataMap.get(key).get(attrKey));
+	}
+
 }

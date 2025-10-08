@@ -344,6 +344,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
 						object.setStatus("COMPLETED");
+						object.setEndWorkflow(true);
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						
 						logger.info("[{}] Movies folder row status changed to {} in the DB for path {} ", super.getTaskName(),
