@@ -549,7 +549,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 	
 	private boolean isFastqOrBam(String originalFilePath) {
-		return (isONT() && StringUtils.contains(originalFilePath, "fastq_") || StringUtils.contains(originalFilePath, "bam_"));
+		return StringUtils.contains(originalFilePath, "fastq_") || StringUtils.contains(originalFilePath, "bam_");
 	}
 	
 	private boolean isMultiplexed(String originalFileName) {
