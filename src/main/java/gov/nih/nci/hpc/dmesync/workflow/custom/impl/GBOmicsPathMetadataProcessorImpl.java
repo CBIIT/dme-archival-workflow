@@ -569,8 +569,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				else if (StringUtils.isNotEmpty(metadataFile) && isONT()) {
 					metadataMap = loadMetadataFile(metadataFile, "FCID");
 					// Loading the metadata using <Flowcell>_<Sample> key for multiplexed ONT flowcells
-					if(isONT())
-						multiplexedMetadataMap = loadMetadataFile(metadataFile, "FCID", "Sample name");
+					multiplexedMetadataMap = loadMetadataFile(metadataFile, "FCID", "Sample name");
 				}
 				else {
 					// This is project metadata
