@@ -63,6 +63,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String sampleId = "";
 			try {
 				sampleId = getSample(object);
+				String flowcellId = getFlowcell(object);
+				String key = isONT() ? flowcellId : sampleId;
+				
+				String archiveStatus= getAttrValueWithExactKey(key, "Archive");
+				boolean archiveReady = archiveStatus != null && archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
+				
+				// Archive column in the master file, that indicates whether a run is ready to be archived in DME.
+				if(archiveReady) {  
 				//If it is ONT, all files other than fastq or bam will be placed under the Flowcell folder.
 				if(isONT() && !isFastqOrBam(object.getOriginalFilePath())){
 					archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
@@ -90,6 +98,16 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						}
 					}
 				}
+			} else {
+				// This Archive column is not Yes in the master file, so dataset is not ready to upload, log the path and complete the workflow
+				logger.info("No need to upload file : {} Archive column is {} ", object.getOriginalFilePath(), archiveStatus);
+				// update the current status info row as completed so this workflow is complete and next task won't be processed.
+				object.setRunId(object.getRunId() + "_IGNORED");
+				object.setEndWorkflow(true);
+				object.setError("No need to upload, Archive column is set to "+ archiveStatus);
+				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				return "";	
+			}
 			} catch (DmeSyncMappingException e) {
 				if(StringUtils.isEmpty(sampleId)) {
 					//This path might not be in the master file. If it is not, we want to ignore this path for now.
