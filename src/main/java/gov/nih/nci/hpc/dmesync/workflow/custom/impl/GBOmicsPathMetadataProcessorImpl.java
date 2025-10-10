@@ -66,7 +66,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				String flowcellId = getFlowcell(object);
 				String key = isONT() ? flowcellId : sampleId;
 				
-				String archiveStatus= getAttrValueWithExactKey(key, "Archive");
+				String archiveStatus = getAttrValueWithExactKey(key, "Archive");
 				boolean archiveReady = archiveStatus != null && archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
 				
 				// Archive column in the master file, that indicates whether a run is ready to be archived in DME.
