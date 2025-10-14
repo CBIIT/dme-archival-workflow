@@ -38,10 +38,10 @@ public class TarUtil {
    * @param files the files to tar
  * @throws Exception 
    */
-  public static void tar(String name, List<String> excludeFolders, File... files) throws Exception {
+  public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
       }
     }
   }
@@ -54,10 +54,10 @@ public class TarUtil {
    * @param files files the files to tar and compress
  * @throws Exception 
    */
-  public static void targz(String name, List<String> excludeFolders, File... files) throws Exception {
+  public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders);
+        addToArchive(out, file, ".", excludeFolders , ignoreBrokenLinksInTar);
       }
     }
   }
@@ -258,9 +258,10 @@ public class TarUtil {
 	    return new GzipCompressorOutputStream(bufferedOutputStream);
 	  }
 
-  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders)
+  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders, boolean ignoreBrokenLinksInTar)
       throws Exception {
     String entry = dir + File.separator + file.getName();
+    Path path = Paths.get(file.getAbsolutePath());
     if (file.isFile()) {
       out.putArchiveEntry(new TarArchiveEntry(file, entry));
       try (FileInputStream in = new FileInputStream(file)) {
@@ -276,10 +277,16 @@ public class TarUtil {
       File[] children = file.listFiles();
       if (children != null) {
         for (File child : children) {
-          addToArchive(out, child, entry, excludeFolders);
+          addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar);
         }
       }
-    } else {
+	} else if (!ignoreBrokenLinksInTar && Files.isSymbolicLink(path)) {
+		Path target = Files.readSymbolicLink(path);
+		Path resolved = path.getParent().resolve(target).normalize();
+		if (!Files.exists(resolved) || !Files.isReadable(resolved))
+			throw new Exception(
+					"Broken symbolic link detected: " + resolved + " (target does not exist or is inaccessible)");
+	} else {
       logger.error("{} is not supported", file.getName());
     }
   }
