@@ -236,8 +236,6 @@ The following properties can be set in `application.properties` file:
   * If specified, it will retrieve the tar name from the excel spreadsheet.
 * `dmesync.tar.contents.file=[true|false]`
   * If specified, it will create the content file which includes files in the each tar and archive.
-* `dmesync.tar.contents.file=[true|false]`
-  * If specified, it will create the content file which includes files in the each tar and archive.
 * `dmesync.process.multiple.tars=[true|false]`
   * If specified, it will create batch tars for the folder with the count specified by below property.
 * `dmesync.multiple.tars.files.count=[50,..]`

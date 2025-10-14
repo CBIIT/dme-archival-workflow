@@ -57,7 +57,7 @@ public class TarUtil {
   public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders , ignoreBrokenLinksInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
       }
     }
   }
