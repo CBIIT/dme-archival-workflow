@@ -102,10 +102,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.max.recommended.file.size}")
 	private String maxRecommendedFileSize;
-	
-	
-	@Value("${dmesync.tar.ignore.broken.link:false}")
-	private boolean ignoreBrokenLinksInTar;
 
 	@PostConstruct
 	public boolean init() {
@@ -193,11 +189,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					tarFile = tarFile + ".gz";
 					tarFileName = tarFileName + ".gz";
 					if (!dryRun) {
-						TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
+						TarUtil.targz(tarFile, excludeFolders, directory);
 					}
 				} else {
 					if (!dryRun) {
-						TarUtil.tar(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
+						TarUtil.tar(tarFile, excludeFolders, directory);
 					}
 				}
 
@@ -268,11 +264,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			tarFile = tarFile + ".gz";
 			tarFileName = tarFileName + ".gz";
 			if (!dryRun) {
-				TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, filesArray);
+				TarUtil.targz(tarFile, excludeFolders, filesArray);
 			}
 		} else {
 			if (!dryRun) {
-				TarUtil.tar(tarFile, excludeFolders, ignoreBrokenLinksInTar, filesArray);
+				TarUtil.tar(tarFile, excludeFolders, filesArray);
 			}
 		}
 		

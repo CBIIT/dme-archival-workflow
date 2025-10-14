@@ -236,14 +236,15 @@ The following properties can be set in `application.properties` file:
   * If specified, it will retrieve the tar name from the excel spreadsheet.
 * `dmesync.tar.contents.file=[true|false]`
   * If specified, it will create the content file which includes files in the each tar and archive.
-* `dmesync.tar.contents.file=[true|false]`
-  * If specified, it will create the content file which includes files in the each tar and archive.
+
 * `dmesync.process.multiple.tars=[true|false]`
   * If specified, it will create batch tars for the folder with the count specified by below property.
 * `dmesync.multiple.tars.files.count=[50,..]`
   * If specified, it will create the tars for every specified batch files in the folder.
-* `dmesync.tar.ignore.broken.link=[true|false]`
-  * If set to false, the tar will not be created and the error from broken links will be recorded in the email report. If it is set to true, these errors will be ignored and the tar will be created. Default will be false.
+* `dmesync.multiple.tars.dir.folders=[<dir>]`
+  * If specified, it will create the batch tars for the folders specified.
+
+
 * `dmesync.admin.emails=<comma separated email addrresses>`
   * Once a run completes, the run result will be emailed to this address.
 
