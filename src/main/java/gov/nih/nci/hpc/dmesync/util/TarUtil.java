@@ -283,9 +283,12 @@ public class TarUtil {
 	} else if (!ignoreBrokenLinksInTar && Files.isSymbolicLink(path)) {
 		Path target = Files.readSymbolicLink(path);
 		Path resolved = path.getParent().resolve(target).normalize();
-		if (!Files.exists(resolved) || !Files.isReadable(resolved))
+		if (!Files.exists(resolved))
 			throw new Exception(
-					"Broken symbolic link detected: " + resolved + " (target does not exist or is inaccessible)");
+					"Broken symbolic link detected: " + resolved + " (target does not exist)");
+		else if (!Files.isReadable(resolved))
+			throw new Exception(
+					"Broken symbolic link detected: " + resolved + " (target is inaccessible)");
 	} else {
       logger.error("{} is not supported", file.getName());
     }
