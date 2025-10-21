@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
+import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
@@ -183,6 +184,9 @@ public class DmeSyncScheduler {
   
   @Value("${dmesync.tar.excluded.contents.file:false}")
   private boolean createTarExcludedContentsFile;
+  
+  @Value("${dmesync.max.permitted.file.size}")
+  private String maxPermittedFileSize;
   
   
   
@@ -507,7 +511,13 @@ public class DmeSyncScheduler {
 
     for (HpcPathAttributes file : files) {
 
-      StatusInfo statusInfo = null;
+     StatusInfo statusInfo = null;
+      
+	 long maxFileSize = Long.parseLong(maxPermittedFileSize);
+
+	// Validate the file size is less than the Permitted File Size before uploading.
+		// if not record error in report
+	if (file.getSize() < maxFileSize) {
 
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
@@ -840,7 +850,15 @@ public class DmeSyncScheduler {
       message.setObjectId(statusInfo.getId());
 
       sender.send(message, "inbound.queue");
-    }
+	} else {
+		// If file size is greater than the permitted value just record in db , so the
+		// details will be displayed in the automated report
+		String errorMessage = "File exceeds the permitted size of "
+				+ ExcelUtil.humanReadableByteCount(maxFileSize, true);
+		logger.info("[Scheduler] Skipping: {} because {}", file.getAbsolutePath(), errorMessage);
+		insertErrorRecordDb(file, true, errorMessage);
+	}
+    } 
   }
 
   private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed) {
@@ -985,6 +1003,25 @@ public class DmeSyncScheduler {
 		message.setObjectId(statusInfo.getId());
 
 		sender.send(message, "inbound.queue");
+	}
+	
+	private StatusInfo insertErrorRecordDb(HpcPathAttributes file, boolean endWorkflow , String errorMessage) {
+
+	    StatusInfo statusInfo = new StatusInfo();
+	    statusInfo.setRunId(runId);
+	    statusInfo.setOrginalFileName(file.getName());
+	    statusInfo.setOriginalFilePath(file.getAbsolutePath());
+	    statusInfo.setSourceFileName(untar ? file.getTarEntry() : file.getName());
+	    statusInfo.setSourceFilePath(file.getAbsolutePath());
+	    statusInfo.setFilesize(file.getSize());
+	    statusInfo.setStartTimestamp(new Date());
+	    statusInfo.setDoc(doc);
+	    if(endWorkflow) {
+	      statusInfo.setEndWorkflow(endWorkflow);
+	      statusInfo.setError(errorMessage);
+	    }
+	    statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+	    return statusInfo;
 	}
 
 

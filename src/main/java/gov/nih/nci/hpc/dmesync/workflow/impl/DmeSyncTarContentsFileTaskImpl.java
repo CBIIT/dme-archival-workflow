@@ -98,9 +98,6 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	
 	@Value("${dmesync.tar.excluded.contents.file:false}")
 	private boolean createTarExcludedContentsFile;
-	
-	@Value("${dmesync.max.recommended.file.size}")
-	private String maxRecommendedFileSize;
 
 	@PostConstruct
 	public boolean init() {
