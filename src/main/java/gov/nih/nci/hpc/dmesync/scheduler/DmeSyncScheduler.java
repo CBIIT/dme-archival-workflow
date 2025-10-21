@@ -517,7 +517,7 @@ public class DmeSyncScheduler {
 
 	// Validate the file size is less than the Permitted File Size before uploading.
 		// if not record error in report
-	if (file.getSize() < maxFileSize) {
+	if (file.getSize() <= maxFileSize) {
 
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
