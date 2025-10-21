@@ -281,6 +281,8 @@ public class TarUtil {
         }
       }
 	} else if (!ignoreBrokenLinksInTar && Files.isSymbolicLink(path)) {
+		/* When ignore Broken link is not set, workflow will throw the expection and error is recorded in DB and automated report
+		 */
 		Path target = Files.readSymbolicLink(path);
 		Path resolved = path.getParent().resolve(target).normalize();
 		if (!Files.exists(resolved))
@@ -290,6 +292,9 @@ public class TarUtil {
 			throw new Exception(
 					"Broken symbolic link detected: " + resolved + " (target is inaccessible)");
 	} else {
+		/* When ignore Broken link is set , workflow ignores the broken links and if exclude contents file is also set then these broken links 
+		 * will be added to excluded contents file and uploaded to DME
+		 */
       logger.error("{} is not supported", file.getName());
     }
   }
