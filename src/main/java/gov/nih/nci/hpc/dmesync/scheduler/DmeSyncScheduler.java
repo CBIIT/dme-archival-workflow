@@ -977,6 +977,7 @@ public class DmeSyncScheduler {
 		statusInfo.setRunId(runId);
 		statusInfo.setError("");
 		statusInfo.setRetryCount(0L);
+		statusInfo.setEndWorkflow(false);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		// Delete the metadata info created for this object ID
 		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
