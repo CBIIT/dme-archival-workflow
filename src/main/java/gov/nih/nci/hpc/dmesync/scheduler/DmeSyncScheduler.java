@@ -652,6 +652,9 @@ public class DmeSyncScheduler {
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
         	}
+         // For re-run: Validate the file size is less than the Permitted File Size before uploading and set endWorkflow to true/false.
+          statusInfo = validateFileSize(file, statusInfo);
+       	 if (statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
@@ -667,6 +670,11 @@ public class DmeSyncScheduler {
 
             sender.send(message, "inbound.queue");
             continue;
+          }
+          } else {
+        	  logger.info(
+      				"[Scheduler] Skipping: {} File/Folder to process because the file size is more than upload permitted File size {}.",
+      				statusInfo.getOriginalFilePath());
           }
         }
 
@@ -991,6 +999,7 @@ public class DmeSyncScheduler {
 		statusInfo.setRunId(runId);
 		statusInfo.setError("");
 		statusInfo.setRetryCount(0L);
+		statusInfo.setEndWorkflow(false);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		// Delete the metadata info created for this object ID
 		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
