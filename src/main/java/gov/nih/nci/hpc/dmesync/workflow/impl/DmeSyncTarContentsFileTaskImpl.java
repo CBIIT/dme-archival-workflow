@@ -171,6 +171,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 				checkForUploadedContentsFile.setRunId(object.getRunId());
 				checkForUploadedContentsFile.setError("");
 				checkForUploadedContentsFile.setRetryCount(0L);
+				checkForUploadedContentsFile.setEndWorkflow(false);
 				checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 				contentsFileRecord = checkForUploadedContentsFile;
 			}
