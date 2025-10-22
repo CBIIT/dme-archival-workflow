@@ -844,7 +844,7 @@ public class DmeSyncScheduler {
   	// Validate the file size is less than the Permitted File Size before uploading and set endWorkflow to true/false.
   	 statusInfo = validateFileSize(file,statusInfo);
    	 
-  	 if(statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
+  	 if (statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
       // Send the objectId to the message queue for processing
       DmeSyncMessageDto message = new DmeSyncMessageDto();
       message.setObjectId(statusInfo.getId());
@@ -853,7 +853,7 @@ public class DmeSyncScheduler {
 		logger.info(
 				"[Scheduler] Skipping: {} File/Folder to process because the file size is more than upload permitted File size {}.",
 				statusInfo.getOriginalFilePath());
-	}
+     }
     } 
   }
 

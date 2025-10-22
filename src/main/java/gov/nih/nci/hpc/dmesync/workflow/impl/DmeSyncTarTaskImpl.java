@@ -141,7 +141,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    // check to validate is the folder to tar is less than maxFilesize
 			if (foldersize > maxFileSize) {
 				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
-						super.getTaskName(),foldersize , maxFileSize);
+						super.getTaskName(), foldersize, maxFileSize);
 				throw new DmeSyncStorageException("Folder exceeds the permitted size of "
 						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 			} else {
