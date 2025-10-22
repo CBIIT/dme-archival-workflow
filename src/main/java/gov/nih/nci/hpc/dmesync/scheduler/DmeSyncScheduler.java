@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -513,12 +514,6 @@ public class DmeSyncScheduler {
 
      StatusInfo statusInfo = null;
       
-	 long maxFileSize = Long.parseLong(maxPermittedFileSize);
-
-	// Validate the file size is less than the Permitted File Size before uploading.
-		// if not record error in report
-	if (file.getSize() <= maxFileSize) {
-
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
         // Checks the local db to see if it has been completed
@@ -844,19 +839,20 @@ public class DmeSyncScheduler {
       // Insert the record in local DB
       logger.info("[Scheduler] Including: {}", file.getAbsolutePath());
       statusInfo = insertRecordDb(file, false);
+      
 
+  	// Validate the file size is less than the Permitted File Size before uploading and set endWorkflow to true/false.
+  	 statusInfo = validateFileSize(file,statusInfo);
+   	 
+  	 if(statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
       // Send the objectId to the message queue for processing
       DmeSyncMessageDto message = new DmeSyncMessageDto();
       message.setObjectId(statusInfo.getId());
-
       sender.send(message, "inbound.queue");
 	} else {
-		// If file size is greater than the permitted value just record in db , so the
-		// details will be displayed in the automated report
-		String errorMessage = "File exceeds the permitted size of "
-				+ ExcelUtil.humanReadableByteCount(maxFileSize, true);
-		logger.info("[Scheduler] Skipping: {} because {}", file.getAbsolutePath(), errorMessage);
-		insertErrorRecordDb(file, true, errorMessage);
+		logger.info(
+				"[Scheduler] Skipping: {} File/Folder to process because the file size is more than upload permitted File size {}.",
+				statusInfo.getOriginalFilePath());
 	}
     } 
   }
@@ -1005,23 +1001,46 @@ public class DmeSyncScheduler {
 		sender.send(message, "inbound.queue");
 	}
 	
-	private StatusInfo insertErrorRecordDb(HpcPathAttributes file, boolean endWorkflow , String errorMessage) {
+	/*
+	 * If folder/file size is greater than the permitted value set endworkflow to
+	 * true and record the error , so the details will be displayed in the automated
+	 * report
+	 */
+	private StatusInfo validateFileSize(HpcPathAttributes file, StatusInfo statusInfo) {
+		long maxUploadFileSize = Long.parseLong(maxPermittedFileSize);
+		String humanReadableMaxUploadedSize = ExcelUtil.humanReadableByteCount(maxUploadFileSize, true);
+		if (file.getIsDirectory()) {
+			File folder = new File(file.getAbsolutePath());
+			long folderSize = FileUtils.sizeOfDirectory(folder);
+			if (folderSize > maxUploadFileSize) {
+				String errorMessage = "Folder with size " + ExcelUtil.humanReadableByteCount(folderSize, true) + " exceeds the permitted size of "
+						+ humanReadableMaxUploadedSize;
+				logger.info("[Scheduler] Folder: {} because {}", file.getAbsolutePath(), errorMessage);
+				statusInfo = setEndWorkflowStatus(statusInfo, errorMessage);
+			}
 
-	    StatusInfo statusInfo = new StatusInfo();
-	    statusInfo.setRunId(runId);
-	    statusInfo.setOrginalFileName(file.getName());
-	    statusInfo.setOriginalFilePath(file.getAbsolutePath());
-	    statusInfo.setSourceFileName(untar ? file.getTarEntry() : file.getName());
-	    statusInfo.setSourceFilePath(file.getAbsolutePath());
-	    statusInfo.setFilesize(file.getSize());
-	    statusInfo.setStartTimestamp(new Date());
-	    statusInfo.setDoc(doc);
-	    if(endWorkflow) {
-	      statusInfo.setEndWorkflow(endWorkflow);
-	      statusInfo.setError(errorMessage);
-	    }
-	    statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
-	    return statusInfo;
+		} else {
+			if (file.getSize() > maxUploadFileSize) {
+				// If file size is greater than the permitted value set endworkflow to true and
+				// record the error , so the
+				// details will be displayed in the automated report
+				String errorMessage = "File with " + ExcelUtil.humanReadableByteCount(file.getSize(), true) + " exceeds the permitted size of "
+						+ humanReadableMaxUploadedSize;
+				logger.info("[Scheduler] File: {} because {}", file.getAbsolutePath(), errorMessage);
+				statusInfo = setEndWorkflowStatus(statusInfo, errorMessage);
+
+			}
+		}
+		return statusInfo;
+	}
+
+	private StatusInfo setEndWorkflowStatus(StatusInfo statusInfo, String errorMessage) {
+
+		statusInfo.setEndWorkflow(true);
+		statusInfo.setError(errorMessage);
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+		return statusInfo;
+
 	}
 
 
