@@ -656,6 +656,7 @@ public class DmeSyncScheduler {
 			// before uploading, and set endWorkflow to true and record the error if file
 			// size exceeds.
        if(statusInfo != null) {
+       	 statusInfo.setRunId(runId);
 	     statusInfo = validateFileSize(file, statusInfo);
        	 if (statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
         	//Update the run_id and reset the retry count and errors
