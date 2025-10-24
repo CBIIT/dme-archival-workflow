@@ -1024,6 +1024,7 @@ public class DmeSyncScheduler {
 		if (file.getIsDirectory()) {
 			File folder = new File(file.getAbsolutePath());
 			long folderSize = FileUtils.sizeOfDirectory(folder);
+			statusInfo.setFilesize(folderSize);
 			if (folderSize > maxUploadFileSize) {
 				String errorMessage = "Folder with size " + ExcelUtil.humanReadableByteCount(folderSize, true) + " exceeds the permitted size of "
 						+ humanReadableMaxUploadedSize;
@@ -1043,6 +1044,7 @@ public class DmeSyncScheduler {
 
 			}
 		}
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		return statusInfo;
 	}
 
@@ -1050,7 +1052,6 @@ public class DmeSyncScheduler {
 
 		statusInfo.setEndWorkflow(true);
 		statusInfo.setError(errorMessage);
-		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		return statusInfo;
 
 	}
