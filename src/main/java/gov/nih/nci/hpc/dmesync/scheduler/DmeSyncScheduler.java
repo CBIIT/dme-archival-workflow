@@ -676,6 +676,7 @@ public class DmeSyncScheduler {
         	  logger.info(
       				"[Scheduler] Skipping: {} File/Folder to process because the file size is more than upload permitted File size {}.",
       				statusInfo.getOriginalFilePath());
+              continue;
           }
        }
         }
