@@ -269,7 +269,6 @@ public class DmeSyncScheduler {
         logger.info("[Scheduler] No files/folders found for runID: {}", runId);
         if (shutDownFlag) {
           logger.info("[Scheduler] No files found. Shutting down the application.");
-          MDC.clear();
           DmeSyncApplication.shutdown();
         }
         MDC.clear();
@@ -328,8 +327,6 @@ public class DmeSyncScheduler {
     			  emailBody);
     	  if (shutDownFlag) {
     	    logger.info("[Scheduler] No files processed. Shutting down the application.");
-    	    MDC.clear();
-    	    runId = null;
     	    DmeSyncApplication.shutdown();
     	  }
       }
