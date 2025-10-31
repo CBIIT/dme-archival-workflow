@@ -249,6 +249,8 @@ The following properties can be set in `application.properties` file:
   * If specified, application will load the custom metadata excel file supplied by the user.
 * `dmesync.additional.pi.metadata.excel=<file path to the level PI metadata file>`
   * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
+* `dmesync.max.permitted.file.size=2500000000000`
+  * Maximum permitted file size for upload is 2.5 TB.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
 
