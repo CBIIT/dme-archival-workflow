@@ -321,10 +321,10 @@ public class DmeSyncScheduler {
       if(CollectionUtils.isEmpty(currentRun))
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
-      if (shutDownFlag) {
-  	    logger.info("[Scheduler] No files/folders found. Shutting down the application.");
-  	    DmeSyncApplication.shutdown();
-  	  }
+		if (shutDownFlag) {
+			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+			DmeSyncApplication.shutdown();
+		}
       
     } catch (Exception e) {
       //Send email notification
