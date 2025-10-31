@@ -1035,6 +1035,7 @@ public class DmeSyncScheduler {
 			}
 
 		} else {
+			statusInfo.setFilesize(file.getSize());
 			if (file.getSize() > maxUploadFileSize) {
 				// If file size is greater than the permitted value set endworkflow to true and
 				// record the error , so the
