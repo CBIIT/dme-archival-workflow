@@ -55,6 +55,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncPermissionArchiveTaskImpl permissionArchiveTask;
   @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
+  @Autowired private DmeSyncCreateCollectionSoftlinkTaskImpl createCollectionSoftlinkTask;
   @Autowired private DmeSyncMoveDataObjectTaskImpl moveDataObjectTask;
   
   @Value("${dmesync.db.access:local}")
@@ -86,6 +87,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   
   @Value("${dmesync.create.softlink:false}")
   private boolean createSoftlink;
+  
+  @Value("${dmesync.create.collection.softlink:false}")
+  private boolean createCollectionSoftlink;
   
   @Value("${dmesync.metadata.update.only:false}")
   private boolean metadataUpdateOnly;
@@ -125,7 +129,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum && !createSoftlink && !moveProcessedFiles && !awsFlag)
+      if(checksum && !createSoftlink && ! createCollectionSoftlink && !moveProcessedFiles && !awsFlag)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
@@ -133,13 +137,15 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     	  tasks.add(syncUploadTask);
       else if (createSoftlink)
     	  tasks.add(createSoftlinkTask);
+      else if (createCollectionSoftlink)
+    	  tasks.add(createCollectionSoftlinkTask);
       else if (moveProcessedFiles)
     	  tasks.add(moveDataObjectTask);
       else if (awsFlag)
     	  tasks.add(awsS3UploadTask);
       else
     	  tasks.add(presignUploadTask);
-      if(!metadataUpdateOnly && !createSoftlink && !moveProcessedFiles && !awsFlag) {
+      if(!metadataUpdateOnly && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag) {
 	      tasks.add(verifyTask);
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)

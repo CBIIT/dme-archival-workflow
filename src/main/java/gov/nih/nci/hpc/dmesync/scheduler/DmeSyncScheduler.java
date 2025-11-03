@@ -154,6 +154,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.create.softlink:false}")
   private boolean createSoftlink;
   
+  @Value("${dmesync.create.collection.softlink:false}")
+  private boolean createCollectionSoftlink;
+  
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
   
@@ -231,6 +234,12 @@ public class DmeSyncScheduler {
     		        dateFormat.format(new Date()),
     		        runId,
     		        sourceSoftlinkFile);
+    else if(createCollectionSoftlink)
+   	 logger.info(
+   		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink file to read {}",
+   		        dateFormat.format(new Date()),
+   		        runId,
+   		        sourceSoftlinkFile);
     else
 	    logger.info(
 	        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
@@ -247,6 +256,8 @@ public class DmeSyncScheduler {
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
     	  paths = queryDataObjects();
+      } else if(createCollectionSoftlink) {
+    	  paths = listCollectionsToLink();
       } else if (noScanRerun) {
         findFilesToRerun();
         logger.info(
@@ -271,7 +282,7 @@ public class DmeSyncScheduler {
         return;
       } else {
         for (HpcPathAttributes pathAttr : paths) {
-          if (pathAttr.getIsDirectory()) {
+          if (pathAttr.getIsDirectory() && !createCollectionSoftlink) {
             //If depth of -1 is specified, skip if it is not a leaf folder
             if (tar && depth.equals("-1") && skipIfNotLeafFolder) {
               try(Stream<Path> stream = Files.list(Paths.get(pathAttr.getAbsolutePath()))) {
@@ -485,6 +496,33 @@ public class DmeSyncScheduler {
       result.addAll(dmeSyncDataObjectListQuery.getPathAttributes(collectionPath));
     }
     return result;
+  }
+  
+  private List<HpcPathAttributes> listCollectionsToLink() throws HpcException, IOException {
+	    List<HpcPathAttributes> result = new ArrayList<>();
+	    Path filePath = Paths.get(sourceSoftlinkFile);
+	    List<String> lines = Files.readAllLines(filePath);
+	    //process each collection
+	    for(String collectionPath: lines) {
+	      result.add(getPathAttributesOfCollection(collectionPath));
+	    }
+	    return result;
+	  }
+
+  /**
+   * Get path attributes of a collection to link.
+   * 
+   * @param collectionPath The collection path
+   * @return pathAttributes
+   * @throws HpcException The exception
+   */
+  private HpcPathAttributes getPathAttributesOfCollection(String collectionPath) {
+	HpcPathAttributes pathAttributes = new HpcPathAttributes();
+	pathAttributes.setName(Paths.get(collectionPath).getFileName().toString());
+	pathAttributes.setPath(collectionPath);
+	pathAttributes.setAbsolutePath(collectionPath);
+	pathAttributes.setIsDirectory(true);
+	return pathAttributes;
   }
 
   private List<HpcPathAttributes> toHpcPathAttribute(String directory) {
@@ -873,7 +911,7 @@ public class DmeSyncScheduler {
           return;
 	 } else {
       StatusInfo latest = null;
-      if(createSoftlink) {
+      if(createSoftlink || createCollectionSoftlink) {
     	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
       } else {
 	      //Add base path also to distinguish multiple docs running the workflow.
