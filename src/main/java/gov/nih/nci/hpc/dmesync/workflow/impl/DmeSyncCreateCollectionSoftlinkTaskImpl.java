@@ -99,8 +99,8 @@ public class DmeSyncCreateCollectionSoftlinkTaskImpl extends AbstractDmeSyncTask
           throw new DmeSyncWorkflowException(errorResponse.getMessage());
       }
     } catch (Exception e) {
-      logger.error("[{}] error occured during create collection softlink", super.getTaskName(), e);
-      throw new DmeSyncWorkflowException("Error occured during collection softlink creation", e);
+      logger.error("[{}] error occurred during create collection softlink", super.getTaskName(), e);
+      throw new DmeSyncWorkflowException("Error occurred during collection softlink creation", e);
     }
 
     return object;
