@@ -129,7 +129,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
 
     if (!dryRun) {
-      if(checksum && !createSoftlink && ! createCollectionSoftlink && !moveProcessedFiles && !awsFlag)
+      if(checksum && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag)
         tasks.add(createChecksumTask);
       if(fileSystemUpload)
     	  tasks.add(fileSystemUploadTask);
