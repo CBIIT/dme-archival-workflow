@@ -160,7 +160,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			                try {
 			                    writer.close();
 			                } catch (IOException e) {
-			                	logger.error("Error closing BufferedWriter: " + e.getMessage());
+			                	logger.error("Error closing BufferedWriter: {}", e.getMessage(), e);
 			                }
 			            }
 			        }
