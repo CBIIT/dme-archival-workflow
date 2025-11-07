@@ -1,7 +1,10 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
@@ -32,18 +35,19 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProcessor implements DmeSyncPathMetadataProcessor {
 
 	@Value("${dmesync.doc.name}")
-	  private String doc;
+	private String doc;
+	
 	@Value("${dmesync.source.base.dir}")
 	protected String sourceBaseDir;
 
+	@Value("${dmesync.work.base.dir}")
+	private String workDir;
+	  
 	@Value("${dmesync.create.collection.softlink:false}")
 	private boolean createCollectionSoftlink;
 	
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
-	
-	@Value("${dmesync.source.softlink.file:}")
-	private String softlinkFile;
 	
 	@Value("${dmesync.db.access:local}")
 	  protected String access;
@@ -57,7 +61,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		logger.info("[PathMetadataTask] GB OMICS getArchivePath called");
 
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() :  object.getSourceFilePath()).toFile().getName();
 		String archivePath = "";
 		if(isDATA() || isONT()) {
 			String sampleId = "";
@@ -132,7 +136,36 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String piCollectionName = getPICollectionName(object);
 			piCollectionName = piCollectionName.replace(" ", "_");
 			archivePath = destinationBaseDir + "/Lab_" + piCollectionName + "/Project_" + projectCollectionName
-			+ (createCollectionSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object) : "/Analysis" + "/" + fileName);
+					+ (createCollectionSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object)
+							: (isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis") + "/"
+									+ fileName);
+			
+			Path collectionLinkFilePath = Paths.get(workDir, "collection_link", getPIFolder(object), projectCollectionName, "collection_link.txt");
+			if(!Files.exists(collectionLinkFilePath)) {
+				String flowcellPaths = getAttrValueWithExactKey(projectCollectionName, "flowcell_path");
+				if(StringUtils.isNotBlank(flowcellPaths)) {
+					BufferedWriter writer = null;
+					try {
+						Files.createDirectories(collectionLinkFilePath.getParent());
+						writer = new BufferedWriter(new FileWriter(collectionLinkFilePath.toString()));
+			            for (String item : flowcellPaths.split(",")) {
+			                writer.write(item);
+			                writer.newLine();
+			            }
+			        } catch (IOException e) {
+			        	logger.error("Error writing to collection link file: ", e.getMessage());
+			        } finally {
+			            // Ensure the writer is closed, even if an exception occurred
+			            if (writer != null) {
+			                try {
+			                    writer.close();
+			                } catch (IOException e) {
+			                	logger.error("Error closing BufferedWriter: " + e.getMessage());
+			                }
+			            }
+			        }
+				}
+			}
 		}
 
 		// replace spaces with underscore
@@ -312,14 +345,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 			
 			// Add path metadata entries for "Source_Data" or "Analysis" folder
-			String analysisCollectionPath = projectCollectionPath + (createCollectionSoftlink ? "/Source_Data" : "/Analysis");
+			String analysisCollectionPath = projectCollectionPath + (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis");
 			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
 			pathEntriesAnalysis.setPath(analysisCollectionPath);
-			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (createCollectionSoftlink ? "Source_Data" : "Analysis")));
+			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "Source_Data" : "Analysis")));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 			
 			if(createCollectionSoftlink) {
-				// Add path metadata entries for "Flowcell" collection
+				// Add path metadata entries for "Flowcell_Link" collection
 				String flowcellId = getFlowcellIdForProject(object);
 				dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell_Link"));
 				dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
@@ -333,7 +366,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
 		// Add object metadata
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() : object.getSourceFilePath()).toFile().getName();
 		String fileType = StringUtils.substringBefore(fileName, ".gz");
 	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
@@ -368,7 +401,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			piFolder = getAttrValueWithExactKey(key, "PI");
 		}
 		else if(createCollectionSoftlink)
-			piFolder = getCollectionNameFromParent(softlinkFile, StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+			piFolder = getCollectionNameFromParent(object.getSourceFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		else
 			piFolder = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		return piFolder;
@@ -384,7 +417,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String projectId = null;
 		if(createCollectionSoftlink)
-			projectId = getCollectionNameFromParent(softlinkFile, getPIFolder(object));
+			projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object));
 		else
 			projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
 		return projectId.toUpperCase().replace('_', '-');
@@ -566,6 +599,10 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	
 	private boolean isFastqOrBam(String originalFilePath) {
 		return StringUtils.contains(originalFilePath, "fastq_") || StringUtils.contains(originalFilePath, "bam_");
+	}
+	
+	private boolean isRawData(String originalFilePath) {
+		return StringUtils.contains(originalFilePath, "raw");
 	}
 	
 	private boolean isMultiplexed(String originalFileName) {

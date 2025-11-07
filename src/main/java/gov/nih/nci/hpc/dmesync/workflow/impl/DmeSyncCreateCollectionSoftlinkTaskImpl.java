@@ -74,7 +74,7 @@ public class DmeSyncCreateCollectionSoftlinkTaskImpl extends AbstractDmeSyncTask
       //Set the link source path for softlink creation.
       HpcCollectionRegistrationDTO collectionRegistrationDTO = new HpcCollectionRegistrationDTO();
       collectionRegistrationDTO.setCreateParentCollections(true);
-      collectionRegistrationDTO.setLinkSourcePath(object.getSourceFilePath());
+      collectionRegistrationDTO.setLinkSourcePath(object.getOriginalFilePath());
       collectionRegistrationDTO.getMetadataEntries().addAll(object.getDataObjectRegistrationRequestDTO().getMetadataEntries());
       collectionRegistrationDTO.setParentCollectionsBulkMetadataEntries(object.getDataObjectRegistrationRequestDTO().getParentCollectionsBulkMetadataEntries());
       

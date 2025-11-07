@@ -234,12 +234,21 @@ public class DmeSyncScheduler {
     		        dateFormat.format(new Date()),
     		        runId,
     		        sourceSoftlinkFile);
-    else if(createCollectionSoftlink)
-   	 logger.info(
+    else if(createCollectionSoftlink) {
+    	if(StringUtils.isNotBlank(sourceSoftlinkFile)) {
+    		logger.info(
    		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink file to read {}",
    		        dateFormat.format(new Date()),
    		        runId,
    		        sourceSoftlinkFile);
+    	} else {
+    		logger.info(
+		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink directory to scan {}",
+		        dateFormat.format(new Date()),
+		        runId,
+		        syncBaseDir);
+    	}
+    }
     else
 	    logger.info(
 	        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
@@ -256,8 +265,6 @@ public class DmeSyncScheduler {
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
     	  paths = queryDataObjects();
-      } else if(createCollectionSoftlink) {
-    	  paths = listCollectionsToLink();
       } else if (noScanRerun) {
         findFilesToRerun();
         logger.info(
@@ -319,7 +326,15 @@ public class DmeSyncScheduler {
         }
       } else {
         // Process the list of files
-        processFiles(files);
+    	  if(createCollectionSoftlink) {
+    		  for (HpcPathAttributes file : files) {
+    	          //List tar files from each folder
+    	          List<HpcPathAttributes> collectionLinkList = listCollectionsToLink(file.getAbsolutePath());
+    	          processFiles(collectionLinkList);
+    	        }
+    		  
+    	  } else
+    		  processFiles(files);
       }
       logger.info(
           "[Scheduler] Completed file scan at {} for Run ID: {} base directory to scan {}",
@@ -498,13 +513,13 @@ public class DmeSyncScheduler {
     return result;
   }
   
-  private List<HpcPathAttributes> listCollectionsToLink() throws HpcException, IOException {
+  private List<HpcPathAttributes> listCollectionsToLink(String sourceSoftlinkFile) throws HpcException, IOException {
 	    List<HpcPathAttributes> result = new ArrayList<>();
 	    Path filePath = Paths.get(sourceSoftlinkFile);
 	    List<String> lines = Files.readAllLines(filePath);
 	    //process each collection
 	    for(String collectionPath: lines) {
-	      result.add(getPathAttributesOfCollection(collectionPath));
+	      result.add(getPathAttributesOfCollection(sourceSoftlinkFile, collectionPath));
 	    }
 	    return result;
 	  }
@@ -516,10 +531,10 @@ public class DmeSyncScheduler {
    * @return pathAttributes
    * @throws HpcException The exception
    */
-  private HpcPathAttributes getPathAttributesOfCollection(String collectionPath) {
+  private HpcPathAttributes getPathAttributesOfCollection(String sourceSoftlinkFile, String collectionPath) {
 	HpcPathAttributes pathAttributes = new HpcPathAttributes();
 	pathAttributes.setName(Paths.get(collectionPath).getFileName().toString());
-	pathAttributes.setPath(collectionPath);
+	pathAttributes.setPath(sourceSoftlinkFile);
 	pathAttributes.setAbsolutePath(collectionPath);
 	pathAttributes.setIsDirectory(true);
 	return pathAttributes;
@@ -887,7 +902,7 @@ public class DmeSyncScheduler {
     statusInfo.setOrginalFileName(file.getName());
     statusInfo.setOriginalFilePath(file.getAbsolutePath());
     statusInfo.setSourceFileName(untar ? file.getTarEntry() : file.getName());
-    statusInfo.setSourceFilePath(file.getAbsolutePath());
+    statusInfo.setSourceFilePath(createCollectionSoftlink ? file.getPath() : file.getAbsolutePath());
     statusInfo.setFilesize(file.getSize());
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(doc);
