@@ -672,6 +672,11 @@ public class DmeSyncScheduler {
 				}
 			}
 		}
+		else if(createCollectionSoftlink) {
+			statusInfo =
+		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
+		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
+		}
 		else {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(

@@ -140,6 +140,17 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 							: (isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis") + "/"
 									+ fileName);
 			
+			//Check if this project is in the metadata spreadsheet
+			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
+			if(projectTitle == null) {
+				logger.info("No need to upload file : {}", object.getOriginalFilePath());
+				object.setRunId(object.getRunId() + "_IGNORED");
+				object.setEndWorkflow(true);
+				object.setError("No need to upload yet");
+				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				return "";
+			}
+			
 			Path collectionLinkFilePath = Paths.get(workDir, "collection_link", getPIFolder(object), projectCollectionName, "collection_link.txt");
 			if(!Files.exists(collectionLinkFilePath)) {
 				String flowcellPaths = getAttrValueWithExactKey(projectCollectionName, "flowcell_path");
@@ -149,7 +160,10 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						Files.createDirectories(collectionLinkFilePath.getParent());
 						writer = new BufferedWriter(new FileWriter(collectionLinkFilePath.toString()));
 			            for (String item : flowcellPaths.split(",")) {
-			                writer.write(item);
+			            	String collectionPath = item.trim();
+			            	if(StringUtils.isEmpty(collectionPath))
+			            		continue;
+			                writer.write(StringUtils.prependIfMissing(collectionPath, "/"));
 			                writer.newLine();
 			            }
 			        } catch (IOException e) {
@@ -474,7 +488,9 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String flowcellId = "";
 		if(object.getOriginalFilePath().contains("Flowcell_")) {
 			String pathStartingFlowcellId = StringUtils.substringAfter(object.getOriginalFilePath(), "Flowcell_");
-			return StringUtils.substringBefore(pathStartingFlowcellId, "/");
+			flowcellId = StringUtils.substringBefore(pathStartingFlowcellId, "/");
+		} else {
+			flowcellId = object.getOrginalFileName();
 		}
 		return flowcellId;
 	}
