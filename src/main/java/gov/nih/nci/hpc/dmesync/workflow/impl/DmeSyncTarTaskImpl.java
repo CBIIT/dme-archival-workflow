@@ -121,13 +121,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Autowired
 	private DmeSyncProducer sender;
 	
-	
-
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
-	    HpcLocalDirectoryListQuery hpcLocalDirectory = new HpcLocalDirectoryListQuery();
 
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
@@ -147,7 +144,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	        File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
 		    // check to validate is the folder to tar is less than maxFilesize
-			if (hpcLocalDirectory.getDirectorySize(originalFilePath,excludeFolders) > maxFileSize) {
+			if (TarUtil.getDirectorySize(originalFilePath,excludeFolders) > maxFileSize) {
 				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
 						super.getTaskName(), object.getFilesize(), maxFileSize);
 				throw new DmeSyncStorageException("Folder exceeds the permitted size of "

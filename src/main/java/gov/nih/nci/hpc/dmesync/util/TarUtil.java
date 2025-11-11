@@ -17,10 +17,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -298,5 +301,33 @@ public class TarUtil {
       logger.error("{} is not supported", file.getName());
     }
   }
+  
+  public static long getDirectorySize(Path dir, List<String> excludeFolders) throws IOException {
+		final long[] size = { 0 };
+
+		Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attrs) {
+				// Exclude folders based on the names
+				if (excludeFolders != null
+						&& excludeFolders.stream().anyMatch(f -> folder.getFileName().toString().equals(f))) {
+				      logger.info("{} is excluded for file size calculation", folder.getFileName().toString());
+					return FileVisitResult.SKIP_SUBTREE;
+				}
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+				if (Files.isReadable(file)) {
+					size[0] += attrs.size();
+				}
+				return FileVisitResult.CONTINUE;
+			}
+
+		});
+
+		return size[0];
+	}
   
 }
