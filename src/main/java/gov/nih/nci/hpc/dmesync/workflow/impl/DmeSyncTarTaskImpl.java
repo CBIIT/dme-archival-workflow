@@ -33,6 +33,7 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -119,11 +120,18 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Autowired
 	private DmeSyncProducer sender;
+	
+	
 
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
+	    HpcLocalDirectoryListQuery hpcLocalDirectory = new HpcLocalDirectoryListQuery();
+
+		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
+				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+		
 		
 		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"movies_TarContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars processing
@@ -137,8 +145,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		try {
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
 	        File Folder = new File(object.getOriginalFilePath());
+	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
 		    // check to validate is the folder to tar is less than maxFilesize
-			if (FileUtils.sizeOfDirectory(Folder) > maxFileSize) {
+			if (hpcLocalDirectory.getDirectorySize(originalFilePath,excludeFolders) > maxFileSize) {
 				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
 						super.getTaskName(), object.getFilesize(), maxFileSize);
 				throw new DmeSyncStorageException("Folder exceeds the permitted size of "
@@ -158,8 +167,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] Creating Tar work space directory {}", super.getTaskName(), tarWorkDirPath);			
 			}
 
-			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
-					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+
 			// if this index range are given for files in status_info object then the tar
 			// should be done for files in folders
 			if (filesPerTar > 0 && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
