@@ -33,7 +33,6 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
-import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;

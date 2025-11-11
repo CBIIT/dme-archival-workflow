@@ -304,6 +304,8 @@ public class TarUtil {
   
   public static long getDirectorySize(Path dir, List<String> excludeFolders) throws IOException {
 		final long[] size = { 0 };
+		
+		try {
 
 		Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 			@Override
@@ -328,6 +330,9 @@ public class TarUtil {
 		});
 
 		return size[0];
+	} catch (IOException e) {
+		logger.error("Failed to walk file tree for directory: {}", dir, e);
+		throw e;
 	}
-  
+  }
 }
