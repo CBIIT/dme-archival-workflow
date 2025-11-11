@@ -167,14 +167,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			                writer.newLine();
 			            }
 			        } catch (IOException e) {
-			        	logger.error("Error writing to collection link file: ", e.getMessage());
+			        	logger.error("Error writing to collection link file: {}", e.getMessage(), e);
 			        } finally {
 			            // Ensure the writer is closed, even if an exception occurred
 			            if (writer != null) {
 			                try {
 			                    writer.close();
 			                } catch (IOException e) {
-			                	logger.error("Error closing BufferedWriter: " + e.getMessage());
+			                	logger.error("Error closing BufferedWriter: {}", e.getMessage(), e);
 			                }
 			            }
 			        }
