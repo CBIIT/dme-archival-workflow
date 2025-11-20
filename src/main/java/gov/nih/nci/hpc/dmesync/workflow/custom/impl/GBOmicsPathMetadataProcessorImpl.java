@@ -340,8 +340,9 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			else
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "CCRGB"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Completed"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(projectCollectionName, "project_start_date")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_end_date")))
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_completed_date")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date", getAttrValueWithExactKey(projectCollectionName, "project_completed_date")));
 			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "key_collaborator")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator", getAttrValueWithExactKey(projectCollectionName, "key_collaborator")));
