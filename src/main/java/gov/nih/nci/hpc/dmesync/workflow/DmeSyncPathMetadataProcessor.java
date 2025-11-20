@@ -24,8 +24,9 @@ public interface DmeSyncPathMetadataProcessor {
    * @return archival path
    * @throws DmeSyncMappingException on mapping error
    * @throws IOException on IO Error
+ * @throws DmeSyncWorkflowException 
    */
-  String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException;
+  String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException, DmeSyncWorkflowException;
 
   /**
    * Gets the collection and data object meta-data
