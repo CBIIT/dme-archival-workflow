@@ -155,6 +155,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("ras")
   private DmeSyncPathMetadataProcessor rasLcoProcessor;
   
+  @Autowired
+  @Qualifier("nob")
+  private DmeSyncPathMetadataProcessor nobProcessor;
+  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
       return hitifProcessor;
@@ -228,6 +232,8 @@ public class DmeSyncPathMetadataProcessorFactory {
         return ccrLcoProcessor;
     }else if ("ras".equals(doc)) {
     	return rasLcoProcessor;
+    }else if ("nob".equals(doc)) {
+    	return nobProcessor;
     }
     else {
         return defaultProcessor;
