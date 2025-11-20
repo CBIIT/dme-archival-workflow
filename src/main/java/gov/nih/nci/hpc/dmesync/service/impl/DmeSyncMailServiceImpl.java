@@ -54,8 +54,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.source.base.dir}")
   private String syncBaseDir;
   
-  @Value("${dmesync.max.recommended.file.size}")
-  private String maxRecommendedFileSize;
+  @Value("${dmesync.max.permitted.file.size}")
+  private String maxPermittedFileSize;
   
   @Value("${dmesync.min.tar.file.size:1024}")
   private String minTarFile;
@@ -143,7 +143,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
               
       // Check to see if any files were over the recommended size and flag if it was.
       boolean exceedsMaxRecommendedFileSize = false;
-      long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+      long maxFileSize = Long.parseLong(maxPermittedFileSize);
       long processedCount = 0, successCount = 0, failedCount = 0;
       for (StatusInfo info : statusInfo) {
     	  processedCount ++;

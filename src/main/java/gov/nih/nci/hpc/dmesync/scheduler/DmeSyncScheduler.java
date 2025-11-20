@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
+import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
@@ -183,6 +185,9 @@ public class DmeSyncScheduler {
   
   @Value("${dmesync.tar.excluded.contents.file:false}")
   private boolean createTarExcludedContentsFile;
+  
+  @Value("${dmesync.max.permitted.file.size}")
+  private String maxPermittedFileSize;
   
   
   
@@ -511,8 +516,8 @@ public class DmeSyncScheduler {
 
     for (HpcPathAttributes file : files) {
 
-      StatusInfo statusInfo = null;
-
+     StatusInfo statusInfo = null;
+      
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
         // Checks the local db to see if it has been completed
@@ -651,7 +656,13 @@ public class DmeSyncScheduler {
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
         	}
-          if(statusInfo != null) {
+			// For re-run: Validate the file size is less than the Permitted File Size
+			// before uploading, and set endWorkflow to true and record the error if file
+			// size exceeds.
+       if(statusInfo != null) {
+       	 statusInfo.setRunId(runId);
+	     statusInfo = validateFileSize(file, statusInfo);
+       	 if (statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
         	statusInfo.setError("");
@@ -666,7 +677,13 @@ public class DmeSyncScheduler {
 
             sender.send(message, "inbound.queue");
             continue;
+          } else {
+        	  logger.info(
+      				"[Scheduler] Skipping: {} File/Folder to process because the file size is more than upload permitted File size {}.",
+      				statusInfo.getOriginalFilePath());
+              continue;
           }
+       }
         }
 
       }
@@ -838,13 +855,22 @@ public class DmeSyncScheduler {
       // Insert the record in local DB
       logger.info("[Scheduler] Including: {}", file.getAbsolutePath());
       statusInfo = insertRecordDb(file, false);
+      
 
+		// Validate the file size is less than the Permitted File Size before uploading,
+		// and set endWorkflow to true and record the error if file size exceeds.
+	  	 statusInfo = validateFileSize(file,statusInfo);
+  	 if (statusInfo.isEndWorkflow() == null || Boolean.FALSE.equals(statusInfo.isEndWorkflow())) {
       // Send the objectId to the message queue for processing
       DmeSyncMessageDto message = new DmeSyncMessageDto();
       message.setObjectId(statusInfo.getId());
-
       sender.send(message, "inbound.queue");
-    }
+	} else {
+		logger.info(
+				"[Scheduler] Skipping: {} File/Folder to process because the file size exceeds upload permitted File size {}.",
+				statusInfo.getOriginalFilePath());
+     }
+    } 
   }
 
   private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed) {
@@ -990,6 +1016,52 @@ public class DmeSyncScheduler {
 		message.setObjectId(statusInfo.getId());
 
 		sender.send(message, "inbound.queue");
+	}
+	
+	/*
+	 * If folder/file size is greater than the permitted value set endworkflow to
+	 * true and record the error , so the details will be displayed in the automated
+	 * report
+	 */
+	private StatusInfo validateFileSize(HpcPathAttributes file, StatusInfo statusInfo) {
+		long maxUploadFileSize = Long.parseLong(maxPermittedFileSize);
+		String humanReadableMaxUploadedSize = ExcelUtil.humanReadableByteCount(maxUploadFileSize, true);
+    	statusInfo.setEndWorkflow(false);
+		// If file is Directory check the size of the Folder
+		if (file.getIsDirectory()) {
+			File folder = new File(file.getAbsolutePath());
+			long folderSize = FileUtils.sizeOfDirectory(folder);
+			statusInfo.setFilesize(folderSize);
+			if (folderSize > maxUploadFileSize) {
+				String errorMessage = "Folder with size " + ExcelUtil.humanReadableByteCount(folderSize, true) + " exceeds the permitted size of "
+						+ humanReadableMaxUploadedSize;
+				logger.info("[Scheduler] Folder: {} because {}", file.getAbsolutePath(), errorMessage);
+				statusInfo = setEndWorkflowStatus(statusInfo, errorMessage);
+			}
+
+		} else {
+			statusInfo.setFilesize(file.getSize());
+			if (file.getSize() > maxUploadFileSize) {
+				// If file size is greater than the permitted value set endworkflow to true and
+				// record the error , so the
+				// details will be displayed in the automated report
+				String errorMessage = "File with " + ExcelUtil.humanReadableByteCount(file.getSize(), true) + " exceeds the permitted size of "
+						+ humanReadableMaxUploadedSize;
+				logger.info("[Scheduler] File: {} because {}", file.getAbsolutePath(), errorMessage);
+				statusInfo = setEndWorkflowStatus(statusInfo, errorMessage);
+
+			}
+		}
+		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
+		return statusInfo;
+	}
+
+	private StatusInfo setEndWorkflowStatus(StatusInfo statusInfo, String errorMessage) {
+
+		statusInfo.setEndWorkflow(true);
+		statusInfo.setError(errorMessage);
+		return statusInfo;
+
 	}
 
 

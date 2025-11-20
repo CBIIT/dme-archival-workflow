@@ -100,8 +100,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Value("${dmesync.tar.excluded.contents.file:false}")
 	private boolean createTarExcludedContentsFile;
 	
-	@Value("${dmesync.max.recommended.file.size}")
-	private String maxRecommendedFileSize;
+	@Value("${dmesync.max.permitted.file.size}")
+	private String maxPermittedFileSize;
 	
 	
 	@Value("${dmesync.tar.ignore.broken.link:false}")
@@ -135,12 +135,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else {
 		// Task: Create tar file in work directory for processing
 		try {
-		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+		    long maxFileSize = Long.parseLong(maxPermittedFileSize);
 	        File Folder = new File(object.getOriginalFilePath());
+	        long foldersize=FileUtils.sizeOfDirectory(Folder);
 		    // check to validate is the folder to tar is less than maxFilesize
-			if (FileUtils.sizeOfDirectory(Folder) > maxFileSize) {
+			if (foldersize > maxFileSize) {
 				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
-						super.getTaskName(), object.getFilesize(), maxFileSize);
+						super.getTaskName(), foldersize, maxFileSize);
 				throw new DmeSyncStorageException("Folder exceeds the permitted size of "
 						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 			} else {
