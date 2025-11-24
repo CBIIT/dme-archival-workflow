@@ -1,7 +1,10 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
@@ -32,18 +35,19 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProcessor implements DmeSyncPathMetadataProcessor {
 
 	@Value("${dmesync.doc.name}")
-	  private String doc;
+	private String doc;
+	
 	@Value("${dmesync.source.base.dir}")
 	protected String sourceBaseDir;
 
-	@Value("${dmesync.create.softlink:false}")
-	private boolean createSoftlink;
+	@Value("${dmesync.work.base.dir}")
+	private String workDir;
+	  
+	@Value("${dmesync.create.collection.softlink:false}")
+	private boolean createCollectionSoftlink;
 	
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
-	
-	@Value("${dmesync.source.softlink.file:}")
-	private String softlinkFile;
 	
 	@Value("${dmesync.db.access:local}")
 	  protected String access;
@@ -57,7 +61,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		logger.info("[PathMetadataTask] GB OMICS getArchivePath called");
 
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() :  object.getSourceFilePath()).toFile().getName();
 		String archivePath = "";
 		if(isDATA() || isONT()) {
 			String sampleId = "";
@@ -129,10 +133,53 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			}
 		} else {
 			String projectCollectionName = getProjectCollectionName(object);
-			String piCollectionName = getAttrValueWithExactKey(projectCollectionName, "data_owner");
+			String piCollectionName = getPICollectionName(object);
 			piCollectionName = piCollectionName.replace(" ", "_");
 			archivePath = destinationBaseDir + "/Lab_" + piCollectionName + "/Project_" + projectCollectionName
-			+ (createSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object) : "/Analysis") + "/" + fileName;
+					+ (createCollectionSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object)
+							: (isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis") + "/"
+									+ fileName);
+			
+			//Check if this project is in the metadata spreadsheet
+			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
+			if(projectTitle == null) {
+				logger.info("No need to upload file : {}", object.getOriginalFilePath());
+				object.setRunId(object.getRunId() + "_IGNORED");
+				object.setEndWorkflow(true);
+				object.setError("No need to upload yet");
+				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				return "";
+			}
+			
+			Path collectionLinkFilePath = Paths.get(workDir, "collection_link", getPIFolder(object), projectCollectionName, "collection_link.txt");
+			if(!Files.exists(collectionLinkFilePath)) {
+				String flowcellPaths = getAttrValueWithExactKey(projectCollectionName, "flowcell_path");
+				if(StringUtils.isNotBlank(flowcellPaths)) {
+					BufferedWriter writer = null;
+					try {
+						Files.createDirectories(collectionLinkFilePath.getParent());
+						writer = new BufferedWriter(new FileWriter(collectionLinkFilePath.toString()));
+			            for (String item : flowcellPaths.split(",")) {
+			            	String collectionPath = item.trim();
+			            	if(StringUtils.isEmpty(collectionPath))
+			            		continue;
+			                writer.write(StringUtils.prependIfMissing(collectionPath, "/"));
+			                writer.newLine();
+			            }
+			        } catch (IOException e) {
+			        	logger.error("Error writing to collection link file: {}", e.getMessage(), e);
+			        } finally {
+			            // Ensure the writer is closed, even if an exception occurred
+			            if (writer != null) {
+			                try {
+			                    writer.close();
+			                } catch (IOException e) {
+			                	logger.error("Error closing BufferedWriter: {}", e.getMessage(), e);
+			                }
+			            }
+			        }
+				}
+			}
 		}
 
 		// replace spaces with underscore
@@ -266,25 +313,16 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			}
 			
 		} else {
-			String projectCollectionName = getProjectCollectionName(object);
-			piCollectionName = getAttrValueWithExactKey(projectCollectionName, "data_owner");
-			piCollectionName = piCollectionName.replace(" ", "_");
+			
+			piCollectionName = getPICollectionName(object);
 			piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email", getAttrValueWithExactKey(projectCollectionName, "data_owner_email")));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation", getAttrValueWithExactKey(projectCollectionName, "data_owner_affiliation")));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator", getAttrValueWithExactKey(projectCollectionName, "data_generator")));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email", getAttrValueWithExactKey(projectCollectionName, "data_generator_email")));
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation", getAttrValueWithExactKey(projectCollectionName, "data_generator_affiliation")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "data_owner_designee")))
-				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee", getAttrValueWithExactKey(projectCollectionName, "data_owner_designee")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "data_owner_designee_email")))
-				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email", getAttrValueWithExactKey(projectCollectionName, "data_owner_designee_email")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "data_owner_designee_affiliation")))
-				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation", getAttrValueWithExactKey(projectCollectionName, "data_owner_designee_affiliation")));
-			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
+			hpcBulkMetadataEntries.getPathsMetadataEntries()
+					.add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName, "gb-omics"));
+			
+			String projectCollectionName = getProjectCollectionName(object);
 			
 			// Add path metadata entries for "Project" collection
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
@@ -297,36 +335,44 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKey(projectCollectionName, "project_description")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithExactKey(projectCollectionName, "project_poc")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", getAttrValueWithExactKey(projectCollectionName, "project_poc_email")));
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", getAttrValueWithExactKey(projectCollectionName, "project_poc_affiliation")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_poc_affiliation")))
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", getAttrValueWithExactKey(projectCollectionName, "project_poc_affiliation")));
+			else
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "CCRGB"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Completed"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKey(projectCollectionName, "project_start_date")));
-			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_end_date")))
-				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date", getAttrValueWithExactKey(projectCollectionName, "project_end_date")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "project_completed_date")))
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date", getAttrValueWithExactKey(projectCollectionName, "project_completed_date")));
 			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "key_collaborator")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator", getAttrValueWithExactKey(projectCollectionName, "key_collaborator")));
 			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "key_collaborator_email")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_email", getAttrValueWithExactKey(projectCollectionName, "key_collaborator_email")));
 			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "key_collaborator_affiliation")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation", getAttrValueWithExactKey(projectCollectionName, "key_collaborator_affiliation")));
+			else if (StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "key_collaborator")))
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation", "CCRGB"));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "pubmed_id")))
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("pubmed_id", getAttrValueWithExactKey(projectCollectionName, "pubmed_id")));
+			if(StringUtils.isNotEmpty(getAttrValueWithExactKey(projectCollectionName, "public_data_accession_id")))
+				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("public_data_accession_id", getAttrValueWithExactKey(projectCollectionName, "public_data_accession_id")));
 			
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 			
 			// Add path metadata entries for "Source_Data" or "Analysis" folder
-			String analysisCollectionPath = projectCollectionPath + (createSoftlink ? "/Source_Data" : "/Analysis");
+			String analysisCollectionPath = projectCollectionPath + (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis");
 			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
 			pathEntriesAnalysis.setPath(analysisCollectionPath);
-			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (createSoftlink ? "Source_Data" : "Analysis")));
+			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "Source_Data" : "Analysis")));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 			
-			if(createSoftlink) {
-				// Add path metadata entries for "Flowcell" collection
+			if(createCollectionSoftlink) {
+				// Add path metadata entries for "Flowcell_Link" collection
 				String flowcellId = getFlowcellIdForProject(object);
-				String flowcellCollectionPath = analysisCollectionPath + "/Flowcell_" + flowcellId;
-				HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
-				pathEntriesFlowcell.setPath(flowcellCollectionPath);
-				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell_Link"));
-				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
-				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
+				dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell_Link"));
+				dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
+				dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
+				return dataObjectRegistrationRequestDTO;
 			}
 	    }
 
@@ -335,7 +381,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
 		// Add object metadata
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() : object.getSourceFilePath()).toFile().getName();
 		String fileType = StringUtils.substringBefore(fileName, ".gz");
 	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
@@ -369,8 +415,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String key = getFlowcell(object);
 			piFolder = getAttrValueWithExactKey(key, "PI");
 		}
-		else if(createSoftlink)
-			piFolder = getCollectionNameFromParent(softlinkFile, StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+		else if(createCollectionSoftlink)
+			piFolder = getCollectionNameFromParent(object.getSourceFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		else
 			piFolder = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
 		return piFolder;
@@ -385,8 +431,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String projectId = null;
-		if(createSoftlink)
-			projectId = getCollectionNameFromParent(softlinkFile, getPIFolder(object));
+		if(createCollectionSoftlink)
+			projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object));
 		else
 			projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
 		return projectId.toUpperCase().replace('_', '-');
@@ -443,7 +489,9 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String flowcellId = "";
 		if(object.getOriginalFilePath().contains("Flowcell_")) {
 			String pathStartingFlowcellId = StringUtils.substringAfter(object.getOriginalFilePath(), "Flowcell_");
-			return StringUtils.substringBefore(pathStartingFlowcellId, "/");
+			flowcellId = StringUtils.substringBefore(pathStartingFlowcellId, "/");
+		} else {
+			flowcellId = object.getOrginalFileName();
 		}
 		return flowcellId;
 	}
@@ -568,6 +616,10 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	
 	private boolean isFastqOrBam(String originalFilePath) {
 		return StringUtils.contains(originalFilePath, "fastq_") || StringUtils.contains(originalFilePath, "bam_");
+	}
+	
+	private boolean isRawData(String originalFilePath) {
+		return StringUtils.contains(originalFilePath, "raw");
 	}
 	
 	private boolean isMultiplexed(String originalFileName) {
