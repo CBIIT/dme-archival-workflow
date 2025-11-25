@@ -344,13 +344,14 @@ public class DmeSyncScheduler {
       //Check to see if any records are being processed for this run, if not send email
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
       String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(syncBaseDirFolders)?" in "+syncBaseDirFolders+" folders":"")+ ".";
-      if(CollectionUtils.isEmpty(currentRun))
+      if(CollectionUtils.isEmpty(currentRun)) {
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
 		if (shutDownFlag) {
 			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 			DmeSyncApplication.shutdown();
 		}
+      }
       
     } catch (Exception e) {
       //Send email notification
