@@ -321,9 +321,28 @@ public class TarUtil {
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-				if (Files.isReadable(file)) {
-					size[0] += attrs.size();
-				}
+				
+				 if (Files.isSymbolicLink(file)) {
+                     try {
+                         Path target = Files.readSymbolicLink(file);
+                         Path resolved = file.getParent().resolve(target).normalize();
+                         
+                         if (Files.exists(resolved) && Files.isReadable(resolved)) {
+                        	 size[0] += attrs.size();  // Valid symlink
+                         } else {
+                             logger.error("{} is not supported", file.toString());
+                              // Broken or unreadable symlink
+                         }
+                     } catch (IOException e) {
+                         logger.error("{} is not supported", file.toString());
+                     	 // Couldn't resolve symlink
+                     }
+                 } else if (Files.isReadable(file)) {
+                	 size[0] += attrs.size(); // Regular readable file
+                 } else {
+                     logger.error("{} is not readable", file.toString());
+                 	// Not readable
+                 }
 				return FileVisitResult.CONTINUE;
 			}
 
