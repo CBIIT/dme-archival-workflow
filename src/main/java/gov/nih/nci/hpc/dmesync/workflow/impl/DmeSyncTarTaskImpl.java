@@ -106,6 +106,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.tar.ignore.broken.link:false}")
 	private boolean ignoreBrokenLinksInTar;
+	
+	@Value("${dmesync.compress.on.oversize:false}")
+	private boolean compressOnOversize;
 
 	@PostConstruct
 	public boolean init() {
@@ -123,7 +126,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
-
+		
 
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
@@ -143,13 +146,19 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	        File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
 	        
+	     if (!tarIndividualFiles && !compressOnOversize && Files.isDirectory(originalFilePath)) {
+
 	        long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
 		    // check to validate is the folder to tar is less than maxFilesize
 			if (folderSize > maxFileSize) {
+			    if (!compressOnOversize) {
 				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
 						super.getTaskName(),folderSize, maxFileSize);
 				throw new DmeSyncStorageException("Folder with size " +ExcelUtil.humanReadableByteCount(folderSize,true) + " exceeds the permitted size of "
 						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+			    }else {
+			    	compress=true;
+			    }
 			} else {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
@@ -226,6 +235,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 			}
 			}
+		}
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 			throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
