@@ -146,8 +146,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	        File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
 	        
-	     if (!tarIndividualFiles && !compressOnOversize && Files.isDirectory(originalFilePath)) {
-
+            if(!compressOnOversize) {
 	        long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
 		    // check to validate is the folder to tar is less than maxFilesize
 			if (folderSize > maxFileSize) {
@@ -159,7 +158,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			    }else {
 			    	compress=true;
 			    }
-			} else {
+			}} else {
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
 			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -233,7 +232,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
-			}
 			}
 		}
 		} catch (Exception e) {
