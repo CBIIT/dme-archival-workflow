@@ -145,7 +145,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
 	        File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
-	        boolean setCompressOnOversize=false;
+	        boolean applyCompressOnOversize=false;
 	        
 			if (!tarIndividualFiles || !compress) {
 				long folderSize = TarUtil.getDirectorySize(originalFilePath, excludeFolders);
@@ -163,7 +163,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 						logger.info(
 								"[{}] Info : compress on oversize propoerty is set: Folder with size {}  that exceeds the recommended file size of  {}",
 								super.getTaskName(), folderSize, maxFileSize);
-						setCompressOnOversize = true;
+						applyCompressOnOversize = true;
 					}
 				}
 			}
@@ -212,7 +212,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 					throw new Exception("No Read permission to " + object.getOriginalFilePath());
 				}
-				if (compress || setCompressOnOversize) {
+				if (compress || applyCompressOnOversize) {
 					tarFile = tarFile + ".gz";
 					tarFileName = tarFileName + ".gz";
 					if (!dryRun) {
@@ -226,7 +226,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
-				Long tarFileSize=createdTarFile.length();
+				long tarFileSize=createdTarFile.length();
 				if (tarFileSize > maxFileSize) {
 					TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
 					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
