@@ -145,20 +145,29 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
 	        File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
+	        boolean setCompressOnOversize=false;
 	        
-            if(!compressOnOversize) {
-	        long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
-		    // check to validate is the folder to tar is less than maxFilesize
-			if (folderSize > maxFileSize) {
-			    if (!compressOnOversize) {
-				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
-						super.getTaskName(),folderSize, maxFileSize);
-				throw new DmeSyncStorageException("Folder with size " +ExcelUtil.humanReadableByteCount(folderSize,true) + " exceeds the permitted size of "
-						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
-			    }else {
-			    	compress=true;
-			    }
-			}} else {
+			if (!tarIndividualFiles || !compress) {
+				long folderSize = TarUtil.getDirectorySize(originalFilePath, excludeFolders);
+				// check to validate is the folder to tar is less than maxFilesize
+				if (folderSize > maxFileSize) {
+					if (!compressOnOversize) {
+						// If compress on size property is not set, then throw exception
+						logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+								super.getTaskName(), folderSize, maxFileSize);
+						throw new DmeSyncStorageException("Folder with size "
+								+ ExcelUtil.humanReadableByteCount(folderSize, true) + " exceeds the permitted size of "
+								+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+					} else {
+						// If compress on size property is set, then compress the folder.
+						logger.info(
+								"[{}] Info : compress on oversize propoerty is set: Folder with size {}  that exceeds the recommended file size of  {}",
+								super.getTaskName(), folderSize, maxFileSize);
+						setCompressOnOversize = true;
+					}
+				}
+			}
+			
 			object.setTarStartTimestamp(new Date());
 			// Construct work dir path
 			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -203,7 +212,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 					throw new Exception("No Read permission to " + object.getOriginalFilePath());
 				}
-				if (compress) {
+				if (compress || setCompressOnOversize) {
 					tarFile = tarFile + ".gz";
 					tarFileName = tarFileName + ".gz";
 					if (!dryRun) {
@@ -217,13 +226,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
-				
-				if (createdTarFile.length() > maxFileSize) {
+				Long tarFileSize=createdTarFile.length();
+				if (tarFileSize > maxFileSize) {
+					TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
 					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
-							super.getTaskName(), object.getFilesize(), maxFileSize);
-		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
-					throw new DmeSyncStorageException("Folder exceeds the permitted size of "
+							super.getTaskName(), tarFileSize, maxFileSize);
+					throw new DmeSyncStorageException("Folder with size "
+							+ ExcelUtil.humanReadableByteCount(tarFileSize, true) + " exceeds the permitted size of "
 							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+
 				}
 
 				object.setFilesize(createdTarFile.length());
@@ -233,7 +244,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
 			}
-		}
+		
 		} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 			throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
