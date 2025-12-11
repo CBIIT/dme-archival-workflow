@@ -154,6 +154,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.create.softlink:false}")
   private boolean createSoftlink;
   
+  @Value("${dmesync.create.collection.softlink:false}")
+  private boolean createCollectionSoftlink;
+  
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
   
@@ -231,6 +234,21 @@ public class DmeSyncScheduler {
     		        dateFormat.format(new Date()),
     		        runId,
     		        sourceSoftlinkFile);
+    else if(createCollectionSoftlink) {
+    	if(StringUtils.isNotBlank(sourceSoftlinkFile)) {
+    		logger.info(
+   		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink file to read {}",
+   		        dateFormat.format(new Date()),
+   		        runId,
+   		        sourceSoftlinkFile);
+    	} else {
+    		logger.info(
+		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink directory to scan {}",
+		        dateFormat.format(new Date()),
+		        runId,
+		        syncBaseDir);
+    	}
+    }
     else
 	    logger.info(
 	        "[Scheduler] Current time: {} executing Run ID: {} base directory to scan {}",
@@ -271,7 +289,7 @@ public class DmeSyncScheduler {
         return;
       } else {
         for (HpcPathAttributes pathAttr : paths) {
-          if (pathAttr.getIsDirectory()) {
+          if (pathAttr.getIsDirectory() && !createCollectionSoftlink) {
             //If depth of -1 is specified, skip if it is not a leaf folder
             if (tar && depth.equals("-1") && skipIfNotLeafFolder) {
               try(Stream<Path> stream = Files.list(Paths.get(pathAttr.getAbsolutePath()))) {
@@ -308,7 +326,15 @@ public class DmeSyncScheduler {
         }
       } else {
         // Process the list of files
-        processFiles(files);
+    	  if(createCollectionSoftlink) {
+    		  for (HpcPathAttributes file : files) {
+    	          //List tar files from each folder
+    	          List<HpcPathAttributes> collectionLinkList = listCollectionsToLink(file.getAbsolutePath());
+    	          processFiles(collectionLinkList);
+    	        }
+    		  
+    	  } else
+    		  processFiles(files);
       }
       logger.info(
           "[Scheduler] Completed file scan at {} for Run ID: {} base directory to scan {}",
@@ -318,9 +344,14 @@ public class DmeSyncScheduler {
       //Check to see if any records are being processed for this run, if not send email
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
       String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(syncBaseDirFolders)?" in "+syncBaseDirFolders+" folders":"")+ ".";
-      if(CollectionUtils.isEmpty(currentRun))
+      if(CollectionUtils.isEmpty(currentRun)) {
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
+		if (shutDownFlag) {
+			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+			DmeSyncApplication.shutdown();
+		}
+      }
       
     } catch (Exception e) {
       //Send email notification
@@ -486,6 +517,33 @@ public class DmeSyncScheduler {
     }
     return result;
   }
+  
+  private List<HpcPathAttributes> listCollectionsToLink(String sourceSoftlinkFile) throws HpcException, IOException {
+	    List<HpcPathAttributes> result = new ArrayList<>();
+	    Path filePath = Paths.get(sourceSoftlinkFile);
+	    List<String> lines = Files.readAllLines(filePath);
+	    //process each collection
+	    for(String collectionPath: lines) {
+	      result.add(getPathAttributesOfCollection(sourceSoftlinkFile, collectionPath));
+	    }
+	    return result;
+	  }
+
+  /**
+   * Get path attributes of a collection to link.
+   * 
+   * @param collectionPath The collection path
+   * @return pathAttributes
+   * @throws HpcException The exception
+   */
+  private HpcPathAttributes getPathAttributesOfCollection(String sourceSoftlinkFile, String collectionPath) {
+	HpcPathAttributes pathAttributes = new HpcPathAttributes();
+	pathAttributes.setName(Paths.get(collectionPath).getFileName().toString());
+	pathAttributes.setPath(sourceSoftlinkFile);
+	pathAttributes.setAbsolutePath(collectionPath);
+	pathAttributes.setIsDirectory(true);
+	return pathAttributes;
+  }
 
   private List<HpcPathAttributes> toHpcPathAttribute(String directory) {
 	  List<HpcPathAttributes> pathAttributesList = new ArrayList<>();
@@ -618,6 +676,11 @@ public class DmeSyncScheduler {
 
 				}
 			}
+		}
+		else if(createCollectionSoftlink) {
+			statusInfo =
+		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
+		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
 		}
 		else {
           statusInfo =
@@ -849,7 +912,7 @@ public class DmeSyncScheduler {
     statusInfo.setOrginalFileName(file.getName());
     statusInfo.setOriginalFilePath(file.getAbsolutePath());
     statusInfo.setSourceFileName(untar ? file.getTarEntry() : file.getName());
-    statusInfo.setSourceFilePath(file.getAbsolutePath());
+    statusInfo.setSourceFilePath(createCollectionSoftlink ? file.getPath() : file.getAbsolutePath());
     statusInfo.setFilesize(file.getSize());
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(doc);
@@ -873,7 +936,7 @@ public class DmeSyncScheduler {
           return;
 	 } else {
       StatusInfo latest = null;
-      if(createSoftlink) {
+      if(createSoftlink || createCollectionSoftlink) {
     	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(doc);
       } else {
 	      //Add base path also to distinguish multiple docs running the workflow.
@@ -977,6 +1040,7 @@ public class DmeSyncScheduler {
 		statusInfo.setRunId(runId);
 		statusInfo.setError("");
 		statusInfo.setRetryCount(0L);
+		statusInfo.setEndWorkflow(false);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		// Delete the metadata info created for this object ID
 		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());

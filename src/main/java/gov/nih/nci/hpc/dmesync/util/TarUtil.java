@@ -17,10 +17,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,10 +41,10 @@ public class TarUtil {
    * @param files the files to tar
  * @throws Exception 
    */
-  public static void tar(String name, List<String> excludeFolders, File... files) throws Exception {
+  public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
       }
     }
   }
@@ -54,10 +57,10 @@ public class TarUtil {
    * @param files files the files to tar and compress
  * @throws Exception 
    */
-  public static void targz(String name, List<String> excludeFolders, File... files) throws Exception {
+  public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
     try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
       }
     }
   }
@@ -258,9 +261,10 @@ public class TarUtil {
 	    return new GzipCompressorOutputStream(bufferedOutputStream);
 	  }
 
-  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders)
+  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders, boolean ignoreBrokenLinksInTar)
       throws Exception {
     String entry = dir + File.separator + file.getName();
+    Path path = Paths.get(file.getAbsolutePath());
     if (file.isFile()) {
       out.putArchiveEntry(new TarArchiveEntry(file, entry));
       try (FileInputStream in = new FileInputStream(file)) {
@@ -276,12 +280,78 @@ public class TarUtil {
       File[] children = file.listFiles();
       if (children != null) {
         for (File child : children) {
-          addToArchive(out, child, entry, excludeFolders);
+          addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar);
         }
       }
-    } else {
+	} else if (!ignoreBrokenLinksInTar && Files.isSymbolicLink(path)) {
+		/* When ignore Broken link is not set, workflow will throw the expection and error is recorded in DB and automated report
+		 */
+		Path target = Files.readSymbolicLink(path);
+		Path resolved = path.getParent().resolve(target).normalize();
+		if (!Files.exists(resolved))
+			throw new Exception(
+					"Broken symbolic link detected: " + resolved + " (target does not exist)");
+		else if (!Files.isReadable(resolved))
+			throw new Exception(
+					"Broken symbolic link detected: " + resolved + " (target is inaccessible)");
+	} else {
+		/* When ignore Broken link is set , workflow ignores the broken links and if exclude contents file is also set then these broken links 
+		 * will be added to excluded contents file and uploaded to DME
+		 */
       logger.error("{} is not supported", file.getName());
     }
   }
   
+  public static long getDirectorySize(Path dir, List<String> excludeFolders) throws IOException {
+		final long[] size = { 0 };
+		
+		try {
+
+		Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attrs) {
+				// Exclude folders based on the names
+				if (excludeFolders != null
+						&& excludeFolders.stream().anyMatch(f -> folder.getFileName().toString().equals(f))) {
+				      logger.info("{} is excluded for file size calculation", folder.getFileName().toString());
+					return FileVisitResult.SKIP_SUBTREE;
+				}
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+				
+				 if (Files.isSymbolicLink(file)) {
+                     try {
+                         Path target = Files.readSymbolicLink(file);
+                         Path resolved = file.getParent().resolve(target).normalize();
+                         
+                         if (Files.exists(resolved) && Files.isReadable(resolved)) {
+                        	 size[0] += attrs.size();  // Valid symlink
+                         } else {
+                             logger.error("{} is not supported", file.toString());
+                              // Broken or unreadable symlink
+                         }
+                     } catch (IOException e) {
+                         logger.error("{} is not supported", file.toString());
+                     	 // Couldn't resolve symlink
+                     }
+                 } else if (Files.isReadable(file)) {
+                	 size[0] += attrs.size(); // Regular readable file
+                 } else {
+                     logger.error("{} is not readable", file.toString());
+                 	// Not readable
+                 }
+				return FileVisitResult.CONTINUE;
+			}
+
+		});
+
+		return size[0];
+	} catch (IOException e) {
+		logger.error("Failed to walk file tree for directory: {}", dir, e);
+		throw e;
+	}
+  }
 }
