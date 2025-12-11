@@ -109,6 +109,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.tar.contents.file:false}")
   private boolean createTarContentsFile;
   
+  @Value("${dmesync.selective.scan:false}")
+  private boolean selectiveScan;
   
   @PostConstruct
   public boolean init() {
@@ -116,7 +118,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks = new ArrayList<>();
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (tar || tarIndividualFiles) {
+	    if (tar || tarIndividualFiles || selectiveScan ) {
 	    	tasks.add(tarTask);
 	    	if(createTarContentsFile) {
 	    		tasks.add(tarContentsfileTask);

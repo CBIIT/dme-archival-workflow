@@ -3,8 +3,10 @@ package gov.nih.nci.hpc.dmesync.scheduler;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1064,24 +1067,30 @@ public class DmeSyncScheduler {
 	
 	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files)
 			throws Exception {
+	
+		
+		 logger.info("[Scheduler] Selective Scan mode Started");
 		List<HpcPathAttributes> foldersToTar = new ArrayList<>();
         Set<String> tarredFolderPaths = new HashSet<>();
-        List<String> tarPatterns = tarIncludePattern == null || tarIncludePattern.isEmpty() ? null :
-                Arrays.asList(tarIncludePattern.split(","));
-
+        
+        List<PathMatcher> tarPatterns = Arrays.stream(tarIncludePattern.split(","))
+                .map(String::trim)
+                .filter(p -> !p.isEmpty())
+                .map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
+                .collect(Collectors.toList());
+        
         for (HpcPathAttributes folder : folders) {
             boolean matched = false;
             if (tarPatterns != null) {
-                for (String pattern : tarPatterns) {
-                    // Use .equals() if exact match, or .matches() for regex pattern
-                    if (folder.getName().equals(pattern.trim()) || folder.getName().matches(pattern.trim())) {
+                for (PathMatcher pattern : tarPatterns) {
+                    if (pattern.matches(Paths.get(folder.getAbsolutePath()))) {
                         matched = true;
                         break;
                     }
                 }
             } else {
                 // Auto-detect leaf folder if no pattern specified
-                File folderFile = new File(folder.getAbsolutePath());
+                /*File folderFile = new File(folder.getAbsolutePath());
                 File[] subFiles = folderFile.listFiles();
                 boolean hasSubDirs = false;
                 if (subFiles != null) {
@@ -1091,10 +1100,11 @@ public class DmeSyncScheduler {
                             break;
                         }
                     }
-                }
-                if (!hasSubDirs) {
+                } */
+                if (isLeafFolder(Paths.get(folder.getAbsolutePath()))) {
                     matched = true;
                 }
+            	
             }
             if (matched) {
                 foldersToTar.add(folder);
@@ -1169,8 +1179,35 @@ public class DmeSyncScheduler {
         if (!topLevelFiles.isEmpty()) {
             processFiles(topLevelFiles);
         }
-	}
+       
+		 logger.info("[Scheduler] Selective Scan mode Completed");
 
+	}
+	/*private boolean isLeafFolder(Path folder, List<Path> scannedFolders) {
+	    Path normalized = folder.normalize();
+
+	    // leaf folder = no other scanned folder starts with this as a parent
+	    return scannedFolders.stream()
+	            .filter(other -> !other.equals(normalized))
+	            .map(Path::normalize)
+	            .noneMatch(other -> other.startsWith(normalized));
+	}*/
+	
+	public boolean isLeafFolder(Path folder) throws IOException {
+	    if (!Files.isDirectory(folder)) {
+	        return false;
+	    }
+
+	    try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder)) {
+	        for (Path child : stream) {
+	            if (Files.isDirectory(child)) {
+	                return false; // has a subdirectory → not leaf
+	            }
+	        }
+	    }
+
+	    return true; // no subdirectories → leaf
+	}
 
 
   
