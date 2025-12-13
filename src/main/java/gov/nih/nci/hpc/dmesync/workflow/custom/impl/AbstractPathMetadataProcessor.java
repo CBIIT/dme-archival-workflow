@@ -166,6 +166,8 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	String key = null;
 	if(threadLocalMap.get() == null)
 	  return null;
+	
+	logger.info("Keyset {}", threadLocalMap.get().keySet());
 	for (String partialKey : threadLocalMap.get().keySet()) {
 		if (StringUtils.contains(rowKey, partialKey)) {
 	      key = partialKey;
