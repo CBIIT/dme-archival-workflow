@@ -1,18 +1,10 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -21,8 +13,6 @@ import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -30,20 +20,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
-import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
-import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
+import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -120,6 +107,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Autowired
 	private DmeSyncProducer sender;
 	
+	@Autowired
+	private DmeSyncPathMetadataProcessor metadataProcessor;
+	
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
@@ -136,7 +126,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else {
+		}else if( metadataProcessor.isMetadataAvailable(object)) {
 		// Task: Create tar file in work directory for processing
 		try {
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
@@ -232,6 +222,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} finally {
 			threadLocalMap.remove();
 		}
+		}else {
+			logger.info("No need to upload file : {}", object.getOriginalFilePath());
+			object.setRunId(object.getRunId() + "_IGNORED");
+			object.setEndWorkflow(true);
+			object.setError("No need to upload yet");
+			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 		}
 		return object;
 	}

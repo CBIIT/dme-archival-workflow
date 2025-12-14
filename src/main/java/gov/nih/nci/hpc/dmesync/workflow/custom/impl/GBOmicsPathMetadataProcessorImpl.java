@@ -393,6 +393,19 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		return dataObjectRegistrationRequestDTO;
 	}
+	
+	@Override
+    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException {
+
+		String projectCollectionName = getProjectCollectionName(object);
+		// Check if this project is in the metadata spreadsheet
+		String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
+		if (projectTitle == null) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	private String getCollectionNameFromParent(String path, String parentName) {
 		Path fullFilePath = Paths.get(path);
