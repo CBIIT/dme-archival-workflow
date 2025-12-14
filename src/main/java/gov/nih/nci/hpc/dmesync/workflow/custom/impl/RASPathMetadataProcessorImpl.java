@@ -167,12 +167,23 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return runId;
 	}
 	
-	public String getAttrValueWithExactKey(String key, String attrKey) {
-		if (StringUtils.isEmpty(key)) {
-			logger.error("Excel mapping not found for {}", key);
-			return null;
-		}
-		return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
+	public String getAttrValueWithExactKey(String rowKey, String attrKey) {
+	
+	String key = null;
+	if(metadataMap == null)
+	  return null;
+	for (String partialKey : metadataMap.keySet()) {
+		if (StringUtils.contains(rowKey, partialKey)) {
+	      key = partialKey;
+	      break;
+	    }
+    }
+	if(StringUtils.isEmpty(key)) {
+      logger.error("Excel mapping not found for {}", rowKey);
+      return null;
+    }
+	return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
+	
 	}
 
 	@PostConstruct
