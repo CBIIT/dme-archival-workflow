@@ -251,6 +251,13 @@ The following properties can be set in `application.properties` file:
   * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
+* `dmesync.workflow.id=<workflow name>`
+  * This id will be the workflow name for the user.
+* `dmesync.server.id=<workflow server name>`
+  * This id will be the server name that the workflow is running.
+* `dmesync.dme.server.id=<dme server name>`
+  * This id will be the dme server the workflow is configured.
+
 
 Optionally, override system defaults for concurrent file processing with the following parameters.
 

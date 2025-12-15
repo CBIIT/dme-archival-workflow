@@ -26,12 +26,15 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
+import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 @Service("hitifMailService")
 public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -182,10 +185,14 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         if(exceedsMaxRecommendedFileSize)
           body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
         helper.setText(body, true);
-        
+  	    
+        String status= (failedCount > 0) ? WorkflowConstants.RunStatus.FAILED.toString() : WorkflowConstants.RunStatus.SUCCEEDED.toString();
+
         FileSystemResource file = new FileSystemResource(excelFile);
         helper.addAttachment(file.getFilename(), file);
         sender.send(message);
+        dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId,doc, status,null);
+
       }
     } catch (MessagingException e) {
       throw new MailParseException(e);

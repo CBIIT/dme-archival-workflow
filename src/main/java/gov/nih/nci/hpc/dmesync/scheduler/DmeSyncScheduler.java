@@ -6,7 +6,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -38,9 +40,11 @@ import gov.nih.nci.hpc.dmesync.DmeSyncApplication;
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncConsumer;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -64,6 +68,7 @@ public class DmeSyncScheduler {
   @Autowired private DmeSyncAWSScanDirectory dmeSyncAWSScanDirectory;
   @Autowired private DmeSyncVerifyTaskImpl dmeSyncVerifyTaskImpl;
   @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
+  @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -146,7 +151,6 @@ public class DmeSyncScheduler {
     
   @Value("${dmesync.file.exist.under.basedir.depth:0}")
   private String checkExistsFileUnderBaseDirDepth;
- 
   
   @Value("${logging.file.name}")
   private String logFile;
@@ -188,6 +192,20 @@ public class DmeSyncScheduler {
   private boolean createTarExcludedContentsFile;
   
   
+  @Value("${dmesync.workflow.id:}")
+  private String dmesyncWorkflowId;
+  
+  @Value("${dmesync.dme.server.id:}")
+  private String dmeServerId;
+  
+  @Value("${dmesync.server.id:}")
+  private String serverId;
+  
+  @Value("${spring.jms.listener.concurrency:}")
+  private Integer workflowThreads;
+  
+  @Value("${dmesync.cron.expression:}")
+  private String cronExpression;
   
   private String runId;
 
@@ -197,6 +215,7 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
 	  
+		 
 	  dmeMetadataBuilder.evictMetadataMap();
 
 	if (moveProcessedFiles) {
@@ -216,6 +235,10 @@ public class DmeSyncScheduler {
     }
     
     runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
+    
+    WorkflowRunInfo workflowRunInfo=insertWorkflowRunInfo();
+	  logger.info(
+		        "[Scheduler] Workflow Run Information is inserted {}", workflowRunInfo);
 
     if (shutDownFlag) {
       //check if the one time run has already occurred
@@ -347,12 +370,12 @@ public class DmeSyncScheduler {
       if(CollectionUtils.isEmpty(currentRun)) {
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
+          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId,doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
 		if (shutDownFlag) {
 			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 			DmeSyncApplication.shutdown();
 		}
       }
-      
     } catch (Exception e) {
       //Send email notification
 	  logger.error("[Scheduler] Failed to access files in directory, {}", syncBaseDir, e);
@@ -1051,6 +1074,25 @@ public class DmeSyncScheduler {
 		sender.send(message, "inbound.queue");
 	}
 
+	  private WorkflowRunInfo insertWorkflowRunInfo() {
+		    Timestamp now = Timestamp.from(Instant.now());
+
+		    WorkflowRunInfo workflowRunInfo = new WorkflowRunInfo();
+		    workflowRunInfo.setRunId(runId);
+		    workflowRunInfo.setRunStartTimestamp(now);
+		    workflowRunInfo.setRunLastHeartbeatTimestamp(now);
+		    workflowRunInfo.setWorkflowId(dmesyncWorkflowId);
+		    workflowRunInfo.setUserId(doc);
+		    workflowRunInfo.setServerId(serverId);
+		    workflowRunInfo.setDmeServerId(dmeServerId);
+		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
+		    workflowRunInfo.setThreads(workflowThreads);
+		    workflowRunInfo.setSourcePath(syncBaseDir);
+		    workflowRunInfo.setSettingsHash(null);
+		    workflowRunInfo.setCronExpression(cronExpression);    
+		    workflowRunInfo = dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(workflowRunInfo);
+		    return workflowRunInfo;
+		  }
 
 
   
