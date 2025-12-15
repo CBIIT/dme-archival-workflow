@@ -1088,7 +1088,7 @@ public class DmeSyncScheduler {
 		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
 		    workflowRunInfo.setThreads(workflowThreads);
 		    workflowRunInfo.setSourcePath(syncBaseDir);
-		    workflowRunInfo.setSettingsHash("");
+		    workflowRunInfo.setSettingsHash(null);
 		    workflowRunInfo.setCronExpression(cronExpression);    
 		    workflowRunInfo = dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(workflowRunInfo);
 		    return workflowRunInfo;

@@ -46,13 +46,10 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndUserId(runId, doc);
 
-		// If duration not provided, compute in app from start/end timestamps
 		if (workflowRunInfo != null) {
+			
 			// Compute Duration Mins
-			Long durationMinutes;
-			WorkflowRunInfo e = workflowRunInfoDao.findById(workflowRunInfo.getId())
-					.orElseThrow(() -> new IllegalArgumentException("Run not found: " + workflowRunInfo.getId()));
-			Instant start = e.getRunStartTimestamp().toInstant();
+			Instant start = workflowRunInfo.getRunStartTimestamp().toInstant();
 			long mins = Math.max(0, Duration.between(start, Instant.now()).toMinutes());
 
 			// Compute Uploaded Size
@@ -62,7 +59,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			long totalSize = runIdRows.stream().filter(f -> "COMPLETED".equalsIgnoreCase(f.getStatus()))
 					.map(StatusInfo::getFilesize).filter(Objects::nonNull).mapToLong(Long::longValue).sum();
 
-			durationMinutes = mins;
+			Long durationMinutes = mins;
 			workflowRunInfo.setRunLastHeartbeatTimestamp(Timestamp.from(Instant.now()));
 			workflowRunInfo.setRunEndTimestamp(Timestamp.from(Instant.now()));
 			workflowRunInfo.setDuration(durationMinutes);
@@ -70,6 +67,8 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setErrorMessage(errorMessage);
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
 			workflowRunInfoDao.save(workflowRunInfo);
+		}else {
+			throw new IllegalArgumentException("Workflow Run not found for: " + runId + doc);
 		}
 	}
 
