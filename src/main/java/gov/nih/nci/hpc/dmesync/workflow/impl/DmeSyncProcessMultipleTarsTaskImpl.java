@@ -80,6 +80,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Value("${dmesync.multiple.tars.files.validation:true}")
 	private boolean verifyTarFilesCount;
 
+	private static final long BYTES_PER_GB = 1024L * 1024L * 1024L;
+
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
@@ -139,7 +141,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					
 					if (sizePerTarInGB > 0) {
 						// Size-based splitting
-						long targetSizeInBytes = (long) sizePerTarInGB * 1024L * 1024L * 1024L; // Convert GB to bytes
+						long targetSizeInBytes = (long) sizePerTarInGB * BYTES_PER_GB;
 						logger.info("[{}] Using size-based splitting with target size {} GB ({} bytes) per tar", 
 							super.getTaskName(), sizePerTarInGB, targetSizeInBytes);
 						
