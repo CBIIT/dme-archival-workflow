@@ -135,7 +135,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					
 					// Determine splitting strategy: size-based takes precedence over count-based
 					int expectedTarRequests;
-					List<List<File>> fileGroups = new ArrayList<>();
+					List<FileGroup> fileGroupsWithIndices = new ArrayList<>();
 					
 					if (sizePerTarInGB > 0) {
 						// Size-based splitting
@@ -143,8 +143,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						logger.info("[{}] Using size-based splitting with target size {} GB ({} bytes) per tar", 
 							super.getTaskName(), sizePerTarInGB, targetSizeInBytes);
 						
-						fileGroups = groupFilesBySize(fileList, targetSizeInBytes);
-						expectedTarRequests = fileGroups.size();
+						fileGroupsWithIndices = groupFilesBySizeWithIndices(fileList, targetSizeInBytes);
+						expectedTarRequests = fileGroupsWithIndices.size();
 						
 						logger.info("[{}] Size-based splitting created {} groups for {} files", 
 							super.getTaskName(), expectedTarRequests, fileList.size());
@@ -154,11 +154,12 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						logger.info("[{}] Using file count-based splitting with {} files per tar", 
 							super.getTaskName(), filesPerTar);
 						
-						// Create groups based on file count
+						// Create groups based on file count with indices
 						for (int i = 0; i < expectedTarRequests; i++) {
 							int start = i * filesPerTar;
-							int end = Math.min(start + filesPerTar, fileList.size());
-							fileGroups.add(fileList.subList(start, end));
+							int end = Math.min(start + filesPerTar, fileList.size()) - 1;
+							List<File> subList = fileList.subList(start, end + 1);
+							fileGroupsWithIndices.add(new FileGroup(subList, start, end));
 						}
 					} else {
 						// No splitting configured
@@ -178,9 +179,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							tarsCounter,expectedTarRequests, tarFileParentName, fileList.size());
 
 					for (int i = 0; i < expectedTarRequests; i++) {
-						List<File> subList = fileGroups.get(i);
-						int start = fileList.indexOf(subList.get(0));
-						int end = fileList.indexOf(subList.get(subList.size() - 1));
+						FileGroup group = fileGroupsWithIndices.get(i);
+						List<File> subList = group.files;
+						int start = group.startIndex;
+						int end = group.endIndex;
 						totalFilesInTars = end+1;
 						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
@@ -483,22 +485,37 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	 * Group files into sublists based on target size
 	 * @param files List of files to group
 	 * @param targetSizeInBytes Target size per group in bytes
-	 * @return List of file groups
+	 * @return List of FileGroup objects containing files and their indices
 	 */
-	private List<List<File>> groupFilesBySize(List<File> files, long targetSizeInBytes) throws IOException {
-		List<List<File>> groups = new ArrayList<>();
+	private static class FileGroup {
+		List<File> files;
+		int startIndex;
+		int endIndex;
+		
+		FileGroup(List<File> files, int startIndex, int endIndex) {
+			this.files = files;
+			this.startIndex = startIndex;
+			this.endIndex = endIndex;
+		}
+	}
+	
+	private List<FileGroup> groupFilesBySizeWithIndices(List<File> files, long targetSizeInBytes) throws IOException {
+		List<FileGroup> groups = new ArrayList<>();
 		List<File> currentGroup = new ArrayList<>();
 		long currentGroupSize = 0;
+		int groupStartIndex = 0;
 
-		for (File file : files) {
+		for (int i = 0; i < files.size(); i++) {
+			File file = files.get(i);
 			long fileSize = calculateSize(file);
 			
 			// If adding this file would exceed the target size and current group is not empty,
 			// start a new group
 			if (currentGroupSize + fileSize > targetSizeInBytes && !currentGroup.isEmpty()) {
-				groups.add(new ArrayList<>(currentGroup));
+				groups.add(new FileGroup(new ArrayList<>(currentGroup), groupStartIndex, i - 1));
 				currentGroup.clear();
 				currentGroupSize = 0;
+				groupStartIndex = i;
 			}
 			
 			// Add file to current group
@@ -508,7 +525,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 		// Add the last group if it has any files
 		if (!currentGroup.isEmpty()) {
-			groups.add(currentGroup);
+			groups.add(new FileGroup(currentGroup, groupStartIndex, files.size() - 1));
 		}
 
 		return groups;
