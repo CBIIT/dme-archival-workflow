@@ -68,6 +68,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Value("${dmesync.multiple.tars.files.count:0}")
 	private Integer filesPerTar;
 
+	@Value("${dmesync.multiple.tars.size.gb:0}")
+	private Integer sizePerTarInGB;
+
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
 
@@ -129,7 +132,39 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				if (files != null && files.length > 0) {
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
-					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
+					
+					// Determine splitting strategy: size-based takes precedence over count-based
+					int expectedTarRequests;
+					List<List<File>> fileGroups = new ArrayList<>();
+					
+					if (sizePerTarInGB > 0) {
+						// Size-based splitting
+						long targetSizeInBytes = (long) sizePerTarInGB * 1024L * 1024L * 1024L; // Convert GB to bytes
+						logger.info("[{}] Using size-based splitting with target size {} GB ({} bytes) per tar", 
+							super.getTaskName(), sizePerTarInGB, targetSizeInBytes);
+						
+						fileGroups = groupFilesBySize(fileList, targetSizeInBytes);
+						expectedTarRequests = fileGroups.size();
+						
+						logger.info("[{}] Size-based splitting created {} groups for {} files", 
+							super.getTaskName(), expectedTarRequests, fileList.size());
+					} else if (filesPerTar > 0) {
+						// File count-based splitting (existing behavior)
+						expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
+						logger.info("[{}] Using file count-based splitting with {} files per tar", 
+							super.getTaskName(), filesPerTar);
+						
+						// Create groups based on file count
+						for (int i = 0; i < expectedTarRequests; i++) {
+							int start = i * filesPerTar;
+							int end = Math.min(start + filesPerTar, fileList.size());
+							fileGroups.add(fileList.subList(start, end));
+						}
+					} else {
+						// No splitting configured
+						throw new DmeSyncWorkflowException(
+							"Neither dmesync.multiple.tars.size.gb nor dmesync.multiple.tars.files.count is configured");
+					}
 					
 				   // setting the expected tars count in DB , In the case of rerun the statusInfo row will already have the getTarContentsCount value.
 					int tarsCounter= object.getTarContentsCount()!=null?object.getTarContentsCount():expectedTarRequests;
@@ -143,10 +178,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							tarsCounter,expectedTarRequests, tarFileParentName, fileList.size());
 
 					for (int i = 0; i < expectedTarRequests; i++) {
-						int start = i * filesPerTar;
-						int end = (Math.min(start + filesPerTar, fileList.size()))-1;
+						List<File> subList = fileGroups.get(i);
+						int start = fileList.indexOf(subList.get(0));
+						int end = fileList.indexOf(subList.get(subList.size() - 1));
 						totalFilesInTars = end+1;
-						List<File> subList = fileList.subList(start, end+1);
 						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
@@ -421,6 +456,62 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		sender.send(message, "inbound.queue");
 		logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 		
+	}
+
+	/**
+	 * Calculate the total size of a file or directory recursively
+	 * @param file The file or directory
+	 * @return Total size in bytes
+	 */
+	private long calculateSize(File file) throws IOException {
+		if (file.isFile()) {
+			return file.length();
+		} else if (file.isDirectory()) {
+			long totalSize = 0;
+			File[] children = file.listFiles();
+			if (children != null) {
+				for (File child : children) {
+					totalSize += calculateSize(child);
+				}
+			}
+			return totalSize;
+		}
+		return 0;
+	}
+
+	/**
+	 * Group files into sublists based on target size
+	 * @param files List of files to group
+	 * @param targetSizeInBytes Target size per group in bytes
+	 * @return List of file groups
+	 */
+	private List<List<File>> groupFilesBySize(List<File> files, long targetSizeInBytes) throws IOException {
+		List<List<File>> groups = new ArrayList<>();
+		List<File> currentGroup = new ArrayList<>();
+		long currentGroupSize = 0;
+
+		for (File file : files) {
+			long fileSize = calculateSize(file);
+			
+			// If adding this file would exceed the target size and current group is not empty,
+			// start a new group
+			if (currentGroupSize + fileSize > targetSizeInBytes && !currentGroup.isEmpty()) {
+				groups.add(new ArrayList<>(currentGroup));
+				currentGroup.clear();
+				currentGroupSize = 0;
+			}
+			
+			// Add file to current group
+			currentGroup.add(file);
+			currentGroupSize += fileSize;
+		}
+
+		// Add the last group if it has any files
+		if (!currentGroup.isEmpty()) {
+			groups.add(currentGroup);
+		}
+
+		return groups;
 	}
 
 }

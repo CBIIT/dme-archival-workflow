@@ -240,6 +240,8 @@ The following properties can be set in `application.properties` file:
   * If specified, it will create batch tars for the folder with the count specified by below property.
 * `dmesync.multiple.tars.files.count=[50,..]`
   * If specified, it will create the tars for every specified batch files in the folder.
+* `dmesync.multiple.tars.size.gb=[50,..]`
+  * If specified, it will create the tars based on size (in GB) for the folder. This property takes precedence over `dmesync.multiple.tars.files.count` if both are specified. The system will group files/subfolders into tar batches, where each tar will contain files up to approximately the specified size. For example, setting this to 50 will create tar files with approximately 50 GB of data each.
 * `dmesync.tar.ignore.broken.link=[true|false]`
   * If set to false, the tar will not be created and the error from broken links will be recorded in the email report. If it is set to true, these errors will be ignored and the tar will be created. Default will be false.
 * `dmesync.admin.emails=<comma separated email addrresses>`
