@@ -144,6 +144,9 @@ The following properties can be set in `application.properties` file:
 * `dmesync.compress=[true|false]`
   * If `true`, the data object will be compressed prior to upload.
   * Default: `false` 
+* `dmesync.compress.on.oversize=[true|false]`
+  * If `true`, the data object will be compressed prior to upload. Mainly used to compress the file which exceeds the permitted upload size
+  * Default: `false` 
 * `dmesync.preprocess.depth=[1,2,...|-1]`
   * If `dmesync.tar` or `dmesync.untar` is true, `dmesync.preprocess.depth` will be used to determine the collection 
   which requires tar or untar.
