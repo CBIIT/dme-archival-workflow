@@ -135,7 +135,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String labCollectionName = getPiCollectionName(metadataFilePathKey);
 			String labCollectionPath = destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataowner_Lab"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 			pathEntriesPI.setPath(labCollectionPath);
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", labCollectionName));
 			pathEntriesPI.getPathMetadataEntries().add(
