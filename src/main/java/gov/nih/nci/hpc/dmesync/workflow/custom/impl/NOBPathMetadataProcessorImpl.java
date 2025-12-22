@@ -350,7 +350,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getExperimentName(String metadataFilePathKey) {
 		String expermientCollectionName = null;
-		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "project_title");
+		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "experiment_name");
 		logger.info("expermientCollectionName: {}", expermientCollectionName);
 		return expermientCollectionName;
 	}
