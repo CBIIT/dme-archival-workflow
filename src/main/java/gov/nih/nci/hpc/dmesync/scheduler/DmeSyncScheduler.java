@@ -1089,18 +1089,6 @@ public class DmeSyncScheduler {
                     }
                 }
             } else {
-                // Auto-detect leaf folder if no pattern specified
-                /*File folderFile = new File(folder.getAbsolutePath());
-                File[] subFiles = folderFile.listFiles();
-                boolean hasSubDirs = false;
-                if (subFiles != null) {
-                    for (File f : subFiles) {
-                        if (f.isDirectory()) {
-                            hasSubDirs = true;
-                            break;
-                        }
-                    }
-                } */
                 if (isLeafFolder(Paths.get(folder.getAbsolutePath()))) {
                     matched = true;
                 }
@@ -1183,15 +1171,6 @@ public class DmeSyncScheduler {
 		 logger.info("[Scheduler] Selective Scan mode Completed");
 
 	}
-	/*private boolean isLeafFolder(Path folder, List<Path> scannedFolders) {
-	    Path normalized = folder.normalize();
-
-	    // leaf folder = no other scanned folder starts with this as a parent
-	    return scannedFolders.stream()
-	            .filter(other -> !other.equals(normalized))
-	            .map(Path::normalize)
-	            .noneMatch(other -> other.startsWith(normalized));
-	}*/
 	
 	public boolean isLeafFolder(Path folder) throws IOException {
 	    if (!Files.isDirectory(folder)) {
