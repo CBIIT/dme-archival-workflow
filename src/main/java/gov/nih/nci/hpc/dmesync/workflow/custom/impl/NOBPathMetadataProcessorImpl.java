@@ -359,7 +359,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String deconvFolderName = null;
 		String pathStr = normalize(path);
 		Optional<String> parentCollectionType = processedFolders.stream()
-				.filter(type -> pathStr.contains("/" + type + "/")).findFirst();
+				.filter(type -> pathStr.toLowerCase().contains("/" + type.toLowerCase() + "/")).findFirst();
 		if (parentCollectionType.isPresent()) {
 			deconvFolderName = getCollectionNameFromParent(path.toAbsolutePath().toString(), sampleName);
 		}
