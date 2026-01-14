@@ -400,11 +400,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String projectCollectionName = getProjectCollectionName(object);
 		// Check if this project is in the metadata spreadsheet
 		String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
-		if (projectTitle != null) {
-			return true;
-		} else {
-			return false;
-		}
+		return projectTitle != null;
 	}
 
 	private String getCollectionNameFromParent(String path, String parentName) {
