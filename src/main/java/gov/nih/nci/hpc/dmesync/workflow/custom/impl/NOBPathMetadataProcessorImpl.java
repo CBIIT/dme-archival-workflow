@@ -307,7 +307,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		} finally {
 			threadLocalMap.remove();
 		}
-		logger.info("POB CCDI custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
+		logger.info("NOB custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
 	}
 
@@ -350,7 +350,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getExperimentName(String metadataFilePathKey) {
 		String expermientCollectionName = null;
-		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "project_title");
+		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "experiment_id");
 		logger.info("expermientCollectionName: {}", expermientCollectionName);
 		return expermientCollectionName;
 	}
