@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
-
+import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -107,14 +107,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Autowired
 	private DmeSyncProducer sender;
 	
-	@Autowired
-	private DmeSyncPathMetadataProcessor metadataProcessor;
+	@Autowired 
+	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory; 
 	
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 
+		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 		
@@ -126,7 +127,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else if( metadataProcessor.isMetadataAvailable(object)) {
+		}else if( metadataTask.isMetadataAvailable(object)) {
 		// Task: Create tar file in work directory for processing
 		try {
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
