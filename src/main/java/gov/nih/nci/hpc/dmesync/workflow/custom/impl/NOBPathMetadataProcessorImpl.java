@@ -385,12 +385,15 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		Path fullFilePath = Paths.get(path);
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
-		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent()!=null && fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-				return fullFilePath.getFileName().toString();
-			}
-			fullFilePath = fullFilePath.getParent();
-		}
+		while (fullFilePath != null && fullFilePath.getParent() != null) {
+	        Path parent = fullFilePath.getParent();
+	        Path parentFileName = parent.getFileName();
+	        if (parentFileName != null && parentFileName.toString().equals(parentName)) {
+	            Path fileName = fullFilePath.getFileName();
+	            return fileName != null ? fileName.toString() : null;
+	        }
+	        fullFilePath = fullFilePath.getParent();
+	    }
 		return null;
 	}
 
