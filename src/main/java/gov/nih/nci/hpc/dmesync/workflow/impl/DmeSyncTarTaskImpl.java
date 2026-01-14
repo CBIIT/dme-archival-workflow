@@ -30,6 +30,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
@@ -225,7 +226,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}
 		}else {
 			logger.info("No need to upload file : {}", object.getOriginalFilePath());
-			object.setRunId(object.getRunId() + "_IGNORED");
+			object.setRunId(object.getRunId() + WorkflowConstants.IgnoredRunSuffix);
 			object.setEndWorkflow(true);
 			object.setError("No need to upload yet");
 			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
