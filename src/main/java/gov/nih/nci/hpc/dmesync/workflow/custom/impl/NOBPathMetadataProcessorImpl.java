@@ -45,7 +45,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// p9p3_cochlea1
 	private final List<String> sampleNames = List.of("s176wt_1", "s176wt_2", "s177wt_1", "s177wt_2", "ear_down",
 			"ear_up", "ear_up_pos50", "Interesting488", "Interesting640", "Interesting790", "e26", "p8heart",
-			"p8heart_1", "p8heart_2", "790", "adult2", "young1b", "young2", "p10_cochlea1", "p10_cochlea1_b",
+			"p8heart_1", "p8heart_2", "790", "790_Deskew","adult2", "young1b", "young2", "p10_cochlea1", "p10_cochlea1_b",
 			"p9p3_cochlea1", "p1117_wtL", "p1117_wtL_round2", "p175_wtR");
 	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused", "adult2_fused",
 			"young1b_fused");
@@ -135,7 +135,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String labCollectionName = getPiCollectionName(metadataFilePathKey);
 			String labCollectionPath = destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataowner_Lab"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 			pathEntriesPI.setPath(labCollectionPath);
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", labCollectionName));
 			pathEntriesPI.getPathMetadataEntries().add(
