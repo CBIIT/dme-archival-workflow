@@ -85,6 +85,17 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String sourceFileName, String status);
   
   /**
+   * findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus
+   *
+   * @param originalFilePath the original file path
+   * @param sourceFilePath the source file path
+   * @param status the status
+   * @return the StatusInfo object
+   */
+  StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
+      String originalFilePath, String sourceFilePath, String status);
+  
+  /**
    * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
    *
    * @param originalFilePath the original file path
