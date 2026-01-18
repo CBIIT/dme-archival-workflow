@@ -45,10 +45,9 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// p9p3_cochlea1
 	private final List<String> sampleNames = List.of("s176wt_1", "s176wt_2", "s177wt_1", "s177wt_2", "ear_down",
 			"ear_up", "ear_up_pos50", "Interesting488", "Interesting640", "Interesting790", "e26", "p8heart",
-			"p8heart_1", "p8heart_2", "790", "790_Deskew","adult2", "young1b", "young2", "p10_cochlea1", "p10_cochlea1_b",
+			"p8heart_1", "p8heart_2", "790", "790_Deskew","adult2","adult2_fused", "young1b","young1b_fused", "young2", "p10_cochlea1", "p10_cochlea1_b",
 			"p9p3_cochlea1", "p1117_wtL", "p1117_wtL_round2", "p175_wtR");
-	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused", "adult2_fused",
-			"young1b_fused");
+	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused");
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
 
@@ -85,7 +84,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
-					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath) + "/Deconv_"
+					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/Deconv_"
 					+ deconvFolderName + "/" + waveLengthFolderType + fileName;
 		} else {
 
@@ -253,8 +252,8 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesExpermientName.setPath(expermientNamePath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExpermientName);
 
-			// String sampleName= getSampleName(filePath);
-			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleName.replace(" ", "_");
+			String sampleNameUpdate= sampleName.replace("_fused", "");
+			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleNameUpdate.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 			pathEntriesSample.getPathMetadataEntries()
@@ -362,7 +361,19 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.filter(type -> pathStr.toLowerCase().contains("/" + type.toLowerCase() + "/")).findFirst();
 		if (parentCollectionType.isPresent()) {
 			deconvFolderName = getCollectionNameFromParent(path.toAbsolutePath().toString(), sampleName);
-		}
+			if(deconvFolderName!=null & deconvFolderName.equalsIgnoreCase(path.getFileName().toString())) {
+				deconvFolderName = FilenameUtils.removeExtension(path.getFileName().toString());
+			}else if (deconvFolderName!=null && deconvFolderName.equals("Decon")) {
+				deconvFolderName=getCollectionNameFromParent(path.toAbsolutePath().toString(), "Decon");
+			}
+		} else if (sampleName != null && sampleName.endsWith("_fused")) {
+	        // If sample name ends with _fused, use it as deconvFolderName
+	        deconvFolderName = sampleName;
+	    }
+		else if (sampleName != null && sampleName.equalsIgnoreCase("790_Deskew")) {
+	        // If sample name equals with 790_Deskew, use it as deconvFolderName
+	        deconvFolderName = sampleName;
+	    }
 		logger.info("deconvFolderName {}", deconvFolderName);
 		return deconvFolderName;
 	}
