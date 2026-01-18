@@ -208,9 +208,9 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years", "7"));
 
 			// Optional Values
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"), "MM/dd/yy"))
+			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date")));
+						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"),"MM/dd/yy"));
 			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")))
 				pathEntriesProject.getPathMetadataEntries()
 						.add(createPathEntry("pubmed_id", getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")));
