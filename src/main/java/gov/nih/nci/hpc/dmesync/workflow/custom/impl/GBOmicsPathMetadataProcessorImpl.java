@@ -436,7 +436,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
         else
             projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
         
-        if(org.apache.commons.lang3.StringUtils.startsWith(projectId, "ccrgb"))
+        if(org.apache.commons.lang3.StringUtils.startsWithIgnoreCase(projectId, "ccrgb"))
             projectId = projectId.toUpperCase().replace('_', '-');
         
         return projectId;
