@@ -39,7 +39,7 @@ class GBOmicsPathMetadataProcessorImplTest {
         
         StatusInfo statusInfo = new StatusInfo();
         
-        // Simulate a path where the project folder is named "ccrgb-13"
+        // Simulate a path where the project folder is a non-ccrgb project named "CENPA_cutrun"
         statusInfo.setOriginalFilePath("/data/khanlab3/gb_omics/projects/caplen/CENPA_cutrun/file.txt");
         statusInfo.setSourceFilePath("/data/khanlab3/gb_omics/projects/caplen/CENPA_cutrun/file.txt");
         
