@@ -130,7 +130,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		long maxFileSize = Long.parseLong(maxRecommendedFileSize);
         
 		
-		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"movies_TarContentsFile.txt")){
+		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"TarContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars processing
 			return object;
 			
