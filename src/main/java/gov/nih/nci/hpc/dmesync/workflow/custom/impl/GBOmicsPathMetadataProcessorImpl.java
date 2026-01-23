@@ -429,14 +429,18 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return getCollectionMappingValue(piFolder.toLowerCase(), "DataOwner_Lab", "gb-omics");
 	}
 
-	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
-		String projectId = null;
-		if(createCollectionSoftlink)
-			projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object));
-		else
-			projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
-		return projectId.toUpperCase().replace('_', '-');
-	}
+	protected String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+        String projectId = null;
+        if(createCollectionSoftlink)
+            projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object));
+        else
+            projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
+        
+        if(org.apache.commons.lang3.StringUtils.startsWithIgnoreCase(projectId, "ccrgb"))
+            projectId = projectId.toUpperCase().replace('_', '-');
+        
+        return projectId;
+    }
 
 	private String getFlowcell(StatusInfo object) throws DmeSyncMappingException {
 		String flowcellId = "";
