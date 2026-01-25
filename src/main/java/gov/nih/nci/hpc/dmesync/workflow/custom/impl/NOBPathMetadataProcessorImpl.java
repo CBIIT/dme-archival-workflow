@@ -45,7 +45,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// p9p3_cochlea1
 	private final List<String> sampleNames = List.of("s176wt_1", "s176wt_2", "s177wt_1", "s177wt_2", "ear_down",
 			"ear_up", "ear_up_pos50", "Interesting488", "Interesting640", "Interesting790", "e26", "p8heart",
-			"p8heart_1", "p8heart_2", "790", "790_Deskew","adult2","adult2_fused", "young1b","young1b_fused", "young2", "p10_cochlea1", "p10_cochlea1_b",
+			"p8heart_1", "p8heart_2", "790_Deskew","adult2","adult2_fused", "young1b","young1b_fused", "young2", "p10_cochlea1", "p10_cochlea1_b",
 			"p9p3_cochlea1", "p1117_wtL", "p1117_wtL_round2", "p175_wtR");
 	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused");
 	@Value("${dmesync.additional.metadata.excel:}")
@@ -338,7 +338,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getSampleName(Path path) {
 		Optional<String> sampleCollectionName = null;
 		String pathStr = normalize(path);
-		sampleCollectionName = sampleNames.stream().filter(sample -> pathStr.contains("/" + sample + "/")).findFirst();
+		sampleCollectionName = sampleNames.stream().filter(sample -> pathStr.contains("/" + sample)).findFirst();
 		logger.info("sampleCollectionName: {}", sampleCollectionName.get());
 		return sampleCollectionName.get();
 	}
@@ -370,7 +370,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	        // If sample name ends with _fused, use it as deconvFolderName
 	        deconvFolderName = sampleName;
 	    }
-		else if (sampleName != null && sampleName.equalsIgnoreCase("790_Deskew")) {
+	    if (sampleName != null && sampleName.equalsIgnoreCase("790_Deskew")) {
 	        // If sample name equals with 790_Deskew, use it as deconvFolderName
 	        deconvFolderName = sampleName;
 	    }
