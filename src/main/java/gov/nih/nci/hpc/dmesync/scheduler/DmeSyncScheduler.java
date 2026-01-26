@@ -935,7 +935,7 @@ public class DmeSyncScheduler {
       if(CollectionUtils.isEmpty(currentRun)) {
     	  // check if there are any records for Run_Ignored
 			List<StatusInfo> currentRunIgnored = dmeSyncWorkflowService.getService(access)
-					.findStatusInfoByRunIdAndDoc(currentRunId + WorkflowConstants.IgnoredRunSuffix, doc);
+					.findStatusInfoByRunIdAndDoc(currentRunId + WorkflowConstants.IGNORED_RUN_SUFFIX, doc);
 			if (CollectionUtils.isEmpty(currentRunIgnored))
 				return;
 			else {

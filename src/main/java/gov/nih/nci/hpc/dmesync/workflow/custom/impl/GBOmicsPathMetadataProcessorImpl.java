@@ -396,11 +396,16 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	
 	@Override
     public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException {
+		
+		if (isDATA() || isONT()) {
+			return true;
 
-		String projectCollectionName = getProjectCollectionName(object);
-		// Check if this project is in the metadata spreadsheet
-		String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
-		return projectTitle != null;
+		} else {
+			String projectCollectionName = getProjectCollectionName(object);
+			// Check if this project is in the metadata spreadsheet
+			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
+			return projectTitle != null;
+		}
 	}
 
 	private String getCollectionNameFromParent(String path, String parentName) {
