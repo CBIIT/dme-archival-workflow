@@ -64,6 +64,11 @@ public interface DmeSyncPathMetadataProcessor {
   /**
    * Determines whether tarring should proceed for upload.
    * Default implementation returns true.
+   * @param object
+   * @return boolean true if metadata available or false 
+   * @throws DmeSyncMappingException
+   * @throws DmeSyncWorkflowException
+   * 
    */
 	default boolean isMetadataAvailable(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
