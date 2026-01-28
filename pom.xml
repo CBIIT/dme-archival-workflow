@@ -132,9 +132,8 @@
 		</dependency>
 		<dependency>
    			<groupId>org.apache.tika</groupId>
-    		<artifactId>tika-parsers</artifactId>
+    		<artifactId>tika-parsers-standard-package</artifactId>
     		<version>3.2.3</version>
-    		<type>pom</type>
     		<exclusions>
 				<exclusion>
 					<groupId>xml-apis</groupId>
