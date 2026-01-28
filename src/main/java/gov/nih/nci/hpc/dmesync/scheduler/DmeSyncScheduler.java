@@ -1073,7 +1073,10 @@ public class DmeSyncScheduler {
 		List<HpcPathAttributes> foldersToTar = new ArrayList<>();
         Set<String> tarredFolderPaths = new HashSet<>();
         
-        List<PathMatcher> tarPatterns = Arrays.stream(tarIncludePattern.split(","))
+        List<String> tarPatterns = tarIncludePattern == null || tarIncludePattern.isEmpty() ? null :
+            Arrays.asList(tarIncludePattern.split(","));
+        
+        List<PathMatcher> tarPatternsMatcher = Arrays.stream(tarIncludePattern.split(","))
                 .map(String::trim)
                 .filter(p -> !p.isEmpty())
                 .map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
@@ -1082,8 +1085,12 @@ public class DmeSyncScheduler {
         for (HpcPathAttributes folder : folders) {
             boolean matched = false;
             if (tarPatterns != null) {
-                for (PathMatcher pattern : tarPatterns) {
-                    if (pattern.matches(Paths.get(folder.getAbsolutePath()))) {
+            	
+            	 for (String pattern : tarPatterns) {
+                     // Use .equals() if exact match, or .matches() for regex pattern
+                     if (folder.getName().equals(pattern.trim()) || folder.getName().matches(pattern.trim())) {
+              //  for (PathMatcher pattern : tarPatterns) {
+                //    if (pattern.matches(Paths.get(folder.getAbsolutePath()))) {
                         matched = true;
                         break;
                     }

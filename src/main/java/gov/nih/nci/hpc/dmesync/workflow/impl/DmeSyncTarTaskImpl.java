@@ -106,6 +106,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.tar.ignore.broken.link:false}")
 	private boolean ignoreBrokenLinksInTar;
+	
+
+	@Value("${dmesync.selective.scan:false}")
+    private boolean selectiveScan;
+
 
 	@PostConstruct
 	public boolean init() {
@@ -127,7 +132,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
-		
+		Path originalFilePath=Paths.get(object.getOriginalFilePath());
 		
 		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"movies_TarContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars processing
@@ -136,12 +141,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
+		}else if (selectiveScan && Files.isRegularFile(originalFilePath)){
+			// Skipping this task for the selective scan files
+			return object;
 		}else {
 		// Task: Create tar file in work directory for processing
 		try {
 		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
 	        File Folder = new File(object.getOriginalFilePath());
-	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
+	        
 	        
 	        long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
 		    // check to validate is the folder to tar is less than maxFilesize
