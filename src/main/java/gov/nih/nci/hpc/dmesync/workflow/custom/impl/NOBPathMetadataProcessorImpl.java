@@ -1,6 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -11,6 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+
+
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -76,8 +80,17 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// subcollectionName can be Deconv or null based on path
 		String deconvFolderName = getDeconvFolderName(filePath, sampleName);
+		
+		if (!fileName.endsWith("tar")) {
+			
+			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
+					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
+					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/"+fileName;
+			
+		}
 
-		if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
+		else if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 
 			String wavelengthFolder = getWavelengthFolderName(object.getOriginalFilePath(), deconvFolderName);
 			String waveLengthFolderType = wavelengthFolder != null ? wavelengthFolder + "/" : "";
@@ -262,8 +275,8 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("sample_name", sampleName));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
-
-			if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
+			if (object.getSourceFilePath() .endsWith("tar")) {
+			 if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 				String deconvCollectionPath = sampleCollectionPath + "/Deconv_" + deconvFolderName;
 				HpcBulkMetadataEntry pathEntriesDeconv = new HpcBulkMetadataEntry();
 				pathEntriesDeconv.getPathMetadataEntries()
@@ -291,7 +304,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFastq);
 
 			}
-
+		}
 			// Set it to dataObjectRegistrationRequestDTO
 			dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
 			dataObjectRegistrationRequestDTO.setGenerateUploadRequestURL(true);
@@ -335,10 +348,19 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return projectCollectionName;
 	}
 
+	static String norm(String s) {
+	    return s.toLowerCase().replaceAll("[_\\-,\\s]", "");
+	}
+	
 	private String getSampleName(Path path) {
-		Optional<String> sampleCollectionName = null;
 		String pathStr = normalize(path);
-		sampleCollectionName = sampleNames.stream().filter(sample -> pathStr.contains("/" + sample)).findFirst();
+
+		String normPath = norm(pathStr);
+
+		Optional<String> sampleCollectionName =
+		        sampleNames.stream()
+		                .filter(sample -> normPath.contains("/" + norm(sample)))
+		                .findFirst();
 		logger.info("sampleCollectionName: {}", sampleCollectionName.get());
 		return sampleCollectionName.get();
 	}
