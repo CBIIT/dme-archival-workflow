@@ -1064,39 +1064,94 @@ public class DmeSyncScheduler {
 
 		sender.send(message, "inbound.queue");
 	}
-	
+	/**
+	 * Selective scan processing.
+	 *
+	 * Purpose:
+	 *  Allows a mixed mode scan where some folders are archived as a single TAR unit,
+	 *       while other folders are scanned and their individual files are archived separately.</li>
+	 * Configuration:
+	 *  {@code dmesync.selective.scan=true} enables this mode.
+	 *  {@code dmesync.tar.include.pattern} is a comma-separated list of glob patterns that select
+	 *       which folders should be treated as "tar folders".
+	 *       
+	 * Pattern semantics:
+	 *   Patterns are matched against the folder path relative to {@code dmesync.source.base.dir}
+	 *       (i.e., {@code syncBaseDir}).
+	 *   Example:
+	 *     syncBaseDir = /data/archive
+	 *     folderPath  = /data/archive/2025/movies/CS-fam123
+	 *     relative    = 2025/movies/CS-fam123
+	 *     pattern     = 2025/movies/CS-fam*
+	 *  Glob wildcards:
+	 *       {@code *} matches characters within a single path segment
+	 *       {@code **} matches across path separators (any depth)
+	 *       {@code ?} matches a single character
+	 *
+	 * Algorithm overview:
+	 *   Determine which candidate folders match {@code tar.include.pattern} (these become {@code foldersToTar}).
+	 *   Remove subfolders underneath tarred parent folders to avoid double-processing.
+	 *   Archive tar-selected folders as folders (TAR workflow) via {@link #processFiles(List)}.
+	 *   For the remaining folders, scan direct children and archive individual files only.
+	 *   Finally, process any "top-level" files that are not within any already-processed folder.
+	 */
 	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files)
 			throws Exception {
 	
 		
-		 logger.info("[Scheduler] Selective Scan mode Started");
+		 
 		List<HpcPathAttributes> foldersToTar = new ArrayList<>();
         Set<String> tarredFolderPaths = new HashSet<>();
         
         List<String> tarPatterns = tarIncludePattern == null || tarIncludePattern.isEmpty() ? null :
             Arrays.asList(tarIncludePattern.split(","));
         
-        List<PathMatcher> tarPatternsMatcher = Arrays.stream(tarIncludePattern.split(","))
-                .map(String::trim)
-                .filter(p -> !p.isEmpty())
-                .map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
-                .collect(Collectors.toList());
+        logger.info("[Scheduler] Selective Scan mode Started with tar Patterns " + tarIncludePattern);
         
+       // Build matchers from comma-separated glob patterns.
+        // These patterns are expected to be relative to syncBaseDir, e.g.:
+        //   2025/movies/CS-fam*
+        // or using any-depth matching:
+        //   2025/**/CS-fam* 
+        List<PathMatcher> tarPatternsMatcher =
+        	    tarIncludePattern == null || tarIncludePattern.trim().isEmpty()
+        	        ? List.of()
+        	        : Arrays.stream(tarIncludePattern.split(","))
+        	            .map(String::trim)
+        	            .filter(p -> !p.isEmpty())
+        	            .map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
+        	            .collect(Collectors.toList());
+
+        Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
+       
+        
+     // Decide which folders should be TARred based on tarIncludePattern.
+        // If no pattern is provided, we fall back to leaf-folder detection.
         for (HpcPathAttributes folder : folders) {
             boolean matched = false;
+            Path folderPath = Paths.get(folder.getAbsolutePath()).toRealPath();
+            Path relativePath = baseDirPath.relativize(folderPath);
+            Path normalizedRelativePath = Paths.get(relativePath.toString().replace('\\', '/'));
             if (tarPatterns != null) {
             	
-            	 for (String pattern : tarPatterns) {
-                     // Use .equals() if exact match, or .matches() for regex pattern
-                     if (folder.getName().equals(pattern.trim()) || folder.getName().matches(pattern.trim())) {
-              //  for (PathMatcher pattern : tarPatterns) {
-                //    if (pattern.matches(Paths.get(folder.getAbsolutePath()))) {
+            	 for (PathMatcher matcher : tarPatternsMatcher) {
+                     if (matcher.matches(normalizedRelativePath)) {
+                       logger.info(
+                                 "[Scheduler][SelectiveScan] Matched folder to Tar. abs='{}' relNormalized='{}'",
+                                 folderPath,
+                                 normalizedRelativePath
+                             );
                         matched = true;
                         break;
                     }
                 }
             } else {
+                // No pattern configured: tar only leaf folders (folders without subdirectories).
+                logger.info(
+                    "[Scheduler][SelectiveScan] No tarIncludePattern configured; using leaf-folder logic. abs='{}'",
+                    folderPath);
                 if (isLeafFolder(Paths.get(folder.getAbsolutePath()))) {
+                  logger.info("[Scheduler][SelectiveScan] Leaf folder => will TAR. abs='{}'", folderPath);
                     matched = true;
                 }
             	

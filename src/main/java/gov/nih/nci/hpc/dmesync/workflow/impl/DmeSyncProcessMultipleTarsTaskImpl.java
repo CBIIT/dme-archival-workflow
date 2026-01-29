@@ -113,8 +113,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
-				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
-						(tarFileNameFormat + "_TarContentsFile.txt"));
+				File tarMappingFile = null;
+				if (StringUtils.equalsIgnoreCase("csb", doc)) {
+					tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
+							(tarFileNameFormat + "_TarContentsFile.txt"));
+				} else {
+					tarMappingFile = new File(tarWorkDir,
+							(tarFileNameFormat + "_TarContentsFile.txt"));
+
+				}
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
                 int totalFilesInTars = 0;
 
@@ -127,6 +134,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				}
 
 				if (files != null && files.length > 0) {
+					// Exclude folders listed in excludeFolder property from files array
+					if ( StringUtils.isNotBlank(excludeFolder)) {
+						List<String> excludeFoldersList = excludeFolder == null || excludeFolder.isEmpty() ? null
+								: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+						
+					    files = Arrays.stream(files)
+					        .filter(f -> !(f.isDirectory() && excludeFoldersList.contains(f.getName())))
+					        .toArray(File[]::new);
+					}
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
