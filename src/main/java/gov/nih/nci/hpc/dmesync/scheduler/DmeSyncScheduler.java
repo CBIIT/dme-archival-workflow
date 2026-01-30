@@ -578,7 +578,7 @@ public class DmeSyncScheduler {
 				&& StringUtils.containsIgnoreCase( multpleTarsFolders, file.getName())) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath());
+					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath() + '%');
 			
 			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
@@ -631,7 +631,7 @@ public class DmeSyncScheduler {
 			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
 
 			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath() + '%');
+					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath());
 
 			if (tarFolderRequests.isEmpty()) {
 				// No records for the path folder in database; running this folder for first time
