@@ -1096,174 +1096,165 @@ public class DmeSyncScheduler {
 	 *   Finally, process any "top-level" files that are not within any already-processed folder.
 	 */
 	
-	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files) throws Exception {
+	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files)
+			throws Exception {
 
-		  logger.info("[Scheduler] Selective Scan mode Started. tarIncludePattern='{}'", tarIncludePattern);
+		logger.info("[Scheduler] Selective Scan mode Started. tarIncludePattern='{}'", tarIncludePattern);
 
-		  // Selected folders that will be processed as "folder objects" (tar workflow).
-		  List<HpcPathAttributes> foldersToTar = new ArrayList<>();
+		try {
 
-		  // Canonical set of tarred folder absolute Paths (used to prevent double-processing descendants).
-		  Set<Path> tarredFolderPaths = new HashSet<>();
+			// Selected folders that will be processed as folder objects (tar workflow).
+			List<HpcPathAttributes> foldersToTar = new ArrayList<>();
 
-		  // Build matchers from comma-separated glob patterns.
-		  // Patterns are matched against folder path RELATIVE to syncBaseDir (with '/' normalization).
-		  // Examples:
-		  //   2025/movies/CS-fam*
-		  //   2025/**/CS-fam*
-		  final List<PathMatcher> tarPatternsMatcher =
-		      tarIncludePattern == null || tarIncludePattern.trim().isEmpty()
-		          ? List.of()
-		          : Arrays.stream(tarIncludePattern.split(","))
-		              .map(String::trim)
-		              .filter(p -> !p.isEmpty())
-		              .map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
-		              .collect(Collectors.toList());
+			Set<Path> tarredFolderPaths = new HashSet<>();
 
-		  // Base directory used to compute relative paths.
-		  final Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
+			// Build matchers from comma-separated glob patterns.
+			// Examples:
+			// 2025/movies/CS-fam*
+			// 2025/**/CS-fam*
+			final List<PathMatcher> tarPatternsMatcher = buildPathMatchers(tarIncludePattern);
 
-		  // Decide which folders should be tarred.
-		  for (HpcPathAttributes folder : folders) {
+			// Base directory used to compute relative paths.
+			final Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
 
-		    final Path folderPath = Paths.get(folder.getAbsolutePath()).toAbsolutePath().normalize();
 
-		    boolean matched;
-		    if (!tarPatternsMatcher.isEmpty()) {
-		      // Pattern-driven mode: match glob patterns against RELATIVE path.
-		      Path relativePath = baseDirPath.relativize(folderPath);
+			// Decide which folders should be tarred.
 
-		      // Normalize separators so patterns can be written using forward slashes in properties.
-		      Path normalizedRelativePath = Paths.get(relativePath.toString().replace('\\', '/'));
+			// 1. Find folders to TAR
+			for (HpcPathAttributes folder : folders) {
+				Path folderPath = Paths.get(folder.getAbsolutePath()).normalize().toAbsolutePath();
+				if (isFolderToTar(folderPath, tarPatternsMatcher, baseDirPath)) {
+					foldersToTar.add(folder);
+					tarredFolderPaths.add(folderPath);
+				}
+			}
 
-		      matched = false;
-		      for (PathMatcher matcher : tarPatternsMatcher) {
-		        if (matcher.matches(normalizedRelativePath)) {
-		          logger.info(
-		              "[Scheduler][SelectiveScan] Matched folder to TAR. absolute path ='{}' relative path ='{}'",
-		              folderPath,
-		              normalizedRelativePath
-		              );
-		          matched = true;
-		          break;
-		        }
-		      }
-		    } else {
-		      // No pattern configured: tar only leaf folders (folders without subdirectories).
-		      matched = isLeafFolder(folderPath);
-		      logger.info(
-		          "[Scheduler][SelectiveScan] No tarIncludePattern configured; leafFolder={} abs='{}'",
-		          matched,
-		          folderPath);
-		    }
+			// 1) Process tar-selected folders.
+			if (!foldersToTar.isEmpty()) {
+				logger.info("[Scheduler][SelectiveScan] Tarring folders count={}", foldersToTar.size());
+				processFiles(foldersToTar);
+			} else {
+				logger.info("[Scheduler][SelectiveScan] No folders selected for TAR.");
+			}
 
-		    if (matched) {
-		      foldersToTar.add(folder);
-		      tarredFolderPaths.add(folderPath);
-		    }
-		  }
+			// 2. Folders for individual scan = not tarred and not subfolder of tarred
+			List<HpcPathAttributes> foldersToScanIndividually = folders.stream().filter(f -> {
+				Path path = Paths.get(f.getAbsolutePath()).normalize().toAbsolutePath();
+				return !tarredFolderPaths.contains(path) && !isDescendantOf(path, tarredFolderPaths);
+			}).toList();
 
-		  // Helper: true if a folder is under any tarred folder (but not equal to it).
-		  java.util.function.Predicate<Path> isDescendantOfTarred =
-		      folderPath -> {
-		        Path p = folderPath.getParent();
-		        while (p != null) {
-		          if (tarredFolderPaths.contains(p)) return true;
-		          p = p.getParent();
-		        }
-		        return false;
-		      };
+			// For remaining folders, enqueue child files .
+			List<HpcPathAttributes> individualFiles = collectFilesFromFolders(foldersToScanIndividually);
 
-		  // Keep only folders that are NOT tarred and NOT descendants of tarred folders.
-		  List<HpcPathAttributes> foldersToScanIndividually =
-		      folders.stream()
-		          .filter(
-		              f -> {
-		                Path p = Paths.get(f.getAbsolutePath()).toAbsolutePath().normalize();
-		                if (tarredFolderPaths.contains(p)) return false;
-		                return !isDescendantOfTarred.test(p);
-		              })
-		          .collect(Collectors.toList());
+			if (!individualFiles.isEmpty()) {
+				logger.info("[Scheduler][SelectiveScan] Processing individual files count={}", individualFiles.size());
+				processFiles(individualFiles);
+			}
 
-		  // 1) Process tar-selected folders.
-		  if (!foldersToTar.isEmpty()) {
-		    logger.info("[Scheduler][SelectiveScan] Tarring folders count={}", foldersToTar.size());
-		    processFiles(foldersToTar);
-		  } else {
-		    logger.info("[Scheduler][SelectiveScan] No folders selected for TAR.");
-		  }
+			// 3) Process files that are not under any processed folder (tarred or
+			// scanned-individually).
+			Set<Path> scannedFolderPaths = new HashSet<>(tarredFolderPaths);
+			for (HpcPathAttributes f : foldersToScanIndividually) {
+				scannedFolderPaths.add(Paths.get(f.getAbsolutePath()).toAbsolutePath().normalize());
+			}
 
-		  // 2) For remaining folders, enqueue child files .
-		  List<HpcPathAttributes> individualFiles = new ArrayList<>();
-		  for (HpcPathAttributes folder : foldersToScanIndividually) {
-		    File dir = new File(folder.getAbsolutePath());
-		    File[] childFiles = dir.listFiles();
-		    if (childFiles == null) continue;
+			// 4. Process top-level files (not under any already-processed folder)
+			Set<Path> processedFolders = new HashSet<>(tarredFolderPaths);
+			foldersToScanIndividually
+					.forEach(f -> processedFolders.add(Paths.get(f.getAbsolutePath()).normalize().toAbsolutePath()));
+			List<HpcPathAttributes> topLevelFiles = files.stream().filter(f -> {
+				Path filePath = Paths.get(f.getAbsolutePath()).normalize().toAbsolutePath();
+				return processedFolders.stream().noneMatch(filePath::startsWith);
+			}).toList();
 
-		    for (File f : childFiles) {
-		      if (!f.isFile()) continue;
-
-		      HpcPathAttributes fa = new HpcPathAttributes();
-		      fa.setName(f.getName());
-		      fa.setPath(f.getPath());
-		      fa.setUpdatedDate(new Date(f.lastModified()));
-		      fa.setAbsolutePath(f.getAbsolutePath());
-		      fa.setSize(f.length());
-		      fa.setIsDirectory(false);
-		      individualFiles.add(fa);
-		    }
-		  }
-
-		  if (!individualFiles.isEmpty()) {
-		    logger.info("[Scheduler][SelectiveScan] Processing individual files count={}", individualFiles.size());
-		    processFiles(individualFiles);
-		  }
-
-		  // 3) Process files that are not under any processed folder (tarred or scanned-individually).
-		  Set<Path> scannedFolderPaths = new HashSet<>(tarredFolderPaths);
-		  for (HpcPathAttributes f : foldersToScanIndividually) {
-		    scannedFolderPaths.add(Paths.get(f.getAbsolutePath()).toAbsolutePath().normalize());
-		  }
-
-		  List<HpcPathAttributes> topLevelFiles =
-		      files.stream()
-		          .filter(
-		              file -> {
-		                Path filePath = Paths.get(file.getAbsolutePath()).toAbsolutePath().normalize();
-		                for (Path folderPath : scannedFolderPaths) {
-		                  if (filePath.startsWith(folderPath)) {
-		                    // This file is inside a processed folder (tared or scanned for individual files)
-		                    return false;
-		                  }
-		                }
-		                return true;
-		              })
-		          .collect(Collectors.toList());
-
-		  if (!topLevelFiles.isEmpty()) {
-		    logger.info("[Scheduler][SelectiveScan] Processing top-level files count={}", topLevelFiles.size());
-		    processFiles(topLevelFiles);
-		  }
-
-		  logger.info("[Scheduler] Selective Scan mode Completed");
+			if (!topLevelFiles.isEmpty()) {
+				logger.info("[Scheduler][SelectiveScan] Processing top-level files count={}", topLevelFiles.size());
+				processFiles(topLevelFiles);
+			}
+		} catch (Exception e) {
+			logger.error("[Scheduler][SelectiveScan] Failed");
+			throw new Exception("SelectiveScan caused excelption" + e.getMessage());
 		}
-	
-	public boolean isLeafFolder(Path folder) throws IOException {
-	    if (!Files.isDirectory(folder)) {
-	        return false;
-	    }
 
-	    try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder)) {
-	        for (Path child : stream) {
-	            if (Files.isDirectory(child)) {
-	                return false; // has a subdirectory → not leaf
-	            }
-	        }
-	    }
-
-	    return true; // no subdirectories → leaf
+		logger.info("[Scheduler] Selective Scan mode Completed");
 	}
 
+	private boolean isFolderToTar(Path folder, List<PathMatcher> matchers, Path baseDirPath) {
+		if (!matchers.isEmpty()) {
+			Path rel = baseDirPath.relativize(folder);
+			String relUnix = rel.toString().replace('\\', '/');
+			for (PathMatcher m : matchers) {
+				if (m.matches(Paths.get(relUnix)))
+					return true;
+			}
+			return false;
+		}
+		// treat as leaf folder if no patterns
+		try (DirectoryStream<Path> ds = Files.newDirectoryStream(folder)) {
+			for (Path p : ds)
+				if (Files.isDirectory(p))
+					return false;
+		} catch (IOException e) {
+			logger.warn("Error checking if folder is leaf: {}", folder, e);
+			return false;
+		}
+		return true;
+	}
 
-  
+	private List<PathMatcher> buildPathMatchers(String patterns) {
+		if (patterns == null || patterns.isBlank())
+			return List.of();
+		return Arrays.stream(patterns.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+				.map(pat -> FileSystems.getDefault().getPathMatcher("glob:" + pat)).toList();
+		
+	}
+
+	private static boolean isDescendantOf(Path test, Set<Path> parents) {
+		Path parent = test.getParent();
+		while (parent != null) {
+			if (parents.contains(parent))
+				return true;
+			parent = parent.getParent();
+		}
+		return false;
+	}
+
+	private List<HpcPathAttributes> collectFilesFromFolders(List<HpcPathAttributes> folders) {
+		List<HpcPathAttributes> files = new ArrayList<>();
+		for (HpcPathAttributes folder : folders) {
+			File[] child = new File(folder.getAbsolutePath()).listFiles();
+			if (child == null)
+				continue;
+			for (File f : child) {
+				if (!f.isFile())
+					continue;
+				HpcPathAttributes a = new HpcPathAttributes();
+				a.setName(f.getName());
+				a.setPath(f.getPath());
+				a.setUpdatedDate(new Date(f.lastModified()));
+				a.setAbsolutePath(f.getAbsolutePath());
+				a.setSize(f.length());
+				a.setIsDirectory(false);
+				files.add(a);
+			}
+		}
+		return files;
+	}
+
+	public boolean isLeafFolder(Path folder) throws IOException {
+		if (!Files.isDirectory(folder)) {
+			return false;
+		}
+
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder)) {
+			for (Path child : stream) {
+				if (Files.isDirectory(child)) {
+					return false; // has a subdirectory → not leaf
+				}
+			}
+		}
+
+		return true; // no subdirectories → leaf
+	}
+
 }
