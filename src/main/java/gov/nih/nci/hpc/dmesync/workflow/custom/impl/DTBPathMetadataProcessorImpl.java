@@ -39,7 +39,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String archivePath = null;
 		Path fullPath = Paths.get(sourcePath);
 		String piCollectionName = getPiCollectionName();
-		String projectcollectionName = getProjectcollectionName(object);
+		String projectcollectionName = getProjectcollectionName(fullPath);
 
 		if (StringUtils.equalsIgnoreCase(projectcollectionName, "NGS")) {
 			String runId = getCollectionNameFromParent(fullPath, "NGS"); // CS039095
@@ -106,7 +106,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String sourcePath = object.getOriginalFilePath();
 			Path fullPath = Paths.get(sourcePath);
 			String piCollectionName = getPiCollectionName();
-			String projectCollectionName = getProjectcollectionName(object);
+			String projectCollectionName = getProjectcollectionName(fullPath);
 			String metadataFilePathKey = getPathForMetadata(fullPath);
 
 			logger.info("metadataFileKey {} ", metadataFilePathKey);
@@ -336,40 +336,22 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	/**
-	 * Utility to extract the path name that follows directly after the given parent
-	 * folder. E.g., for path /a/b/c/d.txt and parentName = "b", returns "c".
-	 */
-	private String getCollectionPathFromParent(Path fullPath, String parentName) {
-		int count = fullPath.getNameCount();
-		logger.info("Full File Path = {}", fullPath);
-		for (int i = 0; i < count - 1; i++) {
-			if (fullPath.getName(i).toString().equals(parentName) && (i + 1 < count)) {
-				return fullPath.toString();
-			}
-		}
-		return null;
-	}
 
-	private String getCollectionNameFromParent(String path, String parentName) {
-		Path fullFilePath = Paths.get(path);
+	private Path getCollectionPathFromParent(Path fullFilePath, String parentName) {
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
-		while (fullFilePath != null && fullFilePath.getParent() != null) {
-			Path parent = fullFilePath.getParent();
-			Path parentFileName = parent.getFileName();
-			if (parentFileName != null && parentFileName.toString().equals(parentName)) {
-				Path fileName = fullFilePath.getFileName();
-				return fileName != null ? fileName.toString() : null;
+		for (int i = 0; i <= count; i++) {
+			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+				return fullFilePath;
 			}
 			fullFilePath = fullFilePath.getParent();
 		}
 		return null;
 	}
 
-	private String getProjectcollectionName(StatusInfo object) {
+	private String getProjectcollectionName(Path fullPath) {
 		String projectCollectionName = null;
-		projectCollectionName = getCollectionNameFromParent(object.getOriginalFilePath(), "Machida_lab");
+		projectCollectionName = getCollectionNameFromParent(fullPath, "Machida_lab");
 		logger.info("projectCollectionName: {}", projectCollectionName);
 		return projectCollectionName;
 
@@ -378,7 +360,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public String getPathForMetadata(Path fullPath) {
 		// Path key is Run level /data/Machida_lab/CryoEM/202504
 
-		return getCollectionPathFromParent(fullPath, getCollectionNameFromParent(fullPath, "Machida_lab"));
+		return getCollectionPathFromParent(fullPath, getCollectionNameFromParent(fullPath, "Machida_lab")).toString();
 
 	}
 
