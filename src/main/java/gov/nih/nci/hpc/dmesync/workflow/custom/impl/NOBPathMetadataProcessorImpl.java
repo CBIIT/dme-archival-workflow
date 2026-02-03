@@ -86,7 +86,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
-					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/"+fileName;
+					+ getExperimentName(metadataFilePathKey)  + "/"+fileName;
 			
 		}
 
@@ -264,7 +264,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			pathEntriesExpermientName.setPath(expermientNamePath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExpermientName);
-
+		if (object.getSourceFilePath() .endsWith("tar")) {
 			String sampleNameUpdate= sampleName.replace("_fused", "");
 			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleNameUpdate.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
@@ -275,7 +275,6 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("sample_name", sampleName));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
-			if (object.getSourceFilePath() .endsWith("tar")) {
 			 if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 				String deconvCollectionPath = sampleCollectionPath + "/Deconv_" + deconvFolderName;
 				HpcBulkMetadataEntry pathEntriesDeconv = new HpcBulkMetadataEntry();
