@@ -1,6 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -11,6 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+
+
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -45,10 +49,9 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	// p9p3_cochlea1
 	private final List<String> sampleNames = List.of("s176wt_1", "s176wt_2", "s177wt_1", "s177wt_2", "ear_down",
 			"ear_up", "ear_up_pos50", "Interesting488", "Interesting640", "Interesting790", "e26", "p8heart",
-			"p8heart_1", "p8heart_2", "790", "adult2", "young1b", "young2", "p10_cochlea1", "p10_cochlea1_b",
+			"p8heart_1", "p8heart_2", "790","adult2","adult2_fused", "young1b","young1b_fused", "young2", "p10_cochlea1", "p10_cochlea1_b",
 			"p9p3_cochlea1", "p1117_wtL", "p1117_wtL_round2", "p175_wtR");
-	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused", "adult2_fused",
-			"young1b_fused");
+	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused");
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
 
@@ -77,15 +80,24 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// subcollectionName can be Deconv or null based on path
 		String deconvFolderName = getDeconvFolderName(filePath, sampleName);
+		
+		if (!fileName.endsWith("tar")) {
+			
+			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
+					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
+					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/"+fileName;
+			
+		}
 
-		if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
+		else if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 
 			String wavelengthFolder = getWavelengthFolderName(object.getOriginalFilePath(), deconvFolderName);
 			String waveLengthFolderType = wavelengthFolder != null ? wavelengthFolder + "/" : "";
 			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
-					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath) + "/Deconv_"
+					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/Deconv_"
 					+ deconvFolderName + "/" + waveLengthFolderType + fileName;
 		} else {
 
@@ -135,7 +147,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String labCollectionName = getPiCollectionName(metadataFilePathKey);
 			String labCollectionPath = destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
-			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Dataowner_Lab"));
+			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 			pathEntriesPI.setPath(labCollectionPath);
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", labCollectionName));
 			pathEntriesPI.getPathMetadataEntries().add(
@@ -210,7 +222,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// Optional Values
 			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date")));
+						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"),"MM/dd/yy"));
 			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")))
 				pathEntriesProject.getPathMetadataEntries()
 						.add(createPathEntry("pubmed_id", getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")));
@@ -253,8 +265,8 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesExpermientName.setPath(expermientNamePath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExpermientName);
 
-			// String sampleName= getSampleName(filePath);
-			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleName.replace(" ", "_");
+			String sampleNameUpdate= sampleName.replace("_fused", "");
+			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleNameUpdate.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 			pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample"));
 			pathEntriesSample.getPathMetadataEntries()
@@ -263,8 +275,8 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("sample_name", sampleName));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
-
-			if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
+			if (object.getSourceFilePath() .endsWith("tar")) {
+			 if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 				String deconvCollectionPath = sampleCollectionPath + "/Deconv_" + deconvFolderName;
 				HpcBulkMetadataEntry pathEntriesDeconv = new HpcBulkMetadataEntry();
 				pathEntriesDeconv.getPathMetadataEntries()
@@ -292,7 +304,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFastq);
 
 			}
-
+		}
 			// Set it to dataObjectRegistrationRequestDTO
 			dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
 			dataObjectRegistrationRequestDTO.setGenerateUploadRequestURL(true);
@@ -307,7 +319,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		} finally {
 			threadLocalMap.remove();
 		}
-		logger.info("POB CCDI custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
+		logger.info("NOB custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
 	}
 
@@ -336,10 +348,19 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return projectCollectionName;
 	}
 
+	static String norm(String s) {
+	    return s.toLowerCase().replaceAll("[_\\-,\\s]", "");
+	}
+	
 	private String getSampleName(Path path) {
-		Optional<String> sampleCollectionName = null;
 		String pathStr = normalize(path);
-		sampleCollectionName = sampleNames.stream().filter(sample -> pathStr.contains("/" + sample + "/")).findFirst();
+
+		String normPath = norm(pathStr);
+
+		Optional<String> sampleCollectionName =
+		        sampleNames.stream()
+		                .filter(sample -> normPath.contains("/" + norm(sample)))
+		                .findFirst();
 		logger.info("sampleCollectionName: {}", sampleCollectionName.get());
 		return sampleCollectionName.get();
 	}
@@ -350,7 +371,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getExperimentName(String metadataFilePathKey) {
 		String expermientCollectionName = null;
-		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "project_title");
+		expermientCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "experiment_id");
 		logger.info("expermientCollectionName: {}", expermientCollectionName);
 		return expermientCollectionName;
 	}
@@ -359,10 +380,22 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String deconvFolderName = null;
 		String pathStr = normalize(path);
 		Optional<String> parentCollectionType = processedFolders.stream()
-				.filter(type -> pathStr.contains("/" + type + "/")).findFirst();
+				.filter(type -> pathStr.toLowerCase().contains("/" + type.toLowerCase() + "/")).findFirst();
 		if (parentCollectionType.isPresent()) {
 			deconvFolderName = getCollectionNameFromParent(path.toAbsolutePath().toString(), sampleName);
-		}
+			if(deconvFolderName!=null && deconvFolderName.equalsIgnoreCase(path.getFileName().toString())) {
+				deconvFolderName = FilenameUtils.removeExtension(path.getFileName().toString());
+			}else if (deconvFolderName!=null && deconvFolderName.equals("Decon")) {
+				deconvFolderName=getCollectionNameFromParent(path.toAbsolutePath().toString(), "Decon");
+			}
+		} else if (sampleName != null && sampleName.endsWith("_fused")) {
+	        // If sample name ends with _fused, use it as deconvFolderName
+	        deconvFolderName = sampleName;
+	    }
+	    if (sampleName != null && sampleName.equalsIgnoreCase("790")) {
+	        // If sample name equals with 790_Deskew, use it as deconvFolderName
+	        deconvFolderName =  "Deskew";
+	    }
 		logger.info("deconvFolderName {}", deconvFolderName);
 		return deconvFolderName;
 	}
@@ -385,12 +418,15 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		Path fullFilePath = Paths.get(path);
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
-		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-				return fullFilePath.getFileName().toString();
-			}
-			fullFilePath = fullFilePath.getParent();
-		}
+		while (fullFilePath != null && fullFilePath.getParent() != null) {
+	        Path parent = fullFilePath.getParent();
+	        Path parentFileName = parent.getFileName();
+	        if (parentFileName != null && parentFileName.toString().equals(parentName)) {
+	            Path fileName = fullFilePath.getFileName();
+	            return fileName != null ? fileName.toString() : null;
+	        }
+	        fullFilePath = fullFilePath.getParent();
+	    }
 		return null;
 	}
 
