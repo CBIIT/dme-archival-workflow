@@ -34,7 +34,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
 		logger.info("[PathMetadataTask] DTB getArchivePath called");
 
-		String sourcePath = object.getSourceFilePath();
+		String sourcePath = object.getOriginalFilePath();
 		String fileName = Paths.get(sourcePath).toFile().getName();
 		String archivePath = null;
 		Path fullPath = Paths.get(sourcePath);
@@ -190,7 +190,9 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("organism", getAttrValueFromMetadataMap(metadataFilePathKey, "organism")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease",
 					getAttrValueFromMetadataMap(metadataFilePathKey, "study_disease")));
-
+			pathEntriesProject.getPathMetadataEntries()
+			.add(createPathEntry("is_cell_line", getAttrValueFromMetadataMap(metadataFilePathKey, "is_cell_line")));
+	
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
 					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generating_facility")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));

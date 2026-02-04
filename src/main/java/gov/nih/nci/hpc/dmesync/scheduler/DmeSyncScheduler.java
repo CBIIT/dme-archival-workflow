@@ -359,6 +359,7 @@ public class DmeSyncScheduler {
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
       String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(syncBaseDirFolders)?" in "+syncBaseDirFolders+" folders":"")+ ".";
       if(CollectionUtils.isEmpty(currentRun)) {
+    	  logger.info("[Scheduler] No files/folders found for RunID." + runId + " Doc "+ doc);
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
 		if (shutDownFlag) {
