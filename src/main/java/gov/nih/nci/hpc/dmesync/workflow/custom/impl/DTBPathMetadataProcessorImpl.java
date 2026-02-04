@@ -361,9 +361,14 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	public String getPathForMetadata(Path fullPath) {
 		// Path key is Run level /data/Machida_lab/CryoEM/202504
+		String metadataKeypath= getCollectionPathFromParent(fullPath, getCollectionNameFromParent(fullPath, "Machida_lab")).toString();
 
-		return getCollectionPathFromParent(fullPath, getCollectionNameFromParent(fullPath, "Machida_lab")).toString();
-
+		    // Normalize known roots to /data
+		    int idx = metadataKeypath.indexOf("/Machida_lab/");
+		    if (idx >= 0) {
+		        return "/data" + metadataKeypath.substring(idx);
+		    }
+		    return metadataKeypath;
 	}
 
 	private String getPiCollectionName() {
