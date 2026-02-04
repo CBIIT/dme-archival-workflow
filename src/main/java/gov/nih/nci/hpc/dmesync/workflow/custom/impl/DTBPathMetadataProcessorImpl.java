@@ -1,9 +1,13 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Comparator;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,8 +31,12 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
+
 	@Value("${dmesync.additional.metadata.excel:}")
 	private String metadataFile;
+
+	@Value("${dmesync.source.base.dir}")
+	private String syncBaseDir;
 
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
@@ -110,7 +118,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String metadataFilePathKey = getPathForMetadata(fullPath);
 
 			logger.info("metadataFileKey {} ", metadataFilePathKey);
-
+			metadataFile = resolveMetadataFile(syncBaseDir,metadataFile );
 			// load the user metadata from the externally placed excel
 			metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
 
@@ -190,9 +198,9 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("organism", getAttrValueFromMetadataMap(metadataFilePathKey, "organism")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease",
 					getAttrValueFromMetadataMap(metadataFilePathKey, "study_disease")));
-			pathEntriesProject.getPathMetadataEntries()
-			.add(createPathEntry("is_cell_line", getAttrValueFromMetadataMap(metadataFilePathKey, "is_cell_line")));
-	
+			pathEntriesProject.getPathMetadataEntries().add(
+					createPathEntry("is_cell_line", getAttrValueFromMetadataMap(metadataFilePathKey, "is_cell_line")));
+
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
 					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generating_facility")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
@@ -214,7 +222,6 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			pathEntriesProject.setPath(projectCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
-			
 			// Add path metadata entries for "Run_XXX" collection
 			if (StringUtils.equalsIgnoreCase(projectCollectionName, "NGS")) {
 				String runId = getCollectionNameFromParent(fullPath, "NGS"); // CS039095
@@ -278,7 +285,8 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					pathEntriesFastq.setPath(fastqPath);
 					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFastq);
 				}
-			// Add path metadata entries for "Run_XXX" collection for Project CryoEM and Xtal
+				// Add path metadata entries for "Run_XXX" collection for Project CryoEM and
+				// Xtal
 			} else if (StringUtils.equalsIgnoreCase(projectCollectionName, "CryoEM")
 					|| StringUtils.equalsIgnoreCase(projectCollectionName, "Xtal")) {
 				String runId = getCollectionNameFromParent(fullPath, projectCollectionName); // 20250409
@@ -292,6 +300,23 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 						.add(createPathEntry("run_date", getAttrValueFromMetadataMap(metadataFilePathKey, "run_date")));
 				pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("instrument_name",
 						getAttrValueFromMetadataMap(metadataFilePathKey, "instrument_name")));
+
+				if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "library_strategy")))
+					pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("library_strategy",
+							getAttrValueFromMetadataMap(metadataFilePathKey, "library_strategy")));
+
+				if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "analyte_type")))
+					pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("analyte_type",
+							getAttrValueFromMetadataMap(metadataFilePathKey, "analyte_type")));
+
+				if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "tissue")))
+					pathEntriesRunName.getPathMetadataEntries()
+							.add(createPathEntry("tissue", getAttrValueFromMetadataMap(metadataFilePathKey, "tissue")));
+
+				if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "tissue_type")))
+					pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("tissue_type",
+							getAttrValueFromMetadataMap(metadataFilePathKey, "tissue_type")));
+
 				pathEntriesRunName.setPath(runNamePath);
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesRunName);
 
@@ -338,7 +363,6 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-
 	private Path getCollectionPathFromParent(Path fullFilePath, String parentName) {
 		logger.info("Full File Path = {}", fullFilePath);
 		int count = fullFilePath.getNameCount();
@@ -361,17 +385,32 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	public String getPathForMetadata(Path fullPath) {
 		// Path key is Run level /data/Machida_lab/CryoEM/202504
-		String metadataKeypath= getCollectionPathFromParent(fullPath, getCollectionNameFromParent(fullPath, "Machida_lab")).toString();
+		String metadataKeypath = getCollectionPathFromParent(fullPath,
+				getCollectionNameFromParent(fullPath, "Machida_lab")).toString();
 
-		    // Normalize known roots to /data
-		    int idx = metadataKeypath.indexOf("/Machida_lab/");
-		    if (idx >= 0) {
-		        return "/data" + metadataKeypath.substring(idx);
-		    }
-		    return metadataKeypath;
+		// Normalize known roots to /data
+		int idx = metadataKeypath.indexOf("/Machida_lab/");
+		if (idx >= 0) {
+			return "/data" + metadataKeypath.substring(idx);
+		}
+		return metadataKeypath;
 	}
 
 	private String getPiCollectionName() {
 		return "Yuichi_Machida";
+	}
+
+	private String resolveMetadataFile(String directory, String propertyPrefix)
+			throws DmeSyncMappingException, IOException {
+
+		File dir = new File(directory);
+		File[] files = dir.listFiles((d, name) -> name.startsWith(propertyPrefix) && name.endsWith(".xlsx"));
+		if (files != null && files.length > 0) {
+			// Sort by last modified time, descending
+	        Arrays.sort(files, Comparator.comparing(File::lastModified).reversed());
+	        return files[0].getAbsolutePath(); // Most recently modified file
+		}
+
+		return null; // or throw
 	}
 }
