@@ -400,17 +400,18 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return "Yuichi_Machida";
 	}
 
-	private String resolveMetadataFile(String directory, String propertyPrefix)
-			throws DmeSyncMappingException, IOException {
-
-		File dir = new File(directory);
-		File[] files = dir.listFiles((d, name) -> name.startsWith(propertyPrefix) && name.endsWith(".xlsx"));
-		if (files != null && files.length > 0) {
-			// Sort by last modified time, descending
-	        Arrays.sort(files, Comparator.comparing(File::lastModified).reversed());
-	        return files[0].getAbsolutePath(); // Most recently modified file
-		}
-
-		return null; // or throw
+	private String resolveMetadataFile(String directory, String propertyPrefix) throws DmeSyncMappingException {
+		
+			File dir = new File(directory);
+			File[] files = dir.listFiles((d, name) -> name.startsWith(propertyPrefix) && name.endsWith(".xlsx"));
+			if (files != null && files.length > 0) {
+				// Sort by last modified time, descending
+				Arrays.sort(files, Comparator.comparing(File::lastModified).reversed());
+				return files[0].getAbsolutePath(); // Most recently modified file
+			}else {
+				logger.error("Metadata excel file not found for {}", directory + "with pattern" + propertyPrefix);
+				throw new DmeSyncMappingException(
+						"Metadata excel file not found for " + directory + "with pattern" + propertyPrefix);
+		      }
 	}
 }
