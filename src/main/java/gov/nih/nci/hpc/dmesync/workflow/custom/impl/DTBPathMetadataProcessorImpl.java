@@ -117,11 +117,13 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String projectCollectionName = getProjectcollectionName(fullPath);
 			String metadataFilePathKey = getPathForMetadata(fullPath);
 
-			logger.info("metadataFileKey {} ", metadataFilePathKey);
-			metadataFile = resolveMetadataFile(syncBaseDir,metadataFile );
+			//metadataFile = resolveMetadataFile(syncBaseDir,metadataFile );
 			// load the user metadata from the externally placed excel
 			metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
 
+
+			logger.info("MetadatafileName {} with metadataFileKey {} ",metadataFile, metadataFilePathKey);
+			
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -294,8 +296,6 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				HpcBulkMetadataEntry pathEntriesRunName = new HpcBulkMetadataEntry();
 				pathEntriesRunName.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Run"));
 				pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("run_id", runId));
-				pathEntriesRunName.getPathMetadataEntries()
-						.add(createPathEntry("run_name", getAttrValueFromMetadataMap(metadataFilePathKey, "run_name")));
 				pathEntriesRunName.getPathMetadataEntries()
 						.add(createPathEntry("run_date", getAttrValueFromMetadataMap(metadataFilePathKey, "run_date")));
 				pathEntriesRunName.getPathMetadataEntries().add(createPathEntry("instrument_name",
