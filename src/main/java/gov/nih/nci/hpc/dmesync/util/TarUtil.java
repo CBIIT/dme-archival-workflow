@@ -354,4 +354,9 @@ public class TarUtil {
 		throw e;
 	}
   }
+  
+  public static boolean isSelectiveScanFileUpload(Path originalFilePath) {
+	  return Files.isRegularFile(originalFilePath);
+	  
+  }
 }

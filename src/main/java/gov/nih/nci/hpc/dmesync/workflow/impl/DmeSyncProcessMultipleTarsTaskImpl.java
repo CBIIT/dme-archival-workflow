@@ -28,6 +28,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -360,6 +361,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
 						object.setStatus("COMPLETED");
+						object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
 						object.setEndWorkflow(true);
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						

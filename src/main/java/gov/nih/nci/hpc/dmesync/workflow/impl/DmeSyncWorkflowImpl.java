@@ -152,7 +152,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 	      tasks.add(permissionBookmarkTask);
 	      if(fileSystemUpload)
 	    	  tasks.add(permissionArchiveTask);
-	      if (tar || tarIndividualFiles || untar || compress) tasks.add(cleanupTask);
+	      if (tar || tarIndividualFiles || untar || compress || selectiveScan) tasks.add(cleanupTask);
       }
     }
     

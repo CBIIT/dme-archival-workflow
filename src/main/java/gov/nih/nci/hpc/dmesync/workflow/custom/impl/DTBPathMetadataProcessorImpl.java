@@ -43,7 +43,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("[PathMetadataTask] DTB getArchivePath called");
 
 		String sourcePath = object.getOriginalFilePath();
-		String fileName = Paths.get(sourcePath).toFile().getName();
+		String fileName = object.getSourceFileName();
 		String archivePath = null;
 		Path fullPath = Paths.get(sourcePath);
 		String piCollectionName = getPiCollectionName();
@@ -117,12 +117,12 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String projectCollectionName = getProjectcollectionName(fullPath);
 			String metadataFilePathKey = getPathForMetadata(fullPath);
 
-			//metadataFile = resolveMetadataFile(syncBaseDir,metadataFile );
+			String metadataFileName = resolveMetadataFile(syncBaseDir,metadataFile );
 			// load the user metadata from the externally placed excel
-			metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
+			metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFileName, "Path");
 
 
-			logger.info("MetadatafileName {} with metadataFileKey {} ",metadataFile, metadataFilePathKey);
+			logger.info("MetadatafileName {} with metadataFileKey {} with pattern {} ",metadataFileName, metadataFilePathKey, metadataFile);
 			
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();

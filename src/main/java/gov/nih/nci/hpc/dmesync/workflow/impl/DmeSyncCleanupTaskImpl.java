@@ -54,6 +54,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multipleTarsFolders;
   
+  @Value("${dmesync.selective.scan:false}")
+  private boolean selectiveScan;
   @Autowired
   private DmeSyncProducer sender;
   
@@ -72,28 +74,31 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   public StatusInfo process(StatusInfo object) {
 
     //Cleanup any files from the work directory.
-    if (tar || untar || compress || tarIndividualFiles) {
+    if (tar || untar || compress || tarIndividualFiles || selectiveScan) {
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
-        if(cleanup) {
-        	
-			String sourceDirLeafNode = object.getSourceFilePath() != null
-					? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
-					: null;
-			if (processMultipleTars && StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)
-					&& object.getTarEndTimestamp()!=null) {
-				
-				cleanUpTaskForMultipleTars(object);
-				
-          }else {
-              TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
-          }
-          
-        }
-        else
-          logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}", super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
-      } catch (Exception e) {
-    	  
+			if (cleanup) {				
+				if (selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()))) {
+					// Skipping this task for the selective scan files
+					return object;
+				} else {
+					String sourceDirLeafNode = object.getSourceFilePath() != null
+							? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
+							: null;
+					if (processMultipleTars && StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)
+							&& object.getTarEndTimestamp() != null) {
+
+						cleanUpTaskForMultipleTars(object);
+
+					} else {
+						TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+					}
+				}
+			} else
+				logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}",
+						super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
+		} catch (Exception e) {
+
     	  String errorMessage="Upload successful but failed to remove file ";
         // For cleanup, we need not to rollback.
         logger.error("[{}] Upload successful but failed to remove file", super.getTaskName(), e);
@@ -123,10 +128,10 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 		 */
 		
 		// Retrieve the record for contents file.
-		String tarFileParentName = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
+		String tarFileParentName   = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
 		String tarContentsFileName = tarFileParentName + "_" + object.getOrginalFileName() + "_TarContentsFile.txt";
 		StatusInfo recordForContentsfile = dmeSyncWorkflowService.getService(access)
-				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId());
+				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId()+"%");
 
 		synchronized (this) {
 			

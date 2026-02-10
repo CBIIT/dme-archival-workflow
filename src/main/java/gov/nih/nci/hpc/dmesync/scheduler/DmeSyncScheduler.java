@@ -589,7 +589,7 @@ public class DmeSyncScheduler {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
-		} else if (tar && filesPerTar > 0  && multpleTarsFolders != null
+		} else if ( filesPerTar > 0  && multpleTarsFolders != null
 				&& StringUtils.containsIgnoreCase( multpleTarsFolders, file.getName())) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
@@ -1143,6 +1143,7 @@ public class DmeSyncScheduler {
 				if (isFolderToTar(folderPath, tarPatternsMatcher, baseDirPath)) {
 					foldersToTar.add(folder);
 					tarredFolderPaths.add(folderPath);
+					logger.info("[Scheduler][SelectiveScan] Tarring folder matched  {}", folderPath);
 				}
 			}
 

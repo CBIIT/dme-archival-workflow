@@ -136,7 +136,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else if (selectiveScan && Files.isRegularFile(originalFilePath)){
+		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
 			// Skipping this task for the selective scan files
 			return object;
 		}else if( metadataTask.isMetadataAvailable(object)) {
