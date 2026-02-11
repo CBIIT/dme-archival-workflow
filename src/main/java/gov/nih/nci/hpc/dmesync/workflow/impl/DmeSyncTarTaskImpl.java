@@ -201,8 +201,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				// Update the record for upload
 				File createdTarFile = new File(tarFile);
+				long createdTarFileSize = createdTarFile.length();
 				
-				if (createdTarFile.length() > maxFileSize) {
+				if (createdTarFileSize > maxFileSize) {
 					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
 							super.getTaskName(), object.getFilesize(), maxFileSize);
 		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
@@ -210,9 +211,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 				}
 				
-				verifyTarSizeAgainstSourceFolder(sourceDirPath, folderSize, tarFile, tarFileName);
+				verifyTarSizeAgainstSourceFolder(sourceDirPath.toString(), folderSize,tarFileName, createdTarFileSize);
 
-				object.setFilesize(createdTarFile.length());
+				object.setFilesize(createdTarFileSize);
 				object.setSourceFileName(tarFileName);
 				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
@@ -345,56 +346,32 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	 * - TAR can be slightly larger than source due to TAR headers/block padding.
 	 * - TAR should never be smaller than the sum of source file sizes.
 	 */
-	private void verifyTarSizeAgainstSourceFolder(Path sourceDirPath,
-	                                             long sourceFolderSize ,
-	                                             String tarFilePath,
-	                                             String tarFileName) throws DmeSyncStorageException {
-	    try {
-	    	
-	        File tarFile = new File(tarFilePath);
+	private void verifyTarSizeAgainstSourceFolder(String sourceDirPath, long sourceFolderSize, String tarFileName,
+			long createdTarFileSize) throws DmeSyncStorageException {
+		
+		try {
+			if (createdTarFileSize >= sourceFolderSize) {
+				logger.info(
+						"[{}] TAR size verification successful. tarFile={}, tarSize={}, sourceFolder={}, sourceSize={}",
+						super.getTaskName(), tarFileName, createdTarFileSize, sourceDirPath, sourceFolderSize);
+				return;
+			}
 
-	        // Ensure the TAR file was actually created and is a regular file
-	        if (!tarFile.exists() || !tarFile.isFile()) {
-	            String msg = String.format(
-	                    "TAR not created or missing. tarFile=%s, tarFilePath=%s, sourceFolder=%s",
-	                    tarFileName,
-	                    tarFilePath,
-	                    sourceDirPath.toString());
-	            logger.error("[{}] {}", super.getTaskName(), msg);
-	            throw new DmeSyncStorageException(msg);
-	        }
-	        long tarSize = tarFile.length();
+			// TAR smaller than source => mismatch (treat as failure )
+			String msg = String.format(
+					"TAR size mismatch detected. Generated TAR is smaller than source folder. tarFile=%s, tarSize=%s, sourceFolder=%s, sourceSize=%s",
+					tarFileName, ExcelUtil.humanReadableByteCount(createdTarFileSize, true), sourceDirPath.toString(),
+					ExcelUtil.humanReadableByteCount(sourceFolderSize, true));
 
-	        if (tarSize >= sourceFolderSize) {
-	            logger.info("[{}] TAR size verification successful. tarFile={}, tarSize={}, sourceFolder={}, sourceSize={}",
-	                    super.getTaskName(),
-	                    tarFileName,
-	                    tarSize,
-	                    sourceDirPath,
-	                    sourceFolderSize);
-	            return;
-	        }
+			logger.error("[{}] {}", super.getTaskName(), msg);
 
-	        // TAR smaller than source => mismatch (treat as failure )
-	        String msg = String.format(
-	                "TAR size mismatch detected. Generated TAR is smaller than source folder. tarFile=%s, tarSize=%s, sourceFolder=%s, sourceSize=%s",
-	                tarFileName,
-	                ExcelUtil.humanReadableByteCount(tarSize, true),
-	                sourceDirPath.toString(),
-	                ExcelUtil.humanReadableByteCount(sourceFolderSize, true));
+			// Throwing exception prevents tar task from being marked completed / saved as
+			// success
+			throw new DmeSyncStorageException(msg);
 
-	        logger.error("[{}] {}", super.getTaskName(), msg);
-
-	        // Throwing exception prevents tar task from being marked completed / saved as success
-	        throw new DmeSyncStorageException(msg);
-
-	    } catch (DmeSyncStorageException e) {
-	        throw e;
-	    } catch (Exception e) {
-	        String msg = "Error occurred during TAR size verification for " + tarFileName + ": " + e.getMessage();
-	        logger.error("[{}] {}", super.getTaskName(), msg, e);
-	        throw new DmeSyncStorageException(msg, e);
-	    }
+		} catch (DmeSyncStorageException e) {
+			throw e;
+		} 
 	}
 	
 
