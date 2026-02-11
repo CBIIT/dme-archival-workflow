@@ -349,29 +349,24 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private void verifyTarSizeAgainstSourceFolder(String sourceDirPath, long sourceFolderSize, String tarFileName,
 			long createdTarFileSize) throws DmeSyncStorageException {
 		
-		try {
-			if (createdTarFileSize >= sourceFolderSize) {
-				logger.info(
-						"[{}] TAR size verification successful. tarFile={}, tarSize={}, sourceFolder={}, sourceSize={}",
-						super.getTaskName(), tarFileName, createdTarFileSize, sourceDirPath, sourceFolderSize);
-				return;
-			}
+		if (createdTarFileSize >= sourceFolderSize) {
+			logger.info(
+					"[{}] TAR size verification successful. tarFile={}, tarSize={}, sourceFolder={}, sourceSize={}",
+					super.getTaskName(), tarFileName, createdTarFileSize, sourceDirPath, sourceFolderSize);
+			return;
+		}
 
-			// TAR smaller than source => mismatch (treat as failure )
-			String msg = String.format(
-					"TAR size mismatch detected. Generated TAR is smaller than source folder. tarFile=%s, tarSize=%s, sourceFolder=%s, sourceSize=%s",
-					tarFileName, ExcelUtil.humanReadableByteCount(createdTarFileSize, true), sourceDirPath.toString(),
-					ExcelUtil.humanReadableByteCount(sourceFolderSize, true));
+		// TAR smaller than source => mismatch (treat as failure )
+		String msg = String.format(
+				"TAR size mismatch detected. Generated TAR is smaller than source folder. tarFile=%s, tarSize=%s, sourceFolder=%s, sourceSize=%s",
+				tarFileName, ExcelUtil.humanReadableByteCount(createdTarFileSize, true), sourceDirPath.toString(),
+				ExcelUtil.humanReadableByteCount(sourceFolderSize, true));
 
-			logger.error("[{}] {}", super.getTaskName(), msg);
+		logger.error("[{}] {}", super.getTaskName(), msg);
 
-			// Throwing exception prevents tar task from being marked completed / saved as
-			// success
-			throw new DmeSyncStorageException(msg);
-
-		} catch (DmeSyncStorageException e) {
-			throw e;
-		} 
+		// Throwing exception prevents tar task from being marked completed / saved as
+		// success
+		throw new DmeSyncStorageException(msg);
 	}
 	
 
