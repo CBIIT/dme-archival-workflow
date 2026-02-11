@@ -1,18 +1,10 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -21,8 +13,6 @@ import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -30,13 +20,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
-import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
-
+import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
@@ -44,6 +31,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
+import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -120,38 +108,34 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Autowired
 	private DmeSyncProducer sender;
 	
+	@Autowired 
+	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory; 
+	
 	@Override
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 
+		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+		long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+        
 		
-		
-		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"movies_TarContentsFile.txt")){
+		if(filesPerTar > 0  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"TarContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars processing
 			return object;
 			
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else {
+		}else if( metadataTask.isMetadataAvailable(object)) {
 		// Task: Create tar file in work directory for processing
 		try {
-		    long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-	        File Folder = new File(object.getOriginalFilePath());
+		    File Folder = new File(object.getOriginalFilePath());
 	        Path originalFilePath=Paths.get(object.getOriginalFilePath());
 	        
-	        long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
-		    // check to validate is the folder to tar is less than maxFilesize
-			if (folderSize > maxFileSize) {
-				logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
-						super.getTaskName(),folderSize, maxFileSize);
-				throw new DmeSyncStorageException("Folder with size " +ExcelUtil.humanReadableByteCount(folderSize,true) + " exceeds the permitted size of "
-						+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
-			} else {
-			object.setTarStartTimestamp(new Date());
+	        object.setTarStartTimestamp(new Date());
 			// Construct work dir path
 			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
 			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
@@ -174,6 +158,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				
 
 			} else {
+				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
+			    // check to validate is the folder to tar is less than maxFilesize
+				if (folderSize > maxFileSize) {
+					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+							super.getTaskName(),folderSize, maxFileSize);
+					throw new DmeSyncStorageException("Folder with size " +ExcelUtil.humanReadableByteCount(folderSize,true) + " exceeds the permitted size of "
+							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+				} else {
 				object.setTarStartTimestamp(new Date());
 				String tarFileName;
 				if (tarNameinExcelFile) {
@@ -232,6 +224,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		} finally {
 			threadLocalMap.remove();
 		}
+		}else {
+			logger.info("No need to upload file : {}", object.getOriginalFilePath());
+			object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
+			object.setEndWorkflow(true);
+			object.setError("No need to upload yet");
+			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 		}
 		return object;
 	}
@@ -246,6 +244,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		String tarFileName = object.getSourceFileName();
 		String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 		tarFile = Paths.get(tarFile).normalize().toString();
+		long maxFileSize = Long.parseLong(maxRecommendedFileSize);
+        
 
 		// sorting the files based on the lastModified in asc, so every rerun we get
 		// them in same order.  
@@ -285,6 +285,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		File createdTarFile = new File(tarFile);
 		int tarContentsCount=TarUtil.countFilesinTar(createdTarFile.getAbsolutePath());
 		
+		if (createdTarFile.length() > maxFileSize) {
+			logger.error("[{}] error :Batch Tar with size {}  that exceeds the recommended file size of  {}",
+					super.getTaskName(), object.getFilesize(), maxFileSize);
+             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+			throw new DmeSyncStorageException("Batch Tar exceeds the permitted size of "
+					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+		}
+
 		if (totalFiles != tarContentsCount) {
 			// Tar Verification.
 			String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
