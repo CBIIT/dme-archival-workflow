@@ -357,10 +357,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}
 
 		// TAR smaller than source => mismatch (treat as failure )
+		
 		String msg = String.format(
-				"TAR size mismatch detected. Generated TAR is smaller than source folder. tarFile=%s, tarSize=%s, sourceFolder=%s, sourceSize=%s",
-				tarFileName, ExcelUtil.humanReadableByteCount(createdTarFileSize, true), sourceDirPath.toString(),
-				ExcelUtil.humanReadableByteCount(sourceFolderSize, true));
+				"TAR verification failed (size mismatch): The generated TAR is smaller than the source folder total. "
+						+ "Source folder: (total size: %s). " + "Generated TAR: %s (size: %s).",
+				ExcelUtil.humanReadableByteCount(sourceFolderSize, true), tarFileName,
+				ExcelUtil.humanReadableByteCount(createdTarFileSize, true));
 
 		logger.error("[{}] {}", super.getTaskName(), msg);
 
