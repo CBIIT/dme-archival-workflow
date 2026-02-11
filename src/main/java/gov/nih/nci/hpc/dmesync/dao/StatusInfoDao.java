@@ -129,7 +129,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    */
 
   @Query("select s from StatusInfo s where  s.doc =?1 and s.sourceFilePath=?2 and s.runId like ?3 ")
-  StatusInfo findTopStatusInfoByDocAndSourceFilePathAndRunId( String doc,String sourceFilePath, String runId) ;
+  StatusInfo findTopStatusInfoByDocAndSourceFilePathAndLikeRunId( String doc,String sourceFilePath, String runId) ;
 
   /**
    * findTopStatusInfoByDocOrderByStartTimestampDesc

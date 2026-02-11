@@ -164,7 +164,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						int end = (Math.min(start + filesPerTar, fileList.size()))-1;
 						totalFilesInTars = end+1;
 						List<File> subList = fileList.subList(start, end+1);
-						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
+						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) +"_of_" + expectedTarRequests + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
 						

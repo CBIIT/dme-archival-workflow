@@ -131,13 +131,13 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 		String tarFileParentName   = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
 		String tarContentsFileName = tarFileParentName + "_" + object.getOrginalFileName() + "_TarContentsFile.txt";
 		StatusInfo recordForContentsfile = dmeSyncWorkflowService.getService(access)
-				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId()+"%");
+				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId());
 
 		synchronized (this) {
 			
 			// Retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies other rows have tarnames.
 			StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
-					.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
+					.findTopStatusInfoByDocAndSourceFilePathAndLikeRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId()+"%");
 			
 			if (tarFolderRow != null) {
 				logger.info(
@@ -190,7 +190,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 	  synchronized (this) {
 		// retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies  other rows have tarnames.
 			StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
-					.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
+					.findTopStatusInfoByDocAndSourceFilePathAndLikeRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId()+"%");
 			if (tarFolderRow != null && tarFolderRow.getTarContentsCount()!=null) {
 				logger.info(
 						"[{}] Decrementing the tar counter old value when cleanup has error in execption block{} , new value {} ",
