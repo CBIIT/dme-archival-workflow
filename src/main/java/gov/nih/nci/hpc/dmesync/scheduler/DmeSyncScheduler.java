@@ -297,17 +297,13 @@ public class DmeSyncScheduler {
                   continue;
               }
             }
-			if (processMultpleTars) {
-				// Only add the folder if the folder is not empty.
-				File folder = new File(pathAttr.getAbsolutePath());
-				if (folder.list() != null && folder.list().length > 0) {
+			// Only add the folder if the folder is not empty.
+			File folder = new File(pathAttr.getAbsolutePath());
+			    if (folder.list() != null && folder.list().length > 0) {
 					folders.add(pathAttr);
 				} else {
 					logger.info("[Scheduler] There are no files in the Folder  {}", pathAttr.getAbsolutePath());
 				}
-			} else {
-				folders.add(pathAttr);
-			}
           } else {
             files.add(pathAttr);
           }
