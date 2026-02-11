@@ -204,15 +204,11 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				long createdTarFileSize = createdTarFile.length();
 				
 				if (createdTarFileSize > maxFileSize) {
-					logger.error(
-							"[{}] error :Tar file with size {} (source folder size {}) exceeds the recommended file size of {}",
-							super.getTaskName(), createdTarFileSize, folderSize, maxFileSize);
+					logger.error("[{}] error :Folder with size {}  that exceeds the recommended file size of  {}",
+							super.getTaskName(), object.getFilesize(), maxFileSize);
 		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
-					throw new DmeSyncStorageException(
-							"Tar file with size "
-									+ ExcelUtil.humanReadableByteCount(createdTarFileSize, true)
-									+ " exceeds the permitted size of "
-									+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
+					throw new DmeSyncStorageException("Folder exceeds the permitted size of "
+							+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 				}
 				
 				verifyTarSizeAgainstSourceFolder(sourceDirPath.toString(), folderSize,tarFileName, createdTarFileSize);
