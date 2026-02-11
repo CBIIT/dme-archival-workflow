@@ -352,6 +352,17 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	    try {
 	    	
 	        File tarFile = new File(tarFilePath);
+
+	        // Ensure the TAR file was actually created and is a regular file
+	        if (!tarFile.exists() || !tarFile.isFile()) {
+	            String msg = String.format(
+	                    "TAR not created or missing. tarFile=%s, tarFilePath=%s, sourceFolder=%s",
+	                    tarFileName,
+	                    tarFilePath,
+	                    sourceDirPath.toString());
+	            logger.error("[{}] {}", super.getTaskName(), msg);
+	            throw new DmeSyncStorageException(msg);
+	        }
 	        long tarSize = tarFile.length();
 
 	        if (tarSize >= sourceFolderSize) {
