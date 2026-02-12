@@ -341,7 +341,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	}
 	
 	/**
-	 * Verify that the generated TAR file size is >= total size of the source folder.
+	 * Verify that the generated TAR file size is greater than total size of the source folder.
 	 * Note:
 	 * - TAR can be slightly larger than source due to TAR headers/block padding.
 	 * - TAR should never be smaller than the sum of source file sizes.
@@ -356,7 +356,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			return;
 		}
 
-		// TAR smaller than source => mismatch (treat as failure )
+		//If TAR is smaller than source, it is a mismatch (treat as failure)
 		
 		String msg = String.format(
 				"TAR verification failed (size mismatch): The generated TAR is smaller than the source folder total. "
