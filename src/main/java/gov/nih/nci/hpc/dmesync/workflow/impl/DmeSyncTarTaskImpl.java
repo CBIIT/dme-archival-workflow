@@ -98,6 +98,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Value("${dmesync.selective.scan:false}")
     private boolean selectiveScan;
+	
+	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
+	private String multipleTarsExcludeFolderPrefixes;
 
 
 	@PostConstruct
@@ -165,7 +168,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				object=createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
 				
-
 			} else {
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
 			    // check to validate is the folder to tar is less than maxFilesize
@@ -259,6 +261,16 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		// sorting the files based on the lastModified in asc, so every rerun we get
 		// them in same order.  
 		Arrays.sort(files, Comparator.comparing(File::lastModified));
+		
+		if (files != null && files.length > 0) {
+			// Exclude folders listed in multiple tars excludeFolder property from files array
+						
+				if ( StringUtils.isNotBlank(multipleTarsExcludeFolderPrefixes)) {
+					
+					 logger.info("{} is excluded for Batch Tar Processing", multipleTarsExcludeFolderPrefixes);
+				    files = TarUtil.excludeBatchFoldersByPrefix(files, multipleTarsExcludeFolderPrefixes);
+				}
+		}
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
 
 		int start = object.getTarIndexStart().intValue();

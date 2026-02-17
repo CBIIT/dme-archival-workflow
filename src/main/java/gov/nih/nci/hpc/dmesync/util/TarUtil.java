@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TarUtil {
@@ -358,5 +359,26 @@ public class TarUtil {
   public static boolean isSelectiveScanFileUpload(Path originalFilePath) {
 	  return Files.isRegularFile(originalFilePath);
 	  
+  }
+  
+  /**
+   * Filter out files with folder whose names start with any prefix in excludePrefixes.
+   * @param File List of the folder/file in the Batch tarring folder 
+   * @param multipleTarsExcludeFolderPrefixes 
+   * @return List of files with excluded directory
+   */
+  public static File[] excludeBatchFoldersByPrefix(File[] files, String multipleTarsExcludeFolderPrefixes) {
+	
+	  List<String> excludePrefixes = multipleTarsExcludeFolderPrefixes == null || multipleTarsExcludeFolderPrefixes.isEmpty() ? null
+				: new ArrayList<>(Arrays.asList(multipleTarsExcludeFolderPrefixes.split(",")));
+		
+	  return files = Arrays.stream(files).filter(f -> {
+			if (!f.isDirectory())
+				return true;
+
+			String name = f.getName();
+			return excludePrefixes.stream().filter(StringUtils::isNotBlank)
+					.noneMatch(prefix -> name.startsWith(prefix));
+		}).toArray(File[]::new);
   }
 }

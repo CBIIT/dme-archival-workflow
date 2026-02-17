@@ -28,6 +28,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
@@ -68,6 +69,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Value("${dmesync.multiple.tars.files.count:0}")
 	private Integer filesPerTar;
+	
+	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
+	private String multipleTarsExcludeFolderPrefixes;
 
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
@@ -135,15 +139,14 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				}
 
 				if (files != null && files.length > 0) {
-					// Exclude folders listed in excludeFolder property from files array
-					if ( StringUtils.isNotBlank(excludeFolder)) {
-						List<String> excludeFoldersList = excludeFolder == null || excludeFolder.isEmpty() ? null
-								: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+					// Exclude folders listed in multiple tars excludeFolder property from files array
+					if ( StringUtils.isNotBlank(multipleTarsExcludeFolderPrefixes)) {
 						
-					    files = Arrays.stream(files)
-					        .filter(f -> !(f.isDirectory() && excludeFoldersList.contains(f.getName())))
-					        .toArray(File[]::new);
+						 logger.info("{} is excluded for Batch Tar Processing", multipleTarsExcludeFolderPrefixes);
+					    files = TarUtil.excludeBatchFoldersByPrefix(files, multipleTarsExcludeFolderPrefixes);
 					}
+					
+					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;

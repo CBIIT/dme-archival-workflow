@@ -92,7 +92,9 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 
 		if (archivePath == null) {
-			throw new DmeSyncMappingException("Unrecognized source path for MachidaLab mapping: " + sourcePath);
+			String msg= "File location does not match the configured DME Hierarchy ";
+			logger.error( "Couldn't extract the DME Path for the source Path " + sourcePath + " " + msg);
+			throw new DmeSyncMappingException(msg);
 		}
 
 		// replace spaces with underscore
@@ -352,13 +354,15 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	 * Utility to extract the directory name that follows directly after the given
 	 * parent folder. E.g., for path /a/b/c/d.txt and parentName = "b", returns "c".
 	 */
-	private String getCollectionNameFromParent(Path fullPath, String parentName) {
-		int count = fullPath.getNameCount();
-		logger.info("Full File Path = {}", fullPath);
-		for (int i = 0; i < count - 1; i++) {
-			if (fullPath.getName(i).toString().equals(parentName) && (i + 1 < count)) {
-				return fullPath.getName(i + 1).toString();
+	private String getCollectionNameFromParent(Path fullFilePath, String parentName) {
+	
+		logger.info("Full File Path = {}", fullFilePath);
+		int count = fullFilePath.getNameCount();
+		for (int i = 0; i <= count; i++) {
+			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+				return fullFilePath.getFileName().toString();
 			}
+			fullFilePath = fullFilePath.getParent();
 		}
 		return null;
 	}
