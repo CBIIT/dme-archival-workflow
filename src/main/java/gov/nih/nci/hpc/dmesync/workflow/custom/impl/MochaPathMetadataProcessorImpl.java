@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
@@ -9,6 +10,7 @@ import java.util.Date;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -18,6 +20,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
+import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 /**
@@ -43,13 +46,19 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   @Value("${dmesync.tar:false}")
   private boolean tar;
   
+  @Autowired
+  private DmeMetadataBuilder dmeMetadataBuilder;
+  
   Map<String, Map<String, String>> metadataMap = null;
   
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
     logger.info("[PathMetadataTask] Mocha getArchivePath called");
-
+    
+    // load the user metadata from the externally placed excel
+    metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Run_ID", "Sample");
+    
     // Example source path -
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
     // /mnt/mocha_scratch/BW_transfers/2022_January/220113_A01063_0058_BHKJMGDSX2/Sample_RES210195_HKJMGDSX2/Sample_RES210195_HKJMGDSX2_R1.fastq.gz
@@ -211,12 +220,12 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("run_id", getRunId(object))); 
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_id", sampleId));  
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrWithKey(runId, sampleId, "Mocha_ID")));
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrWithKey(runId, sampleId, "Library_Type")));
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrWithKey(runId, sampleId, "Analyte")));
-		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", StringUtils.isBlank(getAttrWithKey(runId, sampleId, "Lane")) ? "std_mode" : getAttrWithKey(runId, sampleId, "Lane")));
-		    if(StringUtils.isNotBlank(getAttrWithKey(runId, sampleId, "SubProject")))
-		    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrWithKey(runId, sampleId, "SubProject")));  
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("sample_name", getAttrValueFromMetadataMap(runId, sampleId, "Mocha_ID")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("library_strategy", getAttrValueFromMetadataMap(runId, sampleId, "Library_Type")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("analyte_type", getAttrValueFromMetadataMap(runId, sampleId, "Analyte")));
+		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry("flowcell_lane", StringUtils.isBlank(getAttrValueFromMetadataMap(runId, sampleId, "Lane")) ? "std_mode" : getAttrValueFromMetadataMap(runId, sampleId, "Lane")));
+		    if(StringUtils.isNotBlank(getAttrValueFromMetadataMap(runId, sampleId, "SubProject")))
+		    	pathEntriesSample.getPathMetadataEntries().add(createPathEntry("subproject", getAttrValueFromMetadataMap(runId, sampleId, "SubProject")));  
 		    pathEntriesSample.setPath(sampleCollectionPath);
 		    hpcBulkMetadataEntries
 		        .getPathsMetadataEntries()
@@ -350,7 +359,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String runId = getRunId(object);
 	  String sampleId = getSampleId(object);
-	return getAttrWithKey(runId, sampleId, "Project");
+	return getAttrValueFromMetadataMap(runId, sampleId, "Project");
   }
   
   private String getRunId(StatusInfo object) throws DmeSyncMappingException {
@@ -406,8 +415,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   private String getSampleCollectionName(StatusInfo object) throws DmeSyncMappingException {
 	  String runId = getRunId(object);
 	  String sampleId = getSampleId(object);
-	  String mochaId = getAttrWithKey(runId, sampleId, "Mocha_ID");
-	  String sequencingDate = getAttrWithKey(runId, sampleId, "sequencing_Date");
+	  String mochaId = getAttrValueFromMetadataMap(runId, sampleId, "Mocha_ID");
+	  String sequencingDate = getAttrValueFromMetadataMap(runId, sampleId, "sequencing_Date");
 	  if(sequencingDate.contains("/")) {
 		  DateFormat outputFormatter = new SimpleDateFormat("yyyyMMdd");
 		  SimpleDateFormat inputFormatter = new SimpleDateFormat("MM/dd/yy");
@@ -430,31 +439,6 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  String flowcellId = StringUtils.substringAfterLast(runId, "_");
 	  flowcellId = StringUtils.substring(flowcellId, 1);
 	return "20" + sequencingDate + "_" + flowcellId;
-  }
-  
-  private String getAttrWithKey(String key1, String key2, String attrKey) {
-		if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
-	      logger.error("Excel mapping not found for {}", key1 + key2);
-	      return null;
-	    }
-	    return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
-  }
-  
-  private String getAttrValueWithParitallyMatchingKey(String partialKey, String attrKey) throws DmeSyncMappingException {
-	    String key = null;
-	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
-	        if(StringUtils.contains(entry.getKey(), partialKey)) {
-	          //Partial key match.
-	          key = entry.getKey();
-	          break;
-	        }
-	    }
-	    if(StringUtils.isEmpty(key)) {
-	      logger.error("Excel mapping not found for partial key {}", partialKey);
-	      throw new DmeSyncMappingException("Excel mapping not found for " + partialKey);
-	    }
-	    String attrValue = metadataMap.get(key).get(attrKey);
-	    return attrValue;
   }
   
   private String getSampleFromFilePath(String path, String folderName) {

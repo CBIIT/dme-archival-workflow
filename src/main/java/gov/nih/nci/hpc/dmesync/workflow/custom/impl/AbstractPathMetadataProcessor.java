@@ -34,6 +34,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.util.CsvFileUtil;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 
@@ -49,8 +50,11 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
-
+  
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  
+  @Autowired
+  MessageService messageService;
   
   Map<String, Map<String, String>> metadataMap = null;
   
@@ -324,5 +328,31 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 		}
 		return (piMetadataMap.get(key) == null ? null : piMetadataMap.get(key).get(attrKey));
 	}
+	
+	public String getAttrValueWithParitallyMatchingKey(String partialKey, String attrKey) throws DmeSyncMappingException {
+	    String key = null;
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	        if(StringUtils.contains(entry.getKey(), partialKey)) {
+	          //Partial key match.
+	          key = entry.getKey();
+	          break;
+	        }
+	    }
+	    if(StringUtils.isEmpty(key)) {
+	      logger.error("Excel mapping not found for partial key {}", partialKey);
+	      throw new DmeSyncMappingException("Excel mapping not found for " + partialKey);
+	    }
+	    String attrValue = metadataMap.get(key).get(attrKey);
+	    return attrValue;
+  }
+
+   public String getAttrValueFromMetadataMap(String key1, String key2, String attrKey) {
+		if(StringUtils.isEmpty(key1) || StringUtils.isEmpty(key2)) {
+	      logger.error("Excel mapping not found for {}", key1 + key2);
+	      return null;
+	    }
+	    return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
+   }
+  
 
 }
