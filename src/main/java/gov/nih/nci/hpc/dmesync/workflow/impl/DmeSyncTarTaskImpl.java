@@ -211,6 +211,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				}
 				
+				if(!dryRun)
 				verifyTarSizeAgainstSourceFolder(sourceDirPath.toString(), folderSize,tarFileName, createdTarFileSize);
 
 				object.setFilesize(createdTarFileSize);
@@ -295,12 +296,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			throw new DmeSyncStorageException("Batch Tar exceeds the permitted size of "
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
-
+		if(!dryRun) {
 		if (totalFiles != tarContentsCount) {
 			// Tar Verification.
 			String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
 			logger.error("[{}] {}", super.getTaskName(), msg);
 			throw new DmeSyncVerificationException(msg);
+		}
 		}
 		// Update the record for upload
 		object.setFilesize(createdTarFile.length());
