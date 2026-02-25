@@ -28,6 +28,8 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -67,6 +69,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Value("${dmesync.multiple.tars.files.count:0}")
 	private Integer filesPerTar;
+	
+	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
+	private String multipleTarsExcludeFolderPrefixes;
 
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
@@ -113,8 +118,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
-				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
-						(tarFileNameFormat + "_TarContentsFile.txt"));
+				File tarMappingFile = null;
+				if (StringUtils.equalsIgnoreCase("csb", doc)) {
+					tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
+							(tarFileNameFormat + "_TarContentsFile.txt"));
+				} else {
+					tarMappingFile = new File(tarWorkDir,
+							(tarFileNameFormat + "_TarContentsFile.txt"));
+
+				}
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
                 int totalFilesInTars = 0;
 
@@ -127,6 +139,14 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				}
 
 				if (files != null && files.length > 0) {
+					// Exclude folders listed in multiple tars excludeFolder property from files array
+					if ( StringUtils.isNotBlank(multipleTarsExcludeFolderPrefixes)) {
+						
+						 logger.info("{} is excluded for Batch Tar Processing", multipleTarsExcludeFolderPrefixes);
+					    files = TarUtil.excludeBatchFoldersByPrefix(files, multipleTarsExcludeFolderPrefixes);
+					}
+					
+					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -147,7 +167,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						int end = (Math.min(start + filesPerTar, fileList.size()))-1;
 						totalFilesInTars = end+1;
 						List<File> subList = fileList.subList(start, end+1);
-						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
+						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) +"_of_" + expectedTarRequests + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
 						
@@ -344,6 +364,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
 						object.setStatus("COMPLETED");
+						object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
 						object.setEndWorkflow(true);
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						
