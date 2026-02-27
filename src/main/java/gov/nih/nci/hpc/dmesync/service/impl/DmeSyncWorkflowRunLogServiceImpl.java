@@ -1,5 +1,7 @@
 package gov.nih.nci.hpc.dmesync.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,9 @@ import java.util.Objects;
 @Service
 @Transactional
 public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogService {
+	
+	
+	private static final Logger logger = LoggerFactory.getLogger(DmeSyncWorkflowRunLogService.class);
 
 	@Autowired
 	protected WorkflowRunInfoDao<WorkflowRunInfo> workflowRunInfoDao;
@@ -43,7 +48,9 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 	@Override
 	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage) {
-
+		
+		logger.info("Updating the Workflow run Information");
+		
 		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndUserId(runId, doc);
 
 		if (workflowRunInfo != null) {
@@ -67,6 +74,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setErrorMessage(errorMessage);
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
 			workflowRunInfoDao.save(workflowRunInfo);
+			logger.info("Completed updating the Workflow run Information for workflow " + workflowRunInfo.getRunId());
 		}else {
 			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
 		}
