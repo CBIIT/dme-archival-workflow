@@ -238,7 +238,11 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       helper.addAttachment(file.getFilename(), file);
       sender.send(message);
       logger.info("Workflow Run is completed");
-      dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId,doc, status,null);
+      try {
+          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+       } catch (IllegalArgumentException ex) {
+          logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+      }
       
     } catch (MessagingException e) {
       throw new MailParseException(e);

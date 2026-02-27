@@ -370,7 +370,11 @@ public class DmeSyncScheduler {
       if(CollectionUtils.isEmpty(currentRun)) {
     	  dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
     			  emailBody);
-          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId,doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+          try {
+              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+            } catch (IllegalArgumentException e) {
+              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
+            }
 		if (shutDownFlag) {
 			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 			DmeSyncApplication.shutdown();

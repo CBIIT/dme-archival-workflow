@@ -30,10 +30,13 @@ public interface DmeSyncWorkflowRunLogService {
 	public void logWorkflowRunStartHeartbeat(Long id);
 
 	/**
-	 * update Only the Heartbeat : *
+	 * Update workflow run end information, including run end time, duration,
+	 * status, error message, and uploaded size.
 	 * 
-	 * @param Id WorkflowRunInfo_id
-	 * @return null
+	 * @param runId        workflow run identifier
+	 * @param doc          document name or user identifier associated with the run
+	 * @param finalStatus  final status of the workflow run
+	 * @param errorMessage error message associated with the workflow run, if any
 	 */
 
 	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage);

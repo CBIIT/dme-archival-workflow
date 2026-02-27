@@ -68,7 +68,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
 			workflowRunInfoDao.save(workflowRunInfo);
 		}else {
-			throw new IllegalArgumentException("Workflow Run not found for: " + runId + doc);
+			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
 		}
 	}
 

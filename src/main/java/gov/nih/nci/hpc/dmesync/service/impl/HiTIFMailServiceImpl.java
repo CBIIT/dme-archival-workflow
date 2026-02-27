@@ -191,7 +191,12 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         FileSystemResource file = new FileSystemResource(excelFile);
         helper.addAttachment(file.getFilename(), file);
         sender.send(message);
-        dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId,doc, status,null);
+        logger.info("Workflow Run is completed");
+        try {
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+         } catch (IllegalArgumentException ex) {
+            logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+        }
 
       }
     } catch (MessagingException e) {
