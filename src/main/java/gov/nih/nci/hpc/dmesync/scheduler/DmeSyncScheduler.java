@@ -955,8 +955,24 @@ public class DmeSyncScheduler {
       currentRunId = oneTimeRunId;
       //Check if we have already started the run
       List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, doc);
-      if(CollectionUtils.isEmpty(currentRun))
-          return;
+      if(CollectionUtils.isEmpty(currentRun)) {
+    	  // check if there are any records for Run_Ignored
+			List<StatusInfo> currentRunIgnored = dmeSyncWorkflowService.getService(access)
+					.findStatusInfoByRunIdAndDoc(currentRunId + WorkflowConstants.IGNORED_RUN_SUFFIX, doc);
+			if (CollectionUtils.isEmpty(currentRunIgnored))
+				return;
+			else {
+				// There are records in Ignored Run, no records to upload send email
+				String emailBody = "There were no files/folders found for processing"
+						+ (!StringUtils.isEmpty(syncBaseDirFolders) ? " in " + syncBaseDirFolders + " folders" : "")
+						+ ".";
+				dmeSyncMailServiceFactory.getService(doc)
+						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
+				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+				DmeSyncApplication.shutdown();
+			}
+	    
+      }     
 	 } else {
       StatusInfo latest = null;
       if(createSoftlink || createCollectionSoftlink) {
