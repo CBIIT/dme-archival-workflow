@@ -13,6 +13,9 @@ import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -42,6 +45,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 @Component
 public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 	
+	private static final Pattern GROUPED_SITE_TAR_NAME = Pattern.compile("^(\\d+)_(\\d+)\\.tar$");
 	
 	@Value("${dmesync.doc.name}")
 	private String doc;
@@ -91,16 +95,17 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Value("${dmesync.max.recommended.file.size}")
 	private String maxRecommendedFileSize;
 	
-	
 	@Value("${dmesync.tar.ignore.broken.link:false}")
 	private boolean ignoreBrokenLinksInTar;
 	
-
 	@Value("${dmesync.selective.scan:false}")
     private boolean selectiveScan;
 	
 	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
 	private String multipleTarsExcludeFolderPrefixes;
+	
+	@Value("${dmesync.multiple.tars.group.site.folders:false}")
+	private boolean groupSiteFolders;
 
 
 	@PostConstruct
@@ -262,7 +267,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 		tarFile = Paths.get(tarFile).normalize().toString();
 		long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-        
+		int totalFiles=0;
 
 		// sorting the files based on the lastModified in asc, so every rerun we get
 		// them in same order.  
@@ -278,25 +283,47 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				}
 		}
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
-
-		int start = object.getTarIndexStart().intValue();
-		int end = object.getTarIndexEnd().intValue();
-		int totalFiles = (end+1) - start;
-
-		List<File> subList = fileList.subList(start, end+1);
- 
 		File tarWorkDirectory= new File(tarWorkDir);
-
+        
+        File[] filesArray = null;
+		// tarFile 
 		logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
-		
 		if (!tarWorkDirectory.exists()) {			
 			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
 			
 		}
+        if(groupSiteFolders) {
+        
+            // --- NEW: grouped-site tar by name ---
+            String groupKey = getGroupedSiteKeyFromTarName(tarFileName);
+            if (groupKey != null) {
+                Pattern siteFolderPattern = Pattern.compile("^" + Pattern.quote(groupKey) + "_\\d+$");
+
+                List<File> foldersToTar = Arrays.stream(files)
+                        .filter(File::isDirectory)
+                        .filter(f -> siteFolderPattern.matcher(f.getName()).matches())
+                        .sorted(Comparator.comparing(File::getName))
+                        .collect(Collectors.toList());
+
+                if (foldersToTar.isEmpty()) {
+                    throw new DmeSyncStorageException("Grouped tar " + tarFileName
+                            + " matched groupKey=" + groupKey
+                            + " but found no folders like " + groupKey + "_<n> under " + object.getOriginalFilePath());
+                }
+
+                 filesArray = foldersToTar.toArray(new File[0]);
+            }
+		}else {
+
+			int start = object.getTarIndexStart().intValue();
+			int end = object.getTarIndexEnd().intValue();
+			totalFiles = (end+1) - start;
+			List<File> subList = fileList.subList(start, end+1);
+	        filesArray = new File[subList.size()];
+	        subList.toArray(filesArray);
+		}
+       
 		
-		// tarFile 
-		File[] filesArray = new File[subList.size()];
-		subList.toArray(filesArray);
 		if (compress) {
 			tarFile = tarFile + ".gz";
 			tarFileName = tarFileName + ".gz";
@@ -320,11 +347,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
 
-		if (totalFiles != tarContentsCount) {
-			// Tar Verification.
-			String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
-			logger.error("[{}] {}", super.getTaskName(), msg);
-			throw new DmeSyncVerificationException(msg);
+		if(!groupSiteFolders || !dryRun) {
+			if (totalFiles != tarContentsCount) {
+				// Tar Verification.
+				String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
+				logger.error("[{}] {}", super.getTaskName(), msg);
+				throw new DmeSyncVerificationException(msg);
+			}
 		}
 		// Update the record for upload
 		object.setFilesize(createdTarFile.length());
@@ -395,6 +424,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		throw new DmeSyncStorageException(msg);
 	}
 	
+
+	private String getGroupedSiteKeyFromTarName(String tarFileName) {
+	    if (tarFileName == null) return null;
+	    Matcher m = GROUPED_SITE_TAR_NAME.matcher(tarFileName);
+	    if (!m.matches()) return null;
+	    return m.group(1) + "_" + m.group(2); // "1_11"
+	}
 
 
 }
