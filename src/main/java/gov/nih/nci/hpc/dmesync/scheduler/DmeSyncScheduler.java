@@ -226,6 +226,7 @@ public class DmeSyncScheduler {
       }
     }
 
+    MDC.put("doc", doc);
     MDC.put("run.id", runId);
 
     if(createSoftlink)
@@ -381,6 +382,7 @@ public class DmeSyncScheduler {
       }
     }
 
+    MDC.put("doc", doc);
     MDC.put("run.id", runId);
 
     logger.info(
