@@ -204,7 +204,8 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years", "7"));
 
 			// Optional Values
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date")))
+			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"))
+					&& StringUtils.equalsIgnoreCase(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"),"NA"))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
 						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"), "MM/dd/yy"));
 			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")))
