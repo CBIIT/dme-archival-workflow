@@ -58,6 +58,8 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		//String periodCollectionName = getPeriodCollectionName(fullPath);
 		String subcollectionType = getSubcollectionName(fullPath);
 
+		logger.info("[PathMetadataTask] metadata key {}", metadataFilePathKey );
+		
 		// /data/Trinchieri_lab/JAMSarchive/JAMSdb202201
 		if (piCollectionName != null && projectcollectionName != null 
 				&& subcollectionType != null) {
@@ -134,26 +136,26 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
 			pathEntriesPI.getPathMetadataEntries()
-					.add(createPathEntry("data_owner", getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner")));
+					.add(createPathEntry("data_owner", getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_email",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_email")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_email")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_affiliation",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_affiliation")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_affiliation")));
 
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generator")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_affiliation",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generator_affiliation")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator_affiliation")));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator_email",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generator_email")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator_email")));
 
-			if (getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_designee") != null) {
+			if (getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee") != null) {
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_designee")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee")));
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_email",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_designee_email")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee_email")));
 				pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner_designee_affiliation",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "data_owner_designee_affiliation")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee_affiliation")));
 			}
 
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
@@ -166,54 +168,54 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 			pathEntriesProject.getPathMetadataEntries().add(
-					createPathEntry("project_poc", getAttrValueFromMetadataMap(metadataFilePathKey, "project_poc")));
+					createPathEntry("project_poc", getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "project_poc_affiliation")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc_affiliation")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "project_poc_email")));
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator")))
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc_email")));
+			if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator")));
 			if (StringUtils
-					.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator_affiliation")))
+					.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_affiliation")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator_affiliation")));
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator_email")))
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_affiliation")));
+			if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_email")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_email",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "key_collaborator_email")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_email")));
 
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "project_title")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_title")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "project_start_date"), "MM/dd/yy"));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_start_date"), "MM/dd/yy"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "project_description")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_description")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("platform_name",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "platform_name")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "platform_name")));
 			pathEntriesProject.getPathMetadataEntries()
-					.add(createPathEntry("organism", getAttrValueFromMetadataMap(metadataFilePathKey, "organism")));
+					.add(createPathEntry("organism", getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "organism")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("study_disease",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "study_disease")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "study_disease")));
 
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility",
-					getAttrValueFromMetadataMap(metadataFilePathKey, "data_generating_facility")));
+					getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generating_facility")));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
 
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Controlled Access"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("retention_years", "7"));
 
 			// Optional Values
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"))
-					&& StringUtils.equalsIgnoreCase(getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"),"NA"))
+			if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_completed_date"))
+					&& !StringUtils.equalsIgnoreCase(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_completed_date"),"NA"))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_completed_date",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "project_completed_date"), "MM/dd/yy"));
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")))
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_completed_date"), "MM/dd/yy"));
+			if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "pubmed_id")))
 				pathEntriesProject.getPathMetadataEntries().add(
-						createPathEntry("pubmed_id", getAttrValueFromMetadataMap(metadataFilePathKey, "pubmed_id")));
-			if (StringUtils.isNotBlank(getAttrValueFromMetadataMap(metadataFilePathKey, "Collaborators")))
+						createPathEntry("pubmed_id", getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "pubmed_id")));
+			if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "Collaborators")))
 				pathEntriesProject.getPathMetadataEntries().add(createPathEntry("Collaborators",
-						getAttrValueFromMetadataMap(metadataFilePathKey, "Collaborators")));
+						getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "Collaborators")));
 
 			pathEntriesProject.setPath(projectCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -304,7 +306,7 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	private String getProjectcollectionName(Path fullPath, String metadataFilePathKey) {
 		String projectCollectionName = null;
-		projectCollectionName = getAttrValueFromMetadataMap(metadataFilePathKey, "project_id");
+		projectCollectionName = getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_id");
 		logger.info("projectCollectionName: {}", projectCollectionName);
 		return projectCollectionName;
 
