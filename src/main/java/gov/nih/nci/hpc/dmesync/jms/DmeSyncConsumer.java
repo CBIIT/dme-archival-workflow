@@ -72,6 +72,7 @@ public class DmeSyncConsumer {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);
         return null;
       }
+      MDC.put("doc", statusInfo.get().getDoc());
       MDC.put("run.id", statusInfo.get().getRunId());
       MDC.put("object.id", statusInfo.get().getId().toString());
       MDC.put("object.path", statusInfo.get().getOriginalFilePath() + " - " + statusInfo.get().getSourceFileName());

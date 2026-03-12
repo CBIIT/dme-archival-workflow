@@ -235,6 +235,7 @@ public class DmeSyncScheduler {
       }
     }
 
+    MDC.put("doc", doc);
     MDC.put("run.id", runId);
 
     if(createSoftlink)
@@ -306,16 +307,16 @@ public class DmeSyncScheduler {
                   continue;
               }
             }
-			if (processMultpleTars) {
-				// Only add the folder if the folder is not empty.
-				File folder = new File(pathAttr.getAbsolutePath());
-				if (folder.list() != null && folder.list().length > 0) {
-					folders.add(pathAttr);
-				} else {
-					logger.info("[Scheduler] There are no files in the Folder  {}", pathAttr.getAbsolutePath());
-				}
-			} else {
+			// Only add the folder if the folder is not empty.
+			File folder = new File(pathAttr.getAbsolutePath());
+			String[] children = folder.list();
+			if (children == null) {
+				logger.warn("[Scheduler] Unable to list files in the Folder {}. It may be unreadable or inaccessible.",
+						pathAttr.getAbsolutePath());
+			} else if (children.length > 0) {
 				folders.add(pathAttr);
+			} else {
+				logger.info("[Scheduler] There are no files in the Folder  {}", pathAttr.getAbsolutePath());
 			}
           } else {
             files.add(pathAttr);
@@ -396,6 +397,7 @@ public class DmeSyncScheduler {
       }
     }
 
+    MDC.put("doc", doc);
     MDC.put("run.id", runId);
 
     logger.info(
@@ -646,7 +648,7 @@ public class DmeSyncScheduler {
 			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
 
 			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath() + '%');
+					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath());
 
 			if (tarFolderRequests.isEmpty()) {
 				// No records for the path folder in database; running this folder for first time
