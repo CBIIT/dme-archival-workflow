@@ -71,15 +71,24 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// find the metadataFilePathKey to use as key value for the metadata from file.
 		String metadataFilePathKey = getPathForMetadata(object);
 		String archivePath = null;
-		String sampleName = getSampleName(filePath);
+		
 		
 		logger.info("metadataFileKey {} ", metadataFilePathKey);
 		
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Folder");
-
-		// subcollectionName can be Deconv or null based on path
-		String deconvFolderName = getDeconvFolderName(filePath, sampleName);
+		
+		if (!fileName.endsWith("tar")) {
+			
+			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
+					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
+					+ getExperimentName(metadataFilePathKey)  + "/"+fileName;
+			
+		}else {
+			String sampleName = getSampleName(filePath);
+			// subcollectionName can be Deconv or null based on path
+			String deconvFolderName = getDeconvFolderName(filePath, sampleName);
 		
 		if (!fileName.endsWith("tar")) {
 			
@@ -91,7 +100,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 
 		else if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
-
+			
 			String wavelengthFolder = getWavelengthFolderName(object.getOriginalFilePath(), deconvFolderName);
 			String waveLengthFolderType = wavelengthFolder != null ? wavelengthFolder + "/" : "";
 			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
@@ -107,7 +116,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath) + "/RawData/"
 					+ fileName;
 		}
-
+		}
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
 
@@ -128,10 +137,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			// find the metadataFilePathKey to use as key value for the metadata from file.
 			String metadataFilePathKey = getPathForMetadata(object);
-			String sampleName = getSampleName(filePath);
-			// subcollectionName can be Deconv or null based on path
-			String deconvFolderName = getDeconvFolderName(filePath, sampleName);
-
+			
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -264,7 +270,12 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			pathEntriesExpermientName.setPath(expermientNamePath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesExpermientName);
+		if (object.getSourceFilePath() .endsWith("tar")) {
+			
+			String sampleName = getSampleName(filePath);
 
+			// subcollectionName can be Deconv or null based on path
+			String deconvFolderName = getDeconvFolderName(filePath, sampleName);
 			String sampleNameUpdate= sampleName.replace("_fused", "");
 			String sampleCollectionPath = expermientNamePath + "/Sample_" + sampleNameUpdate.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
@@ -275,6 +286,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("sample_name", sampleName));
 			pathEntriesSample.setPath(sampleCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesSample);
+
 			if (object.getSourceFilePath() .endsWith("tar")) {
 			 if (deconvFolderName != null && !StringUtils.isBlank(deconvFolderName)) {
 				String deconvCollectionPath = sampleCollectionPath + "/Deconv_" + deconvFolderName;
@@ -316,7 +328,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
-		} finally {
+		}} finally {
 			threadLocalMap.remove();
 		}
 		logger.info("NOB custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
