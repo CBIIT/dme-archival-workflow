@@ -633,7 +633,7 @@ public class DmeSyncScheduler {
 			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
 
 			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath() + '%');
+					.findAllByDocAndLikeOriginalFilePath(doc, file.getAbsolutePath());
 
 			if (tarFolderRequests.isEmpty()) {
 				// No records for the path folder in database; running this folder for first time

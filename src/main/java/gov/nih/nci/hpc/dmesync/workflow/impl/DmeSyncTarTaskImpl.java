@@ -119,6 +119,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
+
 		long maxAllowedFileSize = Long.parseLong(maxRecommendedFileSize);
         
 		
