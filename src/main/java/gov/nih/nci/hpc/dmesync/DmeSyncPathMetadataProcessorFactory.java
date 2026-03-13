@@ -164,6 +164,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   private DmeSyncPathMetadataProcessor haoProcessor;
   
   @Autowired
+  @Qualifier("lici-cis")
+  private DmeSyncPathMetadataProcessor liciCisProcessor;
+  
+  @Autowired
   @Qualifier("dtb")
   private DmeSyncPathMetadataProcessor dtbProcessor;
  
@@ -244,6 +248,8 @@ public class DmeSyncPathMetadataProcessorFactory {
     	return nobProcessor;
     }else if ("hao".equals(doc)){
     	return haoProcessor;
+    }else if ("lici-cis".equals(doc)){
+    	return liciCisProcessor;
     }else if ("dtb".equals(doc)){
     	return dtbProcessor;
     }
