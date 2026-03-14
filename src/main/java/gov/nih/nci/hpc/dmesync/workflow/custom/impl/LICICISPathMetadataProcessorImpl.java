@@ -281,25 +281,27 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private String getCollectionNameFromParent(Path fullFilePath, String parentName) {
 
 		logger.info("Full File Path = {}", fullFilePath);
-		int count = fullFilePath.getNameCount();
-		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent() != null && Files.isDirectory(fullFilePath.getParent())
-					&& StringUtils.equals(fullFilePath.getParent().getFileName().toString(), parentName)) {
-				return Files.isDirectory(fullFilePath) ? fullFilePath.getFileName().toString() : null;
+		Path current = fullFilePath;
+		while (current != null && current.getParent() != null) {
+			Path parent = current.getParent();
+			if (StringUtils.equals(parent.getFileName().toString(), parentName)) {
+				Path fileName = current.getFileName();
+				return fileName != null ? fileName.toString() : null;
 			}
-			fullFilePath = fullFilePath.getParent();
+			current = parent;
 		}
 		return null;
 	}
 
 	private Path getCollectionPathFromParent(Path fullFilePath, String parentName) {
 		logger.info("Full File Path = {}", fullFilePath);
-		int count = fullFilePath.getNameCount();
-		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-				return fullFilePath;
+		Path current = fullFilePath;
+		while (current != null && current.getParent() != null) {
+			Path parent = current.getParent();
+			if (StringUtils.equals(parent.getFileName().toString(), parentName)) {
+				return current;
 			}
-			fullFilePath = fullFilePath.getParent();
+			current = parent;
 		}
 		return null;
 	}
