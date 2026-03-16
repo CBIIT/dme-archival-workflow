@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
@@ -13,25 +12,16 @@ import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
-import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest({
-    "hpc.server.url=https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server",
-    "auth.token=xxxx"
-})
+
 public class LICICISPathMetadataProcessorImplTest {
 
     @Autowired
@@ -121,7 +111,7 @@ public class LICICISPathMetadataProcessorImplTest {
 
     @Test
     public void testGetMetaDataJson_reads()
-            throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+            throws Exception {
 
         StatusInfo statusInfo = setupStatusInfo(
                 "/data/Trinchieri_lab/JAMSarchive/JAMSdb202201/reads",
@@ -194,7 +184,7 @@ public class LICICISPathMetadataProcessorImplTest {
 
     @Test
     public void testGetMetaDataJson_nonJAMSarchive()
-            throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+            throws Exception {
 
         StatusInfo statusInfo = setupStatusInfo(
                 "/data/Trinchieri_lab/JAMSBeta/JAMSdb202201/analysis",

@@ -1,12 +1,9 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Comparator;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -117,7 +114,6 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String piCollectionName = getPiCollectionName(fullPath, metadataFilePathKey);
 			String projectCollectionName = getProjectcollectionName(fullPath, metadataFilePathKey);
 
-			String periodCollectionName = getPeriodCollectionName(fullPath);
 			String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -293,18 +289,6 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return null;
 	}
 
-	private Path getCollectionPathFromParent(Path fullFilePath, String parentName) {
-		logger.info("Full File Path = {}", fullFilePath);
-		Path current = fullFilePath;
-		while (current != null && current.getParent() != null) {
-			Path parent = current.getParent();
-			if (StringUtils.equals(parent.getFileName().toString(), parentName)) {
-				return current;
-			}
-			current = parent;
-		}
-		return null;
-	}
 
 	private String getProjectcollectionName(Path fullPath, String metadataFilePathKey) {
 		String projectCollectionName = null;
@@ -314,13 +298,6 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	}
 
-	private String getPeriodCollectionName(Path fullPath) {
-		String periodCollectionName = null;
-		periodCollectionName = getCollectionNameFromParent(fullPath, "JAMSarchive");
-		periodCollectionName = periodCollectionName != null ? periodCollectionName.replaceAll("JAMSdb", "") : null;
-		logger.info("periodCollectionName: {}", periodCollectionName);
-		return periodCollectionName;
-	}
 
 	private String getOutCollectionName(Path fullPath) {
 		String outCollectionName = null;
@@ -353,19 +330,5 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return subCollectionName;
 	}
 
-	private String resolveMetadataFile(String directory, String propertyPrefix) throws DmeSyncMappingException {
-
-		File dir = new File(directory);
-		File[] files = dir.listFiles((d, name) -> name.startsWith(propertyPrefix) && name.endsWith(".xlsx"));
-		if (files != null && files.length > 0) {
-			// Sort by last modified time, descending
-			Arrays.sort(files, Comparator.comparing(File::lastModified).reversed());
-			return files[0].getAbsolutePath(); // Most recently modified file
-		} else {
-			logger.error("Metadata excel file not found for {}", directory + "with pattern" + propertyPrefix);
-			throw new DmeSyncMappingException(
-					"Metadata excel file not found for " + directory + "with pattern" + propertyPrefix);
-		}
-	}
 
 }
