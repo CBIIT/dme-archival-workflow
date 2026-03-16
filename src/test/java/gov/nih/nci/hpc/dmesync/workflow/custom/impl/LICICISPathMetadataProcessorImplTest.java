@@ -1,7 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -10,10 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -21,11 +20,9 @@ import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
-
 public class LICICISPathMetadataProcessorImplTest {
 
-    @Autowired
-    LICICISPathMetadataProcessorImpl liciCisPathMetadataProcessorImpl;
+    private LICICISPathMetadataProcessorImpl liciCisPathMetadataProcessorImpl;
 
     private static final String DESTINATION_BASE_DIR = "/CCR_LICI_CIS_Archive";
     private static final String PROJECT_ID = "ProjectABC";
@@ -34,8 +31,9 @@ public class LICICISPathMetadataProcessorImplTest {
     private static final String METADATA_KEY_JAMSBETA =
             "/data/Trinchieri_lab/JAMSBeta/JAMSdb202201";
 
-    @Before
+    @BeforeEach
     public void init() throws Exception {
+        liciCisPathMetadataProcessorImpl = new LICICISPathMetadataProcessorImpl();
         liciCisPathMetadataProcessorImpl.destinationBaseDir = DESTINATION_BASE_DIR;
 
         // Inject a Mockito mock for DmeMetadataBuilder via reflection
@@ -48,10 +46,6 @@ public class LICICISPathMetadataProcessorImplTest {
         dmeMetadataBuilderField.setAccessible(true);
         dmeMetadataBuilderField.set(liciCisPathMetadataProcessorImpl, mockMetadataBuilder);
     }
-
-    // ---------------------------------------------------------------------------
-    // getArchivePath() tests
-    // ---------------------------------------------------------------------------
 
     @Test
     public void testGetArchivePath_reads() throws Exception {
@@ -232,9 +226,6 @@ public class LICICISPathMetadataProcessorImplTest {
         assertEquals("results.tsv", objectMetadata.get(0).getValue());
     }
 
-    // ---------------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------------
 
     private StatusInfo setupStatusInfo(String originalFilePath, String sourceFilePath,
             String sourceFileName) {
@@ -245,10 +236,6 @@ public class LICICISPathMetadataProcessorImplTest {
         return statusInfo;
     }
 
-    /**
-     * Builds a metadata map that covers both JAMSarchive and JAMSBeta test keys with all
-     * required fields.
-     */
     private Map<String, Map<String, String>> buildMetadataMap() {
         Map<String, String> rowData = new HashMap<>();
         rowData.put("project_id", PROJECT_ID);
@@ -275,24 +262,19 @@ public class LICICISPathMetadataProcessorImplTest {
         return metadataMap;
     }
 
-    /** Sets the inherited {@code metadataMap} field directly on the processor. */
     private void setMetadataMap(Map<String, Map<String, String>> map) throws Exception {
         Field field = AbstractPathMetadataProcessor.class.getDeclaredField("metadataMap");
         field.setAccessible(true);
         field.set(liciCisPathMetadataProcessorImpl, map);
     }
 
-    /** Asserts that a bulk metadata entry contains an entry with the given attribute and value. */
     private void assertMetadataEntry(HpcBulkMetadataEntry entry, String attribute, String value) {
         for (HpcMetadataEntry metadataEntry : entry.getPathMetadataEntries()) {
             if (attribute.equals(metadataEntry.getAttribute())) {
-                assertEquals("Mismatch for attribute '" + attribute + "'",
-                        value, metadataEntry.getValue());
+                assertEquals(value, metadataEntry.getValue(), "Mismatch for attribute '" + attribute + "'");
                 return;
             }
         }
-        throw new AssertionError(
-                "Metadata entry with attribute '" + attribute + "' not found in path: "
-                        + entry.getPath());
+        throw new AssertionError("Metadata entry with attribute '" + attribute + "' not found in path: " + entry.getPath());
     }
 }
