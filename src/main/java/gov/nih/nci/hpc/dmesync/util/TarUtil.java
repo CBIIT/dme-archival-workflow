@@ -381,4 +381,37 @@ public class TarUtil {
 					.noneMatch(prefix -> name.startsWith(prefix));
 		}).toArray(File[]::new);
   }
+  
+	/**
+	 * Counts regular files under the provided list of File entries. - If an entry
+	 * is a file => counts 1 - If an entry is a directory => counts all nested
+	 * regular files recursively
+	 * 
+	 * @param entries List of files/folders
+	 * @return total files in that list of passed files/folders
+	 */
+	public static int countRegularFilesRecursively(List<File> entries) throws Exception {
+		if (entries == null || entries.isEmpty()) {
+			return 0;
+		}
+
+		long count = 0;
+		for (File entry : entries) {
+			if (entry == null || !entry.exists()) {
+				continue;
+			}
+
+			Path p = entry.toPath();
+
+			if (entry.isFile()) {
+				count++;
+			} else if (entry.isDirectory()) {
+				// Walk directory tree and count regular files,
+				try (java.util.stream.Stream<Path> stream = java.nio.file.Files.walk(p)) {
+					count += stream.filter(java.nio.file.Files::isRegularFile).count();
+				}
+			}
+		}
+		return (int) count;
+	}
 }
