@@ -119,14 +119,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
 				File tarMappingFile = null;
-				if (StringUtils.equalsIgnoreCase("csb", doc)) {
-					tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
+				
+				tarMappingFile = new File(tarWorkDir,
 							(tarFileNameFormat + "_TarContentsFile.txt"));
-				} else {
-					tarMappingFile = new File(tarWorkDir,
-							(tarFileNameFormat + "_TarContentsFile.txt"));
-
-				}
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
                 int totalFilesInTars = 0;
 
