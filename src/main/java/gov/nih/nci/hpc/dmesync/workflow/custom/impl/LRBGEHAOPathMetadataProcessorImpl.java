@@ -75,7 +75,21 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 					+ "/" + outcollectionName + "/Analysis" +  "/" + fileName;
 		
 			}
+		  else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
+				
+				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+						+ "/" + outcollectionName + "/QC" +  "/" + fileName;
+			
+		  }
 	   }
+		
+		//if there is readme.txt add readme file under out directory collection
+	   if (archivePath == null && StringUtils.equalsIgnoreCase(fileName, "readme.txt")) {
+			if (outcollectionName != null) {
+				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+						+ "/" + outcollectionName + "/" + fileName;
+			}
+		}
 
 		if (archivePath == null) {
 			String msg = messageService.get("VALIDATION_001");
@@ -221,7 +235,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			
 			String subcollectionType = getCollectionNameFromParent(fullPath, outcollectionName);
 			
-
+            if(subcollectionType != null) {
 			// Add path metadata entries for "Sub folder" collection
 			if (StringUtils.equalsIgnoreCase(subcollectionType, "Flowcell")) {
 				String sampleId = getCollectionNameFromParent(fullPath, subcollectionType); // e.g., sampleId
@@ -275,6 +289,17 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 
 				}  
+			   // Add path metadata entries for "QC" collection
+				else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
+					String analysisPath = outFolderPath + "/QC";
+					HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
+					pathEntriesAnalysis.getPathMetadataEntries()
+							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "QC"));
+					pathEntriesAnalysis.setPath(analysisPath);
+					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
+
+				}  
+		    } 
 
 			// Set it to dataObjectRegistrationRequestDTO
 			dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
@@ -290,7 +315,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		} finally {
 
 		}
-		logger.info("DTB Machida lab custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}",
+		logger.info("HAO lab custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}",
 				object.getId());
 		return dataObjectRegistrationRequestDTO;
 	}
@@ -335,14 +360,14 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	
 	private String getOutCollectionName(Path fullPath) {
 		String OutCollectionName = null;
-		OutCollectionName = getCollectionNameFromParent(fullPath, "MA");
+		OutCollectionName = getCollectionNameFromParent(fullPath, "OUT");
 		logger.info("outCollectionName: {}", OutCollectionName);
 		return OutCollectionName;
 	}
 
 	public String getPathForMetadata(Path fullPath) {
 		// Path key is Run level /data/Machida_lab/CryoEM/202504
-		String metadataKeypath = getCollectionPathFromParent(fullPath,"MA").toString();
+		String metadataKeypath = getCollectionPathFromParent(fullPath,"OUT").toString();
 
 		// Normalize known roots to /data
 		int idx = metadataKeypath.indexOf("/Hager/");
