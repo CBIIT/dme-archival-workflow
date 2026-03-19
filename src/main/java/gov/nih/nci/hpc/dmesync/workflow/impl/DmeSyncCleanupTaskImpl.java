@@ -85,7 +85,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 					String sourceDirLeafNode = object.getSourceFilePath() != null
 							? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
 							: null;
-					if (processMultipleTars && StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)
+					if (processMultipleTars && StringUtils.containsIgnoreCase(sourceDirLeafNode, multipleTarsFolders )
 							&& object.getTarEndTimestamp() != null) {
 
 						cleanUpTaskForMultipleTars(object);
