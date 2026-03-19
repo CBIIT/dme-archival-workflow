@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -90,12 +89,12 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	private boolean verifyTarFilesCount;
 	
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
-	private boolean muttipleTarBatchFolders;
+	private boolean multipleTarBatchFolders;
 
-	@Value("${dmesync.multiple.tars.batch.folder.delimeter:_}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter:_}")
 	private String batchFolderDelimiter;
 
-	@Value("${dmesync.multiple.tars.batch.folder.delimeter.level:2}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:2}")
 	private int batchFolderDelimiterLevel;
 	
 	@PostConstruct
@@ -163,7 +162,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					}
 					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
-					if (muttipleTarBatchFolders) {
+					if (multipleTarBatchFolders) {
 						
 						object = processGroupedFolderTarsRequests (object, files, tarFileNameFormat, notesWriter );
 					}else {
@@ -322,7 +321,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						object.setStatus(null);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple created tars " + totalFilesInTars));
-						
 					} 
 					if (expectedTarRequests != (totalTarsRequests)) {  
 						// verify if all the tar requests are inserted in status_info table.If not throw the exception
@@ -338,6 +336,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						// If all the verifications are true, This block gets executed.
 						logger.info("[{}] Completed Multiple tar requests Verification Completed in {}",
 								super.getTaskName());
+					}
 
 						StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
 								.findTopStatusInfoByDocAndSourceFilePath(doc,
@@ -392,7 +391,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								object.getStatus(),object.getOriginalFilePath() );
 					
 				}
-			}
 			} catch (Exception e) {
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 				throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
@@ -493,10 +491,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		}
 
 		if (!nonMatching.isEmpty()) {
-			logger.error("[{}] {} folder(s) under {} did not match N_N_N . Sample={}",
-					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(),
+			logger.error(
+					"[{}] {} folder(s) under {} did not match the expected batch folder naming convention (delimiter='{}', level={}). Sample={}",
+					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(), batchFolderDelimiter,
+					batchFolderDelimiterLevel,
 					nonMatching.stream().limit(10).map(File::getName).collect(Collectors.toList()));
-			throw new DmeSyncVerificationException("folder(s) under "+ object.getOriginalFilePath() + " did not match the format");
+			throw new DmeSyncVerificationException("folder(s) under " + object.getOriginalFilePath()
+					+ " did not match the expected batch folder naming convention (delimiter='" + batchFolderDelimiter
+					+ "', level=" + batchFolderDelimiterLevel + ")");
+
 		}
 
 		int expectedTarRequests = grouped.size();

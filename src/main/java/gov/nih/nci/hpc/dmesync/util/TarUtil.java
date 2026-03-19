@@ -27,6 +27,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class TarUtil {
 
@@ -381,4 +383,33 @@ public class TarUtil {
 					.noneMatch(prefix -> name.startsWith(prefix));
 		}).toArray(File[]::new);
   }
+  
+  /**
+   * Builds a batch/grouping key for a folder name by splitting it using a configurable delimiter
+   * and joining the first {@code level} segments.
+   * Example:
+   * folderName = { "1_11_3"}, delimiter = { "_"}, level = { 2}  => { "1_11"}
+   * folderName = { "a-b-c-d"}, delimiter = { "-"}, level = { 3} => { "a-b-c"}
+   *
+   * @param folderName The input folder name to be grouped (e.g., {@code "1_11_3"}). Must be non-blank.
+   * @param delimiter  The delimiter used to split the folder name into segments (e.g., { "_"}, { "-"}, { "."})
+   * @param level      Number of segments (from the start of {@ folderName}) to include in the group key.
+   *                   Must be {@code >= 1}. If {@code level} is greater than the number of segments in the name,
+   *                   the result is {@link Optional#empty()}.
+   * @return An {@link Optional} containing the derived group key, or {@link Optional#empty()} if the inputs are invalid
+   *         (blank folderName/delimiter, level &lt; 1) or the folder name does not contain enough segments.
+   */
+  public static Optional<String> buildBatchGroupKey(String folderName, String delimiter, int level) {
+	    if (StringUtils.isBlank(folderName)) return Optional.empty();
+	    if (StringUtils.isBlank(delimiter)) return Optional.empty();
+	    if (level < 1) return Optional.empty();
+
+	    String[] parts = folderName.split(Pattern.quote(delimiter));
+	    if (parts.length < level) return Optional.empty();
+
+	    String key = String.join(delimiter, Arrays.copyOfRange(parts, 0, level));
+	    if (StringUtils.isBlank(key)) return Optional.empty();
+
+	    return Optional.of(key);
+	}
 }

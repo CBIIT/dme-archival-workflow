@@ -13,8 +13,6 @@ import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -108,10 +106,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
 	private boolean muttipleTarBatchFolders;
 	
-	@Value("${dmesync.multiple.tars.batch.folder.delimeter:_}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter:_}")
 	private String batchFolderDelimiter;
 
-	@Value("${dmesync.multiple.tars.batch.folder.delimeter.level:2}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:2}")
 	private int batchFolderDelimiterLevel;
 	
 	@Value("${dmesync.process.multiple.tars:false}")
@@ -366,7 +364,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
 
-		if(!muttipleTarBatchFolders || dryRun) {
+		if(!muttipleTarBatchFolders || !dryRun) {
 			if (totalFiles != tarContentsCount) {
 				// Tar Verification.
 				String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
