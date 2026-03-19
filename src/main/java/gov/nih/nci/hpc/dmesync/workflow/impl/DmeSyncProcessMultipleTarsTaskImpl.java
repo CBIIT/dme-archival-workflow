@@ -89,9 +89,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Value("${dmesync.multiple.tars.files.validation:true}")
 	private boolean verifyTarFilesCount;
 	
-	@Value("${dmesync.multiple.tars.group.site.folders:false}")
-	private boolean groupSiteFolders;
+	@Value("${dmesync.multiple.tars.batch.folders:false}")
+	private boolean muttipleTarBatchFolders;
 
+	@Value("${dmesync.multiple.tars.batch.folder.delimeter:_}")
+	private String batchFolderDelimiter;
+
+	@Value("${dmesync.multiple.tars.batch.folder.delimeter.level:2}")
+	private int batchFolderDelimiterLevel;
+	
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
@@ -111,7 +117,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-		if (StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)) {
+		if (StringUtils.containsIgnoreCase(sourceDirLeafNode, multipleTarsFolders)) {
 
 			try {
 
@@ -157,8 +163,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					}
 					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
-					if (groupSiteFolders) {
-						object= processGroupedSiteTarsRequests(object, files, tarFileNameFormat, notesWriter );
+					if (muttipleTarBatchFolders) {
+						
+						object = processGroupedFolderTarsRequests (object, files, tarFileNameFormat, notesWriter );
 					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -460,142 +467,122 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		
 	}
 	
-
-	/** For "1_11_3" returns Optional["1_11"]. For non-matching returns Optional.empty(). */
-	private Optional<String> groupKeyFirstTwoSegments(String folderName) {
-	    Matcher m = SITE_FOLDER_3NUM_PATTERN.matcher(folderName);
-	    if (!m.matches()) return Optional.empty();
-	    return Optional.of(m.group(1) + "_" + m.group(2));
-	}
 	
-	private StatusInfo processGroupedSiteTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
+	private StatusInfo processGroupedFolderTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
 			BufferedWriter notesWriter) throws IOException, DmeSyncVerificationException {
 
-			// Only directories (site folders)
-			List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
-					.sorted(Comparator.comparing(File::getName)) 
-					.collect(Collectors.toList());
+		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), batchFolderDelimiter,
+				batchFolderDelimiterLevel);
 
-			// groupKey ("1_11") -> folders in that group
-			Map<String, List<File>> grouped = new LinkedHashMap<>();
-			List<File> nonMatching = new ArrayList<>();
+		// Only directories (site folders)
+		List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
+				.sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
 
-			for (File f : siteFolders) {
-				Optional<String> keyOpt = groupKeyFirstTwoSegments(f.getName());
-				if (keyOpt.isEmpty()) {
-					nonMatching.add(f);
+		// groupKey ("1_11") -> folders in that group
+		Map<String, List<File>> grouped = new LinkedHashMap<>();
+		List<File> nonMatching = new ArrayList<>();
+
+		for (File f : siteFolders) {
+			Optional<String> keyOpt = TarUtil.buildBatchGroupKey(f.getName(), batchFolderDelimiter,
+					batchFolderDelimiterLevel);
+			if (keyOpt.isEmpty()) {
+				nonMatching.add(f);
+				continue;
+			}
+			grouped.computeIfAbsent(keyOpt.get(), k -> new ArrayList<>()).add(f);
+		}
+
+		if (!nonMatching.isEmpty()) {
+			logger.error("[{}] {} folder(s) under {} did not match N_N_N . Sample={}",
+					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(),
+					nonMatching.stream().limit(10).map(File::getName).collect(Collectors.toList()));
+			throw new DmeSyncVerificationException("folder(s) under "+ object.getOriginalFilePath() + " did not match the format");
+		}
+
+		int expectedTarRequests = grouped.size();
+
+		// expected tars count in DB
+		int tarsCounter = object.getTarContentsCount() != null ? object.getTarContentsCount() : expectedTarRequests;
+		object.setTarContentsCount(tarsCounter);
+		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+
+		logger.info("[{}] Grouped folder batching enabled. Creating {} tar requests from {} batch folders in {}",
+				super.getTaskName(), expectedTarRequests, siteFolders.size(), object.getOriginalFilePath());
+
+		// using a folder coverage check to check if all folders in the base folder are covered.
+		int coveredFolders = 0;
+
+		
+		for (Map.Entry<String, List<File>> entry : grouped.entrySet()) {
+			String groupKey = entry.getKey(); // e.g. "1_11"
+			List<File> foldersInGroup = entry.getValue();
+
+			coveredFolders += foldersInGroup.size();
+
+			// tar name as groupKey.tar which is used tarTask to select folders to tar for this request
+			String tarFileName = groupKey + ".tar";
+			String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
+			tarFilePath = Paths.get(tarFilePath).normalize().toString();
+
+			int tarContentsCount = foldersInGroup.size();
+			
+			if ("local".equals(verifyPrevUpload)) {
+
+				StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
+						.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(object.getOriginalFilePath(),
+								tarFileName, "COMPLETED");
+
+				StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
+						.findTopBySourceFileNameAndRunId(tarFileName, object.getRunId());
+
+				if (recordForUploadedTar != null) {
+					logger.info("[{}] Skipping grouped tar {} since already uploaded (id={}, status={})",
+							super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
+							recordForUploadedTar.getStatus());
+					// Mapping file
+					writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
 					continue;
-				}
-				grouped.computeIfAbsent(keyOpt.get(), k -> new ArrayList<>()).add(f);
-			}
 
-			if (!nonMatching.isEmpty()) {
-				// TODO : Decide if there are folders that deosn't matched matching
-				logger.warn("[{}] {} folder(s) under {} did not match N_N_N and will be skipped. Sample={}",
-						super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(),
-						nonMatching.stream().limit(10).map(File::getName).collect(Collectors.toList()));
-			}
-
-			int expectedTarRequests = grouped.size();
-
-			// expected tars count in DB
-			int tarsCounter = object.getTarContentsCount() != null ? object.getTarContentsCount() : expectedTarRequests;
-			object.setTarContentsCount(tarsCounter);
-			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-
-			logger.info(
-					"[{}] Grouped site-folder batching enabled. Creating {} tar requests from {} site folders in {}",
-					super.getTaskName(), expectedTarRequests, siteFolders.size(), object.getOriginalFilePath());
-
-			// using a folder coverage check to check if all folders in the base folder are covered.
-			int coveredFolders = 0;
-
-			int ordinal = 0;
-			for (Map.Entry<String, List<File>> entry : grouped.entrySet()) {
-				String groupKey = entry.getKey(); // e.g. "1_11"
-				List<File> foldersInGroup = entry.getValue();
-
-				coveredFolders += foldersInGroup.size();
-
-				// tar name as requested
-				String tarFileName = groupKey + ".tar";
-				String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
-				tarFilePath = Paths.get(tarFilePath).normalize().toString();
-
-				// Set non-null indexes for DB counting/verification (ordinal only; grouped tar
-				// membership is by tar name in TarTask)
-				int start = ordinal;
-				int end = ordinal;
-				int tarContentsCount = foldersInGroup.size();
-				if ("local".equals(verifyPrevUpload)) {
-
-					StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
-							.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
-									object.getOriginalFilePath(), tarFileName, "COMPLETED");
-
-					StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
-							.findTopBySourceFileNameAndRunId(tarFileName, object.getRunId());
-
-					if (recordForUploadedTar != null) {
-						logger.info("[{}] Skipping grouped tar {} since already uploaded (id={}, status={})",
-								super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
-								recordForUploadedTar.getStatus());
-
-						// cleanup duplicates like existing logic (optional; keep if you want same
-						// behavior)
-						List<StatusInfo> duplicateRows = dmeSyncWorkflowService.getService(access)
-								.findByOriginalFilePathAndSourceFileNameAndStatusNull(object.getOriginalFilePath(),
-										tarFileName);
-						if (!duplicateRows.isEmpty()) {
-							List<Long> objectIds = duplicateRows.stream().map(StatusInfo::getId)
-									.collect(Collectors.toList());
-							dmeSyncWorkflowService.getService(access).deleteStatusInfoByIds(objectIds);
-						}
-
-						// Mapping file: OPTIONAL. If you keep it, write folder names.
-						writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
-						ordinal++;
-						continue;
-
-					} else if (recordForTarfile != null) {
-						// reuse existing row
-						logger.info("[{}] Enqueuing existing grouped tar request {} id={} path={}", super.getTaskName(),
-								tarFileName, recordForTarfile.getId(), tarFilePath);
-						enqueueRequestToJms(recordForTarfile);
-
-					} else {
-						// create new row
-						StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null, tarContentsCount );
-						newTarRequest.setTarContentsCount(foldersInGroup.size());
-						logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
-								newTarRequest.getId());
-						enqueueRequestToJms(newTarRequest);
-					}
+				} else if (recordForTarfile != null) {
+					// reuse existing row
+					logger.info("[{}] Enqueuing existing grouped tar request {} id={} path={}", super.getTaskName(),
+							tarFileName, recordForTarfile.getId(), tarFilePath);
+					enqueueRequestToJms(recordForTarfile);
 
 				} else {
-					StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null , tarContentsCount);
+					// create new row
+					StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, 0, 0, null,
+							tarContentsCount);
+					newTarRequest.setTarContentsCount(foldersInGroup.size());
 					logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
 							newTarRequest.getId());
 					enqueueRequestToJms(newTarRequest);
 				}
 
-				// OPTIONAL mapping file: write tar -> folder names
-				writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
-
-				ordinal++;
+			} else {
+				StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, 0, 0, null,
+						tarContentsCount);
+				logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
+						newTarRequest.getId());
+				enqueueRequestToJms(newTarRequest);
 			}
 
-			notesWriter.close();
+			//  mapping file: write tar -> folder names
+			writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
 
-			// Folder coverage verification
-			int expectedCovered = siteFolders.size();
-			if (coveredFolders != expectedCovered) {
-				object.setError("Grouped site folder coverage mismatch: covered=" + coveredFolders + " expected="
-						+ expectedCovered);
-				dmeSyncWorkflowService.getService(access).recordError(object);
-				object.setStatus(null);
-				throw new DmeSyncVerificationException(object.getError());
-			}
+		}
+
+		notesWriter.close();
+
+		// Folder coverage verification
+		int expectedCovered = siteFolders.size();
+		if (coveredFolders != expectedCovered) {
+			object.setError("Grouped site folder coverage mismatch: covered=" + coveredFolders + " expected="
+					+ expectedCovered);
+			dmeSyncWorkflowService.getService(access).recordError(object);
+			object.setStatus(null);
+			throw new DmeSyncVerificationException(object.getError());
+		}
 
 		return object;
 	}
