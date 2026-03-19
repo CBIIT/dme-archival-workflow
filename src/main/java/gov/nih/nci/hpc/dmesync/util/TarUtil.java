@@ -412,4 +412,35 @@ public class TarUtil {
 
 	    return Optional.of(key);
 	}
+  
+  /**
+   * Checks whether the given sourceDirLeafNode matches any folder name or pattern
+   * present in the multipleTarsFolders string.
+   * Example input for multipleTarsFolders:
+   * "abc,folderstart*,*folderend"
+   * @param multipleTarsFolders comma-separated folder names or patterns
+   * @param sourceDirLeafNode folder name to check
+   * @return true if sourceDirLeafNode matches any folder pattern, else false
+   */
+  public static boolean matchesAnyMultipleTarFolder(String multipleTarsFolders, String sourceDirLeafNode) {
+      if (multipleTarsFolders == null || sourceDirLeafNode == null) {
+          return false;
+      }
+
+      return Arrays.stream(multipleTarsFolders.split(","))
+              .map(String::trim)
+              .filter(s -> !s.isEmpty())
+              .anyMatch(pattern -> matchesPattern(pattern, sourceDirLeafNode));
+  }
+  /**
+   * Converts a wildcard pattern into regex and checks whether it matches
+   * the given sourceDirLeafNode.
+   */
+  private static boolean matchesPattern(String pattern, String sourceDirLeafNode) {
+      String regex = pattern
+              .replace(".", "\\.")
+              .replace("*", ".*");
+      // Check if the sourceDirLeafNode matches the generated regex
+      return sourceDirLeafNode.matches(regex);
+  }
 }

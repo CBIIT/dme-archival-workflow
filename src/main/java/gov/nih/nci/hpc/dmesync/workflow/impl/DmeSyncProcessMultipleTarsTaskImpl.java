@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -43,9 +42,6 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 @Component
 public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 	
-
-	private static final Pattern SITE_FOLDER_3NUM_PATTERN = Pattern.compile("^(\\d+)_(\\d+)_(\\d+)$");
-
 	@Autowired
 	private DmeSyncProducer sender;
 
@@ -116,7 +112,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-		if (StringUtils.containsIgnoreCase(sourceDirLeafNode, multipleTarsFolders)) {
+		if (TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
 
 			try {
 
@@ -176,7 +172,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					logger.info("[{}] Updated the expected tars counter value column {} in the DB  ", super.getTaskName(),
 							object.getTarContentsCount());
 				
-
 					logger.info("[{}] Started creating {} tars with total of  {} for the dataset {} with {} files ", super.getTaskName(),
 							tarsCounter,expectedTarRequests, tarFileParentName, fileList.size());
 

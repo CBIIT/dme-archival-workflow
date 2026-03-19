@@ -104,7 +104,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private String multipleTarsExcludeFolderPrefixes;
 	
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
-	private boolean muttipleTarBatchFolders;
+	private boolean multipleTarBatchFolders;
 	
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter:_}")
 	private String batchFolderDelimiter;
@@ -299,7 +299,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
 			
 		}
-        if(muttipleTarBatchFolders) {
+        if(multipleTarBatchFolders) {
         
 			// --- NEW: grouped-Batch folders tar by name ---
 
@@ -364,7 +364,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
 
-		if(!muttipleTarBatchFolders || !dryRun) {
+		if(!multipleTarBatchFolders || dryRun) {
 			if (totalFiles != tarContentsCount) {
 				// Tar Verification.
 				String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
