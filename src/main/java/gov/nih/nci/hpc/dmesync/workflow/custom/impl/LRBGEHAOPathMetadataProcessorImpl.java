@@ -66,7 +66,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			if(sampleId !=null) {
 			
 				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName 
-						+ "/" + outcollectionName + "/Data" + "/" + sampleId + "/" + fileName;
+						+ "/" + outcollectionName + "/Raw_Data" + "/" + sampleId + "/" + fileName;
 			
 			}
 		} else if (StringUtils.equalsIgnoreCase(subcollectionType, "Analysis")) {
@@ -240,7 +240,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			if (StringUtils.equalsIgnoreCase(subcollectionType, "Flowcell")) {
 				String sampleId = getCollectionNameFromParent(fullPath, subcollectionType); // e.g., sampleId
 																				
-				String subFolderPath = outFolderPath + "/Data";
+				String subFolderPath = outFolderPath + "/Raw_Data";
 				HpcBulkMetadataEntry pathEntriesSubFolder = new HpcBulkMetadataEntry();
 				pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Raw_Data"));
 				pathEntriesSubFolder.getPathMetadataEntries().add(createPathEntry("library_strategy",
