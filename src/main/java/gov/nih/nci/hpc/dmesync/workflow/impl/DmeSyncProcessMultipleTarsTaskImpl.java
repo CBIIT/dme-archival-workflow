@@ -160,7 +160,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					if (multipleTarBatchFolders) {
 						
-						object = processGroupedFolderTarsRequests (object, files, tarFileNameFormat, notesWriter );
+						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter );
 					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -183,7 +183,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) +"_of_" + expectedTarRequests + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
-						int tarContentsCount = end-start;
+						int tarContentsCount = end-start + 1;
                       /* Before creating new tar request If verifyPrevUpload is local check these two conditions
                        *   check if already uploaded to dme: if yes check Indexes in the statusInfo row are same: if above condition works write to contents file and skip the tar
                        *   check if there is already record inserted in Db: If yes check the indexes, if not reuse the row from Db record.
