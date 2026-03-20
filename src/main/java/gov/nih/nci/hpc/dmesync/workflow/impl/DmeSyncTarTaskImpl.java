@@ -237,6 +237,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				}
 				
+				if(!dryRun)
 				verifyTarSizeAgainstSourceFolder(sourceDirPath.toString(), folderSize,tarFileName, createdTarFileSize);
 
 				object.setFilesize(createdTarFileSize);

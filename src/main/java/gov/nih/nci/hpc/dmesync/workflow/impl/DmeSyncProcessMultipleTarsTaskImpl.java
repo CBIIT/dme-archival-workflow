@@ -380,6 +380,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						object.setStatus("COMPLETED");
 						object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
 						object.setEndWorkflow(true);
+						object.setSourceFilePath(object.getOriginalFilePath());
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						
 						logger.info("[{}] Movies folder row status changed to {} in the DB for path {} ", super.getTaskName(),
