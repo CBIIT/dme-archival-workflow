@@ -247,12 +247,12 @@ The following properties can be set in `application.properties` file:
 
 * `dmesync.multiple.tars.batch.folder.delimiter=<delimiter>`
   * Delimiter used to split each immediate child folder name (under the dataset directory) into segments to derive the group key.
-  * Default: `_`
+  * Default: ``
   * Example: for folder name `1_11_3` with delimiter `_`, segments are `1`, `11`, `3`.
 
 * `dmesync.multiple.tars.batch.folder.delimiter.level=<N>`
   * Number of leading segments (after splitting by `dmesync.multiple.tars.batch.folder.delimiter`) to join back together to form the **group key**.
-  * Default: `2`
+  * Default: `0`
   * Example:
     * folder `1_11_3`, delimiter `_`, level `2` → group key `1_11` → tar name `1_11.tar`
     * folder `a-b-c-d`, delimiter `-`, level `3` → group key `a-b-c` → tar name `a-b-c.tar`
