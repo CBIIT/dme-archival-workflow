@@ -291,12 +291,12 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 				}  
 			   // Add path metadata entries for "QC" collection
 				else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
-					String analysisPath = outFolderPath + "/QC";
-					HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
-					pathEntriesAnalysis.getPathMetadataEntries()
+					String qcPath = outFolderPath + "/QC";
+					HpcBulkMetadataEntry pathEntriesQc = new HpcBulkMetadataEntry();
+					pathEntriesQc.getPathMetadataEntries()
 							.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "QC"));
-					pathEntriesAnalysis.setPath(analysisPath);
-					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
+					pathEntriesQc.setPath(qcPath);
+					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesQc);
 
 				}  
 		    } 
