@@ -87,10 +87,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
 	private boolean multipleTarBatchFolders;
 
-	@Value("${dmesync.multiple.tars.batch.folder.delimiter:_}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter:}")
 	private String batchFolderDelimiter;
 
-	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:2}")
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
 	private int batchFolderDelimiterLevel;
 	
 	@PostConstruct
