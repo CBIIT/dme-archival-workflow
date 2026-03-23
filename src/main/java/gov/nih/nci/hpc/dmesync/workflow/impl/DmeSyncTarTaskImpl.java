@@ -44,7 +44,6 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 @Component
 public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 	
-	private static final Pattern GROUPED_SITE_TAR_NAME = Pattern.compile("^(\\d+)_(\\d+)\\.tar$");
 	
 	@Value("${dmesync.doc.name}")
 	private String doc;
@@ -104,7 +103,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private String multipleTarsExcludeFolderPrefixes;
 	
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
-	private boolean multipleTarBatchFolders;
+	private boolean multipleTarBatchFoldersEnabled;
 	
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter:}")
 	private String batchFolderDelimiter;
@@ -300,7 +299,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
 			
 		}
-        if(multipleTarBatchFolders) {
+        if(multipleTarBatchFoldersEnabled) {
         
 			// --- NEW: grouped-Batch folders tar by name ---
 
@@ -365,7 +364,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
 
-		if(!multipleTarBatchFolders || dryRun) {
+		if(!multipleTarBatchFoldersEnabled || dryRun) {
 			if (totalFiles != tarContentsCount) {
 				// Tar Verification.
 				String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;

@@ -85,7 +85,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	private boolean verifyTarFilesCount;
 	
 	@Value("${dmesync.multiple.tars.batch.folders:false}")
-	private boolean multipleTarBatchFolders;
+	private boolean multipleTarBatchFoldersEnabled;
 
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter:}")
 	private String batchFolderDelimiter;
@@ -158,7 +158,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					}
 					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
-					if (multipleTarBatchFolders) {
+					if (multipleTarBatchFoldersEnabled) {
 						
 						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter );
 					}else {
