@@ -366,7 +366,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	}
 
 	public String getPathForMetadata(Path fullPath) {
-		// Path key is Run level /data/Machida_lab/CryoEM/202504
+		// Path key is run level and based on the HAO/OUT hierarchy, e.g. /data/Hager/.../HAO/OUT
 		String metadataKeypath = getCollectionPathFromParent(fullPath,"OUT").toString();
 
 		// Normalize known roots to /data
