@@ -4,6 +4,9 @@ import java.io.IOException;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -44,6 +47,8 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
+		
+		removeTrailingSlashFromKeys(metadataMap);
 
 		String sourcePath = object.getOriginalFilePath();
 		String fileName = object.getSourceFileName();
@@ -56,6 +61,15 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String subcollectionType = getSubcollectionName(fullPath);
 
 		logger.info("[PathMetadataTask] metadata key {}", metadataFilePathKey );
+		
+		if(projectcollectionName == null) {
+			String msg = messageService.get("VALIDATION_002",
+					metadataFilePathKey,
+			        Locale.getDefault()
+			    );
+			logger.error(msg);
+			throw new DmeSyncMappingException(msg);
+		}
 		
 		// /data/Trinchieri_lab/JAMSarchive/JAMSdb202201
 		if (piCollectionName != null && projectcollectionName != null 
@@ -328,6 +342,20 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		subCollectionName = fullPath.getFileName().toString();
 		logger.info("subCollectionName: {}", subCollectionName);
 		return subCollectionName;
+	}
+	
+	private void removeTrailingSlashFromKeys(Map<String, Map<String, String>> metadataMap) {
+		Map<String, Map<String, String>> updatedMetadataMap = new HashMap<>();
+
+		metadataMap.forEach((k, v) -> {
+		    String newKey = k;
+		    while (newKey.endsWith("/")) {
+		        newKey = newKey.substring(0, newKey.length() - 1);
+		    }
+		    updatedMetadataMap.put(newKey, v);
+		});
+		metadataMap.clear();
+		metadataMap.putAll(updatedMetadataMap);
 	}
 
 
