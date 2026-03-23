@@ -120,8 +120,18 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
 				File tarMappingFile = null;
 				
-				tarMappingFile = new File(tarWorkDir,
-							(tarFileNameFormat + "_TarContentsFile.txt"));
+				// Placed the tar contents mapping file outside the tar work directory
+ 				// to avoid blocking cleanup of the movies/tar subfolder. Used a dataset-
+ 				// level work directory under syncWorkDir (i.e., syncWorkDir/<dataset>).
+ 				String tarMappingDir = workDirPath.toString();
+ 				Path relativeDatasetPath = relativePath.getParent();
+ 				if (relativeDatasetPath != null) {
+ 					tarMappingDir = tarMappingDir + File.separatorChar + relativeDatasetPath.toString();
+ 				}
+ 				Files.createDirectories(Paths.get(tarMappingDir));
+ 				tarMappingFile = new File(tarMappingDir,
+ 							(tarFileNameFormat + "_TarContentsFile.txt"));
+				
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
                 int totalFilesInTars = 0;
 
