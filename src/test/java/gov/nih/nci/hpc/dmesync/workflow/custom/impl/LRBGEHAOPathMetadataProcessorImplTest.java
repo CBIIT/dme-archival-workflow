@@ -140,13 +140,15 @@ class LRBGEHAOPathMetadataProcessorImplTest {
   }
 
   /**
-   * Inject a lightweight messageService implementation that returns a constant message.
-   * Works when messageService field type is an interface with a get(String) method (typical).
+   * Inject a lightweight {@link MessageService} mock that always returns a constant message.
+   * This helper assumes the messageService field is a Spring {@code MessageService} bean
+   * with a varargs signature {@code get(String, Object...)}; the stub below exercises it
+   * using only the message key argument.
    */
   private static void injectMessageServiceReturning(Object target) throws Exception {
 	  MessageService messageService = mock(MessageService.class);
 
-	  // If MessageService has: String getMessage(String key)
+	  // If MessageService has: String get(String key, Object... args)
 	  when(messageService.get(anyString())).thenReturn("VALIDATION_001");
 
 	  setField(target, "messageService", messageService);
