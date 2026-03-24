@@ -143,6 +143,8 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    		}
 		    	if(createExcel) {
 		        	Path excelFilePath = Paths.get(workDir, "fastq_files", patientId, "successfulRun.xls");
+		        	//Create parent folder if it doesn’t exist
+		 			Files.createDirectories(excelFilePath.getParent());
 		        	ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()),"\t");
 		        }
     		} catch (IOException e) {
