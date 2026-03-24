@@ -70,17 +70,16 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			
 			}
 		} else if (StringUtils.equalsIgnoreCase(subcollectionType, "Analysis")) {
-			
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
-					+ "/" + outcollectionName + "/Analysis" +  "/" + fileName;
-		
-			}
-		  else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
-				
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
-						+ "/" + outcollectionName + "/QC" +  "/" + fileName;
-			
-		  }
+
+			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
+					+ outcollectionName + "/Analysis" + "/" + fileName;
+
+		} else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
+
+			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
+					+ outcollectionName + "/QC" + "/" + fileName;
+
+		}
 	   }
 		
 		//if there is readme.txt add readme file under out directory collection
