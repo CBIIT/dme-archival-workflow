@@ -336,18 +336,32 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		}
 		return null;
 	}
+	
+	
 
 	private Path getCollectionPathFromParent(Path fullFilePath, String parentName) {
 		logger.info("Full File Path = {}", fullFilePath);
+
+		if (fullFilePath == null || StringUtils.isBlank(parentName)) {
+			return null;
+		}
 		int count = fullFilePath.getNameCount();
 		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
+			Path parent = fullFilePath.getParent();
+			if (parent == null) {
+				// Reached filesystem root without finding parentName
+				return null;
+			}
+			Path parentFileName = parent.getFileName();
+			if (parentFileName != null && StringUtils.equals(parentFileName.toString(), parentName)) {
 				return fullFilePath;
 			}
-			fullFilePath = fullFilePath.getParent();
+
+			fullFilePath = parent;
 		}
 		return null;
 	}
+	
 
 	private String getProjectcollectionName(Path fullPath, String metadataFilePathKey) {
 		String projectCollectionName = null;

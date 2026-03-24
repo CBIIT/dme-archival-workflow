@@ -162,10 +162,13 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     Path file = Files.createFile(dir.resolve("x.txt"));
 
     String metadataKey = processor.getPathForMetadata(file);
+    // Normalize separators for Windows portability.
+    // Path#toString() can contain backslashes on Windows, while production code asserts Unix-like segments.
+    String normalizedMetadataKey = metadataKey.replace('\\', '/');
 
     // Example expected: /data/Hager/OUT/OUT_20250320
-    assertTrue(metadataKey.startsWith("/data/Hager/"), "Expected metadataKey to start with /data/Hager/ but was " + metadataKey);
-    assertTrue(metadataKey.endsWith("/OUT/OUT_20250320"), "Expected metadataKey to end with /OUT/OUT_20250320 but was " + metadataKey);
+    assertTrue(normalizedMetadataKey.startsWith("/data/Hager/"), "Expected metadataKey to start with /data/Hager/ but was " + normalizedMetadataKey);
+    assertTrue(normalizedMetadataKey.endsWith("/OUT/OUT_20250320"), "Expected metadataKey to end with /OUT/OUT_20250320 but was " + normalizedMetadataKey);
   }
 
   // ---------------- helpers ----------------
