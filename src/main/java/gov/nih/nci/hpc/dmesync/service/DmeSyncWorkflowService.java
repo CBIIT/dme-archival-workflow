@@ -146,7 +146,7 @@ public interface DmeSyncWorkflowService {
    * @return the StatusInfo object
    */
   
-   StatusInfo findTopBySourceFileNameAndRunId( String sourceFileName,  String runId);
+   StatusInfo findTopBySourceFileNameAndRunIdAndOriginalFilePath( String sourceFileName,  String runId , String originalFilePath);
 
   /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId

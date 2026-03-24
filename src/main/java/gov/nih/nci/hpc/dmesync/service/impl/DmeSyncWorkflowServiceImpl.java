@@ -130,10 +130,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
  
   
   @Override
-  public StatusInfo findTopBySourceFileNameAndRunId(
-      String sourceFileName, String runId) {
-    return statusInfoDao.findTopBySourceFileNameAndRunId(
-    		sourceFileName, runId);
+  public StatusInfo findTopBySourceFileNameAndRunIdAndOriginalFilePath(
+      String sourceFileName, String runId , String originalFilePath) {
+    return statusInfoDao.findTopBySourceFileNameAndRunIdAndOriginalFilePath(
+    		sourceFileName, runId , originalFilePath );
   }
   
   @Override
