@@ -1276,5 +1276,119 @@ public class DmeSyncScheduler {
 
 		return true; // no subdirectories → leaf
 	}
+	
+	/**
+	 * Include prior-run failures in the current run so they are retried automatically.
+	 *
+	 * What it does (simple/low-filter version):
+	 *  1) Find the most recent previous run_id for (doc, baseDir) that is NOT the current runId.
+	 *  2) Load all StatusInfo rows for that previous run_id + doc.
+	 *  3) Take only rows under the baseDir and not COMPLETED.
+	 *  4) Reset them to current runId and enqueue to JMS.
+	 */
+	private void includePriorRunFailuresInCurrentRunWorklist() {
+
+	  if (StringUtils.isBlank(runId) || StringUtils.isBlank(doc) || StringUtils.isBlank(syncBaseDir)) {
+	    logger.warn("[Scheduler][PriorRunRetry] Missing context. runId='{}', doc='{}', syncBaseDir='{}'",
+	        runId, doc, syncBaseDir);
+	    return;
+	  }
+
+	  try {
+	    // 1) Determine previousRunId (most recent runId for this doc/baseDir excluding current runId).
+	    StatusInfo latestAny =
+	        dmeSyncWorkflowService.getService(access)
+	            .findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(doc, syncBaseDir);
+
+	    if (latestAny == null || StringUtils.isBlank(latestAny.getRunId())) {
+	      logger.info("[Scheduler][PriorRunRetry] No history found for doc='{}' base='{}'", doc, syncBaseDir);
+	      return;
+	    }
+
+	    // derive previous run id i by scanning recent rows under baseDir and picking the newest runId != current runId.
+	    List<StatusInfo> baseRows =
+	        dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
+
+	    String previousRunId = baseRows.stream()
+	        .filter(s -> s != null && StringUtils.isNotBlank(s.getRunId()) && !StringUtils.equals(s.getRunId(), runId))
+	        .sorted((a, b) -> {
+	          Date ad = a.getStartTimestamp();
+	          Date bd = b.getStartTimestamp();
+	          if (ad == null && bd == null) return 0;
+	          if (ad == null) return 1;
+	          if (bd == null) return -1;
+	          return bd.compareTo(ad); // newest first
+	        })
+	        .map(StatusInfo::getRunId)
+	        .findFirst()
+	        .orElse(null);
+
+	    if (StringUtils.isBlank(previousRunId)) {
+	      logger.info("[Scheduler][PriorRunRetry] No previous run found (current runId='{}')", runId);
+	      return;
+	    }
+
+	    // 2) Load previous run rows.
+	    List<StatusInfo> prevRunRows =
+	        dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(previousRunId, doc);
+
+	    if (CollectionUtils.isEmpty(prevRunRows)) {
+	      logger.info("[Scheduler][PriorRunRetry] No rows for previousRunId='{}' doc='{}'", previousRunId, doc);
+	      return;
+	    }
+
+	    // 3) retry anything under baseDir that is NOT COMPLETED.
+	    List<StatusInfo> toRetry = prevRunRows.stream()
+	        .filter(s -> s != null)
+	        .filter(s -> StringUtils.startsWith(s.getOriginalFilePath(), syncBaseDir))
+	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
+	        .filter(s -> {
+	            String p = s.getOriginalFilePath();
+	            if (StringUtils.isBlank(p)) return false;
+	            try {
+	              return Files.exists(Paths.get(p));
+	            } catch (Exception ex) {
+	              // Path could be invalid/unreadable; treat as "not available"
+	              logger.warn("[Scheduler][PriorRunRetry] Cannot access originalFilePath='{}' (skipping retry): {}", p, ex.getMessage());
+	              return false;
+	            }
+	          })
+	          .toList();
+
+	    if (toRetry.isEmpty()) {
+	      logger.info("[Scheduler][PriorRunRetry] No failures to retry from previousRunId='{}' under base='{}'",
+	          previousRunId, syncBaseDir);
+	      return;
+	    }
+
+	    // 4) Reset + enqueue.
+	    int enqueued = 0;
+	    for (StatusInfo s : toRetry) {
+
+	      s.setRunId(runId);
+	      s.setError("");
+	      s.setRetryCount(0L);
+	      s.setEndWorkflow(false);
+
+	      s = dmeSyncWorkflowService.getService(access).saveStatusInfo(s);
+
+	      //  clear old derived state so rerun is clean.
+	      dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(s.getId());
+	      dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(s.getId());
+
+	      DmeSyncMessageDto message = new DmeSyncMessageDto();
+	      message.setObjectId(s.getId());
+	      sender.send(message, "inbound.queue");
+
+	      enqueued++;
+	    }
+
+	    logger.info("[Scheduler][PriorRunRetry] Enqueued {} prior-run failure(s) from '{}' into current runId='{}'",
+	        enqueued, previousRunId, runId);
+
+	  } catch (Exception e) {
+	    logger.error("[Scheduler][PriorRunRetry] Failed to include prior-run failures into current run", e);
+	  }
+	}
 
 }
