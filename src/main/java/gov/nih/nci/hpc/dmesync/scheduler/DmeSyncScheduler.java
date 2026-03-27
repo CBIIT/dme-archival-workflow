@@ -354,9 +354,9 @@ public class DmeSyncScheduler {
     	  } else
     		  processFiles(files);
       }
-      if(retryPriorRunFailures) {
-      includePriorRunFailuresInCurrentRunWorklist();
-      }
+	   if (retryPriorRunFailures) {
+			includePriorRunFailuresInCurrentRunWorklist();
+		}
       logger.info(
           "[Scheduler] Completed file scan at {} for Run ID: {} base directory to scan {}",
           dateFormat.format(new Date()),
@@ -1311,9 +1311,9 @@ public class DmeSyncScheduler {
 	      return;
 	    }
 
-	    // derive previous run id i by scanning recent rows under baseDir and picking the newest runId != current runId.
+	    // derive previous run id by scanning recent rows under baseDir and picking the newest runId != current runId.
 	    List<StatusInfo> baseRows =
-	        dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
+	        dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(doc, syncBaseDir + "%");
 
 	    String previousRunId = baseRows.stream()
 	        .filter(s -> s != null && StringUtils.isNotBlank(s.getRunId()) && !StringUtils.equals(s.getRunId(), runId))
@@ -1343,23 +1343,35 @@ public class DmeSyncScheduler {
 	      return;
 	    }
 
-	    // 3) retry anything under baseDir that is NOT COMPLETED.
+	    // 3) retry anything under baseDir that is NOT COMPLETED, and also check if the source folder/file is still exists in source
+	    
+	    Path baseDirPath;
+	    try {
+	      baseDirPath = Paths.get(syncBaseDir).toRealPath();
+	    } catch (IOException e) {
+	      // Fallback to normalized absolute path if the real path cannot be resolved.
+	      logger.warn("[Scheduler][PriorRunRetry] Unable to resolve real path for syncBaseDir='{}'. Using normalized path instead: {}", syncBaseDir, e.getMessage());
+	      baseDirPath = Paths.get(syncBaseDir).normalize().toAbsolutePath();
+	    }
 	    List<StatusInfo> toRetry = prevRunRows.stream()
 	        .filter(s -> s != null)
-	        .filter(s -> StringUtils.startsWith(s.getOriginalFilePath(), syncBaseDir))
 	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
 	        .filter(s -> {
 	            String p = s.getOriginalFilePath();
 	            if (StringUtils.isBlank(p)) return false;
 	            try {
-	              return Files.exists(Paths.get(p));
-	            } catch (Exception ex) {
-	              // Path could be invalid/unreadable; treat as "not available"
-	              logger.warn("[Scheduler][PriorRunRetry] Cannot access originalFilePath='{}' (skipping retry): {}", p, ex.getMessage());
-	              return false;
-	            }
-	          })
-	          .toList();
+	              Path candidatePath;
+	              try {
+	                candidatePath = Paths.get(p).toRealPath();
+	              } catch (IOException ioEx) {
+	                // If real path cannot be resolved, fall back to a normalized absolute path.
+	                candidatePath = Paths.get(p).normalize().toAbsolutePath();
+	              }
+	              if (!candidatePath.startsWith(baseDirPath)) {
+	                return false;
+	              }
+	              return Files.exists(candidatePath);
+	    
 
 	    if (toRetry.isEmpty()) {
 	      logger.info("[Scheduler][PriorRunRetry] No failures to retry from previousRunId='{}' under base='{}'",

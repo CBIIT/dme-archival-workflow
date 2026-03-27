@@ -24,9 +24,8 @@ import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
  *  - @Test only
  *  - Mockito mocks created inside each test
  *  - ReflectionTestUtils for private fields + private method invocation
- *  - NO mockito-inline: uses real temp paths for Files.exists()
  *
- * NOTE: Replace WorkflowServiceType with the actual service type returned by factory.getService(access).
+ * 
  */
 class DmeSyncSchedulerPriorRunRetryTest {
 
