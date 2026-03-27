@@ -198,6 +198,9 @@ public class DmeSyncScheduler {
   @Value("${dmesync.tar.include.pattern:}")
   private String tarIncludePattern;
   
+  @Value("${dmesync.retry.prior.run.failures:false}")
+  private boolean retryPriorRunFailures;
+  
   private String runId;
 
   /**
@@ -350,6 +353,9 @@ public class DmeSyncScheduler {
     		  
     	  } else
     		  processFiles(files);
+      }
+      if(retryPriorRunFailures) {
+      includePriorRunFailuresInCurrentRunWorklist();
       }
       logger.info(
           "[Scheduler] Completed file scan at {} for Run ID: {} base directory to scan {}",
