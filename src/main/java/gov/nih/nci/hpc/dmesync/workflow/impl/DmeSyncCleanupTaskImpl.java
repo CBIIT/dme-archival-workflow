@@ -131,7 +131,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 		String tarFileParentName   = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
 		String tarContentsFileName = tarFileParentName + "_" + object.getOrginalFileName() + "_TarContentsFile.txt";
 		StatusInfo recordForContentsfile = dmeSyncWorkflowService.getService(access)
-				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId());
+				.findTopBySourceFileNameAndRunIdAndOriginalFilePath(tarContentsFileName, object.getRunId(),
+						object.getOriginalFilePath());
 
 		synchronized (this) {
 			
