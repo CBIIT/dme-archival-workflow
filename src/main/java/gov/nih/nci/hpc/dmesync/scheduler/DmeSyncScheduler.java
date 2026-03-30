@@ -1392,7 +1392,6 @@ public class DmeSyncScheduler {
 
 	      //  clear old derived state so rerun is clean.
 	      dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(s.getId());
-	      dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(s.getId());
 
 	      DmeSyncMessageDto message = new DmeSyncMessageDto();
 	      message.setObjectId(s.getId());
