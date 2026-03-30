@@ -26,7 +26,9 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -384,6 +386,62 @@ public class TarUtil {
 		}).toArray(File[]::new);
   }
   
+ 	/**
+ 	 * Counts regular files under the provided list of File entries.
+ 	 * - If an entry is a file => counts 1
+ 	 * - If an entry is a directory => counts all nested regular files recursively
+ 	 *   while skipping any directory whose name matches exactly one of the
+ 	 *   provided excludeFolders (same semantics as tar creation).
+ 	 *
+ 	 * @param entries        List of files/folders
+ 	 * @param excludeFolders List of folder names to exclude from counting
+ 	 * @return total files in that list of passed files/folders, honoring exclusions
+ 	 */
+	public static long countRegularFilesRecursively(List<File> entries, List<String> excludeFolders) throws Exception {
+		if (entries == null || entries.isEmpty()) {
+			return 0;
+		}
+
+		long count = 0;
+		for (File entry : entries) {
+			if (entry == null || !entry.exists()) {
+				continue;
+			}
+			if (entry.isFile()) {
+				count++;
+			} else if (entry.isDirectory()) {
+				// Skip entire directory if its name is in the exclude list.
+				if (excludeFolders != null && excludeFolders.contains(entry.getName())) {
+					continue;
+				}
+				final long[] dirCount = new long[1];
+				Path p = entry.toPath();
+				// Walk directory tree and count regular files, skipping excluded subtrees.
+				Files.walkFileTree(p, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attrs)
+							throws IOException {
+						if (excludeFolders != null
+								&& excludeFolders.stream().anyMatch(f -> folder.getFileName().toString().equals(f))) {
+							logger.info("{} is excluded for files count calculation", folder.getFileName().toString());
+							return FileVisitResult.SKIP_SUBTREE;
+						}
+						return FileVisitResult.CONTINUE;
+					}
+
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						if (attrs.isRegularFile()) {
+							dirCount[0]++;
+						}
+						return FileVisitResult.CONTINUE;
+					}
+				});
+				count += dirCount[0];
+			}
+		}
+		return count;
+	}
   /**
    * Builds a batch/grouping key for a folder name by splitting it using a configurable delimiter
    * and joining the first {@code level} segments.

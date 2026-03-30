@@ -290,6 +290,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				}
 		}
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
+
+		int start = object.getTarIndexStart().intValue();
+		int end = object.getTarIndexEnd().intValue();
+		
+
+		List<File> subList = fileList.subList(start, end+1);
+		
+		long totalFiles = TarUtil.countRegularFilesRecursively(subList,excludeFolders);
+
 		File tarWorkDirectory= new File(tarWorkDir);
         
         File[] filesArray = null;
