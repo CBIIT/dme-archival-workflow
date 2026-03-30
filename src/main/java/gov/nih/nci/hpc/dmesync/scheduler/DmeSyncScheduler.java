@@ -733,7 +733,9 @@ public class DmeSyncScheduler {
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
         	statusInfo.setEndWorkflow(false);
+        	if(!file.getIsDirectory()) {
         	statusInfo.setFilesize(file.getSize());
+        	}
         	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
         	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());

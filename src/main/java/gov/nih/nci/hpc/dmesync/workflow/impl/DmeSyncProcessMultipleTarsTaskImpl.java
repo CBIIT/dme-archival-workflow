@@ -538,7 +538,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								tarFileName, "COMPLETED");
 
 				StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
-						.findTopBySourceFileNameAndRunId(tarFileName, object.getRunId());
+						.findTopBySourceFileNameAndRunIdAndOriginalFilePath(tarFileName, object.getRunId(), object.getOriginalFilePath());
 
 				if (recordForUploadedTar != null) {
 					logger.info("[{}] Skipping grouped tar {} since already uploaded (id={}, status={})",

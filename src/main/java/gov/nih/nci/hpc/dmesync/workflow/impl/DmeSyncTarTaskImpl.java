@@ -274,7 +274,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 		tarFile = Paths.get(tarFile).normalize().toString();
 		long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-		int totalFiles=0;
+		long totalFiles=0;
 
 		// sorting the files based on the lastModified in asc, so every rerun we get
 		// them in same order.  
@@ -290,14 +290,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				}
 		}
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
-
-		int start = object.getTarIndexStart().intValue();
-		int end = object.getTarIndexEnd().intValue();
-		
-
-		List<File> subList = fileList.subList(start, end+1);
-		
-		long totalFiles = TarUtil.countRegularFilesRecursively(subList,excludeFolders);
 
 		File tarWorkDirectory= new File(tarWorkDir);
         
@@ -343,8 +335,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 			int start = object.getTarIndexStart().intValue();
 			int end = object.getTarIndexEnd().intValue();
-			totalFiles = (end+1) - start;
 			List<File> subList = fileList.subList(start, end+1);
+			totalFiles = TarUtil.countRegularFilesRecursively(subList,excludeFolders);
 	        filesArray = new File[subList.size()];
 	        subList.toArray(filesArray);
 		}
