@@ -591,8 +591,8 @@ public class DmeSyncScheduler {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
-		} else if ( filesPerTar > 0  && multpleTarsFolders != null
-				&& StringUtils.containsIgnoreCase( multpleTarsFolders, file.getName())) {
+		} else if ( processMultpleTars && 
+				   TarUtil.matchesAnyMultipleTarFolder( multpleTarsFolders , file.getName() )) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(doc,file.getAbsolutePath());
@@ -733,6 +733,7 @@ public class DmeSyncScheduler {
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
         	statusInfo.setEndWorkflow(false);
+        	statusInfo.setFilesize(file.getSize());
         	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
         	// Delete the metadata info created for this object ID
         	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());

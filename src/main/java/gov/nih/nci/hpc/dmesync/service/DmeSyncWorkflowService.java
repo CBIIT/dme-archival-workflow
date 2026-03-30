@@ -139,14 +139,15 @@ public interface DmeSyncWorkflowService {
   StatusInfo findTopStatusInfoByDocOrderByStartTimestampDesc(String doc);
   
   /**
-   * findTopBySourceFileNameAndRunId
+   * findTopBySourceFileNameAndRunIdAndOriginalFilePath
    *
    * @param sourceFileName
    * @param runId the runId
+   * @param originalFilePath the original file path
    * @return the StatusInfo object
    */
   
-   StatusInfo findTopBySourceFileNameAndRunId( String sourceFileName,  String runId);
+   StatusInfo findTopBySourceFileNameAndRunIdAndOriginalFilePath( String sourceFileName,  String runId , String originalFilePath);
 
   /**
    * findAllStatusInfoByOriginalFilePathAndStatusAndRunId
