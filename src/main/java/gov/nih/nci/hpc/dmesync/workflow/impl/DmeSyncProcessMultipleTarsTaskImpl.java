@@ -105,7 +105,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 		/**
-		 * This task is only applicable for CSB movies folder in Dataset so below
+		 * This task is only applicable for some folders in Dataset so below
 		 * condition will skip other folders and individual tar file requests when dmesync.process.multiple.tars is true
 		 * 
 		 */
@@ -359,6 +359,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
 							logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
 										tarMappingFile.getName());
+							checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
+							checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 							enqueueRequestToJms(checkForUploadedContentsFile);
 						   }
 						} else {
@@ -389,13 +391,13 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						object.setSourceFilePath(object.getOriginalFilePath());
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						
-						logger.info("[{}] Movies folder row status changed to {} in the DB for path {} ", super.getTaskName(),
+						logger.info("[{}] Multiple Tar folder row status changed to {} in the DB for path {} ", super.getTaskName(),
 								object.getStatus(),object.getOriginalFilePath() );
 					
 				}
 			} catch (Exception e) {
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-				throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
+				throw new DmeSyncStorageException("Error occurred during batch tarring. " + e.getMessage(), e);
 			}
 		}return object;
 
