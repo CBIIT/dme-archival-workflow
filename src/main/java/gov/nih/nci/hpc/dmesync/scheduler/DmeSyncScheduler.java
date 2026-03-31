@@ -1345,23 +1345,16 @@ public class DmeSyncScheduler {
 
 	    // 3) retry anything under baseDir that is NOT COMPLETED, and also check if the source folder/file is still exists in source
 	    
-	    Path baseDirPath;
-	    try {
-	      baseDirPath = Paths.get(syncBaseDir).toRealPath();
-	    } catch (IOException e) {
-	      // Fallback to normalized absolute path if the real path cannot be resolved.
-	      logger.warn("[Scheduler][PriorRunRetry] Unable to resolve real path for syncBaseDir='{}'. Using normalized path instead: {}", syncBaseDir, e.getMessage());
-	      baseDirPath = Paths.get(syncBaseDir).normalize().toAbsolutePath();
-	    }
+
 	    List<StatusInfo> toRetry = prevRunRows.stream()
 	        .filter(s -> s != null)
 	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
 	        .filter(s -> {
 	            String p = s.getOriginalFilePath();
 	            if (StringUtils.isBlank(p)) return false;
-	            try {
-	              Path candidatePath;
+	              Path baseDirPath = null, candidatePath;
 	              try {
+	            	baseDirPath = Paths.get(syncBaseDir).toRealPath();
 	                candidatePath = Paths.get(p).toRealPath();
 	              } catch (IOException ioEx) {
 	                // If real path cannot be resolved, fall back to a normalized absolute path.
@@ -1371,6 +1364,8 @@ public class DmeSyncScheduler {
 	                return false;
 	              }
 	              return Files.exists(candidatePath);
+	          })
+	          .toList();
 	    
 
 	    if (toRetry.isEmpty()) {
@@ -1407,5 +1402,5 @@ public class DmeSyncScheduler {
 	    logger.error("[Scheduler][PriorRunRetry] Failed to include prior-run failures into current run", e);
 	  }
 	}
-
 }
+	

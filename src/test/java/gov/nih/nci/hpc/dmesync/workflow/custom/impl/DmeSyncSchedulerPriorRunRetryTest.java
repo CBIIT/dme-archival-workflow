@@ -59,7 +59,6 @@ class DmeSyncSchedulerPriorRunRetryTest {
     DmeSyncWorkflowServiceFactory factory = mock(DmeSyncWorkflowServiceFactory.class);
     DmeSyncWorkflowService workflowSvc = mock(DmeSyncWorkflowService.class);
 
-    // runId blank
     DmeSyncScheduler scheduler = newSchedulerWithContext(
         sender, factory, workflowSvc, "local", "DOC1", "/source", "");
 
@@ -230,6 +229,71 @@ class DmeSyncSchedulerPriorRunRetryTest {
     verify(workflowSvc, never()).deleteMetadataInfoByObjectId(anyLong());
     verify(workflowSvc, never()).deleteTaskInfoByObjectId(anyLong());
 
+    java.nio.file.Files.deleteIfExists(baseDir);
+  }
+  
+  @Test
+  void happyPath_failedExistingPath_retriedAndEnqueued() throws Exception {
+    DmeSyncProducer sender = mock(DmeSyncProducer.class);
+    DmeSyncWorkflowServiceFactory factory = mock(DmeSyncWorkflowServiceFactory.class);
+    DmeSyncWorkflowService workflowSvc = mock(DmeSyncWorkflowService.class);
+
+    Path baseDir = java.nio.file.Files.createTempDirectory("dmesync-base-");
+    Path existing = java.nio.file.Files.createDirectory(baseDir.resolve("existing"));
+
+    DmeSyncScheduler scheduler = newSchedulerWithContext(
+        sender, factory, workflowSvc, "local", "DOC1", baseDir.toString(), "Run_20260325010101");
+
+    // (1) first call: top row (avoid early return)
+    StatusInfo latestAny = new StatusInfo();
+    latestAny.setRunId("Run_20260225010101"); // previous runId used in interaction #3
+    latestAny.setStartTimestamp(new Date(10));
+    latestAny.setOriginalFilePath(existing.toString());
+
+    when(workflowSvc.findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc("DOC1", baseDir.toString()))
+        .thenReturn(latestAny);
+
+    // (2) second call: baseRows used to derive previous run id (can return anything, but must not break logic)
+    StatusInfo baseRow = new StatusInfo();
+    baseRow.setRunId("Run_20260225010101");
+    baseRow.setStartTimestamp(new Date(9));
+    baseRow.setOriginalFilePath(existing.toString());
+
+    when(workflowSvc.findAllByDocAndLikeOriginalFilePath("DOC1", baseDir.toString() + "%"))
+        .thenReturn(List.of(baseRow));
+
+    // (3) third call: rows for the previous runId that will be retried
+    StatusInfo failedExisting = new StatusInfo();
+    failedExisting.setId(4L);
+    failedExisting.setRunId("Run_20260225010101");
+    failedExisting.setDoc("DOC1");
+    failedExisting.setOriginalFilePath(existing.toString());
+    failedExisting.setStatus("FAILED");
+    failedExisting.setError("old error");
+    failedExisting.setRetryCount(7L);
+    failedExisting.setEndWorkflow(true);
+
+    when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
+        .thenReturn(List.of(failedExisting));
+
+    when(workflowSvc.saveStatusInfo(any(StatusInfo.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    // Act
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+
+    // Assert
+    verify(workflowSvc, times(1)).saveStatusInfo(argThat(s ->
+        "Run_20260325010101".equals(s.getRunId())
+            && "".equals(s.getError())
+            && Long.valueOf(0L).equals(s.getRetryCount())
+            && Boolean.FALSE.equals(s.isEndWorkflow())
+            && existing.toString().equals(s.getOriginalFilePath())
+    ));
+
+    verify(workflowSvc, times(1)).deleteMetadataInfoByObjectId(4L);
+    verify(sender, times(1)).send(any(DmeSyncMessageDto.class), eq("inbound.queue"));
+
+    java.nio.file.Files.deleteIfExists(existing);
     java.nio.file.Files.deleteIfExists(baseDir);
   }
 }
