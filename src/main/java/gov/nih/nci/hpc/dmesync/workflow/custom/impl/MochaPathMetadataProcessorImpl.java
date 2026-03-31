@@ -465,15 +465,4 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  return fileName.substring(fileName.indexOf('.') + 1);
   }
   
-  @PostConstruct
-  private void init() {
-	if("mocha".equalsIgnoreCase(doc)) {
-	    try {
-	      metadataMap = ExcelUtil.parseBulkMetadataEntries(metadataFile, "Run_ID", "Sample");
-	    } catch (DmeSyncMappingException e) {
-	        logger.error(
-	            "Failed to initialize metadata  path metadata processor", e);
-	    }
-	}
-  }
 }
