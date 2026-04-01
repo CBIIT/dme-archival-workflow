@@ -1350,15 +1350,15 @@ public class DmeSyncScheduler {
 	        .filter(s -> s != null)
 	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
 	        .filter(s -> {
-	            String p = s.getOriginalFilePath();
-	            if (StringUtils.isBlank(p)) return false;
+	            String originalFilePath = s.getOriginalFilePath();
+	            if (StringUtils.isBlank(originalFilePath)) return false;
 	              Path baseDirPath = null, candidatePath;
 	              try {
 	            	baseDirPath = Paths.get(syncBaseDir).toRealPath();
-	                candidatePath = Paths.get(p).toRealPath();
+	                candidatePath = Paths.get(originalFilePath).toRealPath();
 	              } catch (IOException ioEx) {
 	                // If real path cannot be resolved, fall back to a normalized absolute path.
-	                candidatePath = Paths.get(p).normalize().toAbsolutePath();
+	                candidatePath = Paths.get(originalFilePath).normalize().toAbsolutePath();
 	              }
 	              if (!candidatePath.startsWith(baseDirPath)) {
 	                return false;
