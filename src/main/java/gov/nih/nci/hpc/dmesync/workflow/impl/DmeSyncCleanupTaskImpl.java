@@ -54,6 +54,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Value("${dmesync.multiple.tars.dir.folders:}")
   private String multipleTarsFolders;
   
+  @Value("${dmesync.selective.scan:false}")
+  private boolean selectiveScan;
   @Autowired
   private DmeSyncProducer sender;
   
@@ -72,28 +74,31 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   public StatusInfo process(StatusInfo object) {
 
     //Cleanup any files from the work directory.
-    if (tar || untar || compress || tarIndividualFiles) {
+    if (tar || untar || compress || tarIndividualFiles || selectiveScan) {
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
-        if(cleanup) {
-        	
-			String sourceDirLeafNode = object.getSourceFilePath() != null
-					? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
-					: null;
-			if (processMultipleTars && StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)
-					&& object.getTarEndTimestamp()!=null) {
-				
-				cleanUpTaskForMultipleTars(object);
-				
-          }else {
-              TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
-          }
-          
-        }
-        else
-          logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}", super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
-      } catch (Exception e) {
-    	  
+			if (cleanup) {				
+				if (selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()))) {
+					// Skipping this task for the selective scan files
+					return object;
+				} else {
+					String sourceDirLeafNode = object.getSourceFilePath() != null
+							? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
+							: null;
+					if (processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )
+							&& object.getTarEndTimestamp() != null) {
+
+						cleanUpTaskForMultipleTars(object);
+
+					} else {
+						TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+					}
+				}
+			} else
+				logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}",
+						super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
+		} catch (Exception e) {
+
     	  String errorMessage="Upload successful but failed to remove file ";
         // For cleanup, we need not to rollback.
         logger.error("[{}] Upload successful but failed to remove file", super.getTaskName(), e);
@@ -123,16 +128,17 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 		 */
 		
 		// Retrieve the record for contents file.
-		String tarFileParentName = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
+		String tarFileParentName   = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
 		String tarContentsFileName = tarFileParentName + "_" + object.getOrginalFileName() + "_TarContentsFile.txt";
 		StatusInfo recordForContentsfile = dmeSyncWorkflowService.getService(access)
-				.findTopBySourceFileNameAndRunId(tarContentsFileName, object.getRunId());
+				.findTopBySourceFileNameAndRunIdAndOriginalFilePath(tarContentsFileName, object.getRunId(),
+						object.getOriginalFilePath());
 
 		synchronized (this) {
 			
 			// Retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies other rows have tarnames.
 			StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
-					.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
+					.findTopStatusInfoByDocAndSourceFilePathAndLikeRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId()+"%");
 			
 			if (tarFolderRow != null) {
 				logger.info(
@@ -185,7 +191,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 	  synchronized (this) {
 		// retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies  other rows have tarnames.
 			StatusInfo tarFolderRow = dmeSyncWorkflowService.getService(access)
-					.findTopByDocAndSourceFilePathAndRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId());
+					.findTopStatusInfoByDocAndSourceFilePathAndLikeRunId(object.getDoc(),object.getOriginalFilePath(), object.getRunId()+"%");
 			if (tarFolderRow != null && tarFolderRow.getTarContentsCount()!=null) {
 				logger.info(
 						"[{}] Decrementing the tar counter old value when cleanup has error in execption block{} , new value {} ",

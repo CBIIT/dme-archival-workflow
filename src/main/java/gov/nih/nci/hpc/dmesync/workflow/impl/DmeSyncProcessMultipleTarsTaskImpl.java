@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,8 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -37,7 +41,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
-
+	
 	@Autowired
 	private DmeSyncProducer sender;
 
@@ -67,6 +71,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Value("${dmesync.multiple.tars.files.count:0}")
 	private Integer filesPerTar;
+	
+	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
+	private String multipleTarsExcludeFolderPrefixes;
 
 	@Value("${dmesync.cleanup:false}")
 	private boolean cleanup;
@@ -76,7 +83,16 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Value("${dmesync.multiple.tars.files.validation:true}")
 	private boolean verifyTarFilesCount;
+	
+	@Value("${dmesync.multiple.tars.batch.folders:false}")
+	private boolean multipleTarBatchFoldersEnabled;
 
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter:}")
+	private String batchFolderDelimiter;
+
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
+	private int batchFolderDelimiterLevel;
+	
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
@@ -89,14 +105,14 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 		/**
-		 * This task is only applicable for CSB movies folder in Dataset so below
+		 * This task is only applicable for some folders in Dataset so below
 		 * condition will skip other folders and individual tar file requests when dmesync.process.multiple.tars is true
 		 * 
 		 */
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-		if (StringUtils.containsIgnoreCase(multipleTarsFolders, sourceDirLeafNode)) {
+		if (TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
 
 			try {
 
@@ -113,8 +129,20 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				
 				String tarFileParentName = sourceDirPath.getParent().getFileName().toString();
 				String tarFileNameFormat = tarFileParentName + "_" + object.getOrginalFileName();
-				File tarMappingFile = new File(syncWorkDir + "/" + tarFileParentName,
-						(tarFileNameFormat + "_TarContentsFile.txt"));
+				File tarMappingFile = null;
+				
+				// Placed the tar contents mapping file outside the tar work directory
+ 				// to avoid blocking cleanup of the movies/tar subfolder. Used a dataset-
+ 				// level work directory under syncWorkDir (i.e., syncWorkDir/<dataset>).
+ 				String tarMappingDir = workDirPath.toString();
+ 				Path relativeDatasetPath = relativePath.getParent();
+ 				if (relativeDatasetPath != null) {
+ 					tarMappingDir = tarMappingDir + File.separatorChar + relativeDatasetPath.toString();
+ 				}
+ 				Files.createDirectories(Paths.get(tarMappingDir));
+ 				tarMappingFile = new File(tarMappingDir,
+ 							(tarFileNameFormat + "_TarContentsFile.txt"));
+				
 				BufferedWriter notesWriter = new BufferedWriter(new FileWriter(tarMappingFile));
                 int totalFilesInTars = 0;
 
@@ -127,7 +155,18 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				}
 
 				if (files != null && files.length > 0) {
+					// Exclude folders listed in multiple tars excludeFolder property from files array
+					if ( StringUtils.isNotBlank(multipleTarsExcludeFolderPrefixes)) {
+						
+						 logger.info("{} is excluded for Batch Tar Processing", multipleTarsExcludeFolderPrefixes);
+					    files = TarUtil.excludeBatchFoldersByPrefix(files, multipleTarsExcludeFolderPrefixes);
+					}
+					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
+					if (multipleTarBatchFoldersEnabled) {
+						
+						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter );
+					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
 					
@@ -138,7 +177,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					logger.info("[{}] Updated the expected tars counter value column {} in the DB  ", super.getTaskName(),
 							object.getTarContentsCount());
 				
-
 					logger.info("[{}] Started creating {} tars with total of  {} for the dataset {} with {} files ", super.getTaskName(),
 							tarsCounter,expectedTarRequests, tarFileParentName, fileList.size());
 
@@ -147,10 +185,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						int end = (Math.min(start + filesPerTar, fileList.size()))-1;
 						totalFilesInTars = end+1;
 						List<File> subList = fileList.subList(start, end+1);
-						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) + ".tar";
+						String tarFileName = tarFileNameFormat + "_part_" + (i + 1) +"_of_" + expectedTarRequests + ".tar";
 						String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
 						tarFilePath = Paths.get(tarFilePath).normalize().toString();
-						
+						int tarContentsCount = end-start + 1;
                       /* Before creating new tar request If verifyPrevUpload is local check these two conditions
                        *   check if already uploaded to dme: if yes check Indexes in the statusInfo row are same: if above condition works write to contents file and skip the tar
                        *   check if there is already record inserted in Db: If yes check the indexes, if not reuse the row from Db record.
@@ -163,7 +201,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 									.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
 											object.getOriginalFilePath(), tarFileName, "COMPLETED");
 							StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
-									.findTopBySourceFileNameAndRunId(tarFileName, object.getRunId());
+									.findTopBySourceFileNameAndRunIdAndOriginalFilePath(tarFileName, object.getRunId() , 
+											object.getOriginalFilePath());
 							
 							if (recordForUploadedTar != null) {
 								/* if tar already got uploaded to DME(completed status in  statusInfo table,then verify indexes matched
@@ -235,7 +274,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								
 								// If tar is not uploaded or existing record is not in database, mainly for new tar request
 								// add new row in status info table for tar, send the new row Id to JMS queue
-								StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null);
+								
+								StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null , tarContentsCount);
 								// Send the objectId to the message queue for processing
 								logger.info("[{}]Enqueuing the new tar request {} with Id {}", super.getTaskName(),
 										tarFileName,newTarRequest.getId());
@@ -244,7 +284,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							
 						} else {
 							// If verifyPrevUpload value is none. This means doesn't check the database for uploads then add new row in status info table for tar, send the new row Id to JMS queue
-							StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null);
+							StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null , tarContentsCount);
 							logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
 									newTarRequest.getId());
 							enqueueRequestToJms(newTarRequest);
@@ -282,7 +322,6 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						object.setStatus(null);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple created tars " + totalFilesInTars));
-						
 					} 
 					if (expectedTarRequests != (totalTarsRequests)) {  
 						// verify if all the tar requests are inserted in status_info table.If not throw the exception
@@ -298,6 +337,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						// If all the verifications are true, This block gets executed.
 						logger.info("[{}] Completed Multiple tar requests Verification Completed in {}",
 								super.getTaskName());
+					}
 
 						StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
 								.findTopStatusInfoByDocAndSourceFilePath(doc,
@@ -319,6 +359,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
 							logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
 										tarMappingFile.getName());
+							checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
+							checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 							enqueueRequestToJms(checkForUploadedContentsFile);
 						   }
 						} else {
@@ -327,7 +369,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 									tarMappingFile.getName());
 							// add new row in status info table for uploading tarContentsFile.
 							StatusInfo contentsFileRecord = insertNewRowforTar(object, tarMappingFile.getName(), false, null,
-									null, tarMappingFile);
+									null, tarMappingFile , 0);
 							if (object.getTarContentsCount()==0) {
 								// tarContentsCounter : number of tars remaining to be uploaded .
 								  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
@@ -344,23 +386,25 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
 						object.setStatus("COMPLETED");
+						object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
 						object.setEndWorkflow(true);
+						object.setSourceFilePath(object.getOriginalFilePath());
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 						
-						logger.info("[{}] Movies folder row status changed to {} in the DB for path {} ", super.getTaskName(),
+						logger.info("[{}] Multiple Tar folder row status changed to {} in the DB for path {} ", super.getTaskName(),
 								object.getStatus(),object.getOriginalFilePath() );
 					
 				}
 			} catch (Exception e) {
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
-				throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
+				throw new DmeSyncStorageException("Error occurred during batch tarring. " + e.getMessage(), e);
 			}
 		}return object;
 
 	}
 
 	private StatusInfo insertNewRowforTar(StatusInfo object, String sourceFileName, boolean isTarRequest,
-			Integer tarStartIndex, Integer tarEndIndex, File sourceFile) throws IOException {
+			Integer tarStartIndex, Integer tarEndIndex, File sourceFile, int tarContentsCount ) throws IOException {
 
 		StatusInfo statusInfo = new StatusInfo();
 		statusInfo.setRunId(object.getRunId());
@@ -377,6 +421,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 			statusInfo.setSourceFilePath(sourceFile.getAbsolutePath());
 			statusInfo.setFilesize(sourceFile.length());
 		}
+		
+		statusInfo.setTarContentsCount(tarContentsCount);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 
 		return statusInfo;
@@ -421,6 +467,131 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		sender.send(message, "inbound.queue");
 		logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 		
+	}
+	
+	
+	private StatusInfo processGroupedFolderTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
+			BufferedWriter notesWriter) throws IOException, DmeSyncVerificationException {
+
+		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), batchFolderDelimiter,
+				batchFolderDelimiterLevel);
+
+		// Only directories (site folders)
+		List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
+				.sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
+
+		// groupKey ("1_11") -> folders in that group
+		Map<String, List<File>> grouped = new LinkedHashMap<>();
+		List<File> nonMatching = new ArrayList<>();
+
+		for (File f : siteFolders) {
+			Optional<String> keyOpt = TarUtil.buildBatchGroupKey(f.getName(), batchFolderDelimiter,
+					batchFolderDelimiterLevel);
+			if (keyOpt.isEmpty()) {
+				nonMatching.add(f);
+				continue;
+			}
+			grouped.computeIfAbsent(keyOpt.get(), k -> new ArrayList<>()).add(f);
+		}
+
+		if (!nonMatching.isEmpty()) {
+			logger.error(
+					"[{}] {} folder(s) under {} did not match the expected batch folder naming convention (delimiter='{}', level={}). Sample={}",
+					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(), batchFolderDelimiter,
+					batchFolderDelimiterLevel,
+					nonMatching.stream().limit(10).map(File::getName).collect(Collectors.toList()));
+			throw new DmeSyncVerificationException("folder(s) under " + object.getOriginalFilePath()
+					+ " did not match the expected batch folder naming convention (delimiter='" + batchFolderDelimiter
+					+ "', level=" + batchFolderDelimiterLevel + ")");
+
+		}
+
+		int expectedTarRequests = grouped.size();
+
+		// expected tars count in DB
+		int tarsCounter = object.getTarContentsCount() != null ? object.getTarContentsCount() : expectedTarRequests;
+		object.setTarContentsCount(tarsCounter);
+		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+
+		logger.info("[{}] Grouped folder batching enabled. Creating {} tar requests from {} batch folders in {}",
+				super.getTaskName(), expectedTarRequests, siteFolders.size(), object.getOriginalFilePath());
+
+		// using a folder coverage check to check if all folders in the base folder are covered.
+		int coveredFolders = 0;
+
+		
+		for (Map.Entry<String, List<File>> entry : grouped.entrySet()) {
+			String groupKey = entry.getKey(); // e.g. "1_11"
+			List<File> foldersInGroup = entry.getValue();
+
+			coveredFolders += foldersInGroup.size();
+
+			// tar name as groupKey.tar which is used tarTask to select folders to tar for this request
+			String tarFileName = groupKey + ".tar";
+			String tarFilePath = tarWorkDir + File.separatorChar + tarFileName;
+			tarFilePath = Paths.get(tarFilePath).normalize().toString();
+
+			int tarContentsCount = foldersInGroup.size();
+			
+			if ("local".equals(verifyPrevUpload)) {
+
+				StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
+						.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(object.getOriginalFilePath(),
+								tarFileName, "COMPLETED");
+
+				StatusInfo recordForTarfile = dmeSyncWorkflowService.getService(access)
+						.findTopBySourceFileNameAndRunIdAndOriginalFilePath(tarFileName, object.getRunId(), object.getOriginalFilePath());
+
+				if (recordForUploadedTar != null) {
+					logger.info("[{}] Skipping grouped tar {} since already uploaded (id={}, status={})",
+							super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
+							recordForUploadedTar.getStatus());
+					// Mapping file
+					writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
+					continue;
+
+				} else if (recordForTarfile != null) {
+					// reuse existing row
+					logger.info("[{}] Enqueuing existing grouped tar request {} id={} path={}", super.getTaskName(),
+							tarFileName, recordForTarfile.getId(), tarFilePath);
+					enqueueRequestToJms(recordForTarfile);
+
+				} else {
+					// create new row
+					StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, 0, 0, null,
+							tarContentsCount);
+					newTarRequest.setTarContentsCount(foldersInGroup.size());
+					logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
+							newTarRequest.getId());
+					enqueueRequestToJms(newTarRequest);
+				}
+
+			} else {
+				StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, 0, 0, null,
+						tarContentsCount);
+				logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
+						newTarRequest.getId());
+				enqueueRequestToJms(newTarRequest);
+			}
+
+			//  mapping file: write tar -> folder names
+			writeToContentsFile(notesWriter, tarFileName, foldersInGroup);
+
+		}
+
+		notesWriter.close();
+
+		// Folder coverage verification
+		int expectedCovered = siteFolders.size();
+		if (coveredFolders != expectedCovered) {
+			object.setError("Grouped site folder coverage mismatch: covered=" + coveredFolders + " expected="
+					+ expectedCovered);
+			dmeSyncWorkflowService.getService(access).recordError(object);
+			object.setStatus(null);
+			throw new DmeSyncVerificationException(object.getError());
+		}
+
+		return object;
 	}
 
 }

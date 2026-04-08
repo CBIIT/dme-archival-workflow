@@ -54,11 +54,29 @@ public class DmeMetadataBuilder {
 		logger.info("Updating the PI Metadata Spreadsheet and creating Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
 	}
+	
+	@Cacheable(value = "metadata", key = "'dmeMetadata'", sync = true)
+	public Map<String, Map<String, String>> getMetadataMap(String metadataFile, String key1, String key2)
+			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+
+		logger.info("Parsing the Metadata Spreadsheet and creating Metadata Map");
+		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
+	}
+
+	@CachePut(value = "metadata", key = "'dmeMetadata'")
+	public Map<String, Map<String, String>> updateMetadataMap(String metadataFile, String key1, String key2)
+			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+
+		logger.info("Updating the Metadata Spreadsheet and creating Metadata Map");
+		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
+	}
 
 	@CacheEvict(value = "metadata", allEntries = true)
 	public void evictMetadataMap() {
 		logger.info("Clearing the cached Metadata Map");
 
 	}
+	
+	
 
 }

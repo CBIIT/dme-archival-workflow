@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -123,6 +124,10 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     	  statusInfo=generateAggregrateRecords(statusInfo);
       }
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
+      // Sort in-place ascending (A->Z), nulls last
+	  statusInfo.sort(Comparator.comparing(StatusInfo::getOriginalFilePath,
+				Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+      
       Path path = Paths.get(logFile);
       String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
       

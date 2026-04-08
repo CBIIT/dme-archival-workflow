@@ -25,7 +25,12 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class TarUtil {
 
@@ -353,5 +358,147 @@ public class TarUtil {
 		logger.error("Failed to walk file tree for directory: {}", dir, e);
 		throw e;
 	}
+  }
+  
+  public static boolean isSelectiveScanFileUpload(Path originalFilePath) {
+	  return Files.isRegularFile(originalFilePath);
+	  
+  }
+  
+  /**
+   * Filter out files with folder whose names start with any prefix in excludePrefixes.
+   * @param File List of the folder/file in the Batch tarring folder 
+   * @param multipleTarsExcludeFolderPrefixes 
+   * @return List of files with excluded directory
+   */
+  public static File[] excludeBatchFoldersByPrefix(File[] files, String multipleTarsExcludeFolderPrefixes) {
+	
+	  List<String> excludePrefixes = multipleTarsExcludeFolderPrefixes == null || multipleTarsExcludeFolderPrefixes.isEmpty() ? null
+				: new ArrayList<>(Arrays.asList(multipleTarsExcludeFolderPrefixes.split(",")));
+		
+	  return files = Arrays.stream(files).filter(f -> {
+			if (!f.isDirectory())
+				return true;
+
+			String name = f.getName();
+			return excludePrefixes.stream().filter(StringUtils::isNotBlank)
+					.noneMatch(prefix -> name.startsWith(prefix));
+		}).toArray(File[]::new);
+  }
+  
+ 	/**
+ 	 * Counts regular files under the provided list of File entries.
+ 	 * - If an entry is a file => counts 1
+ 	 * - If an entry is a directory => counts all nested regular files recursively
+ 	 *   while skipping any directory whose name matches exactly one of the
+ 	 *   provided excludeFolders (same semantics as tar creation).
+ 	 *
+ 	 * @param entries        List of files/folders
+ 	 * @param excludeFolders List of folder names to exclude from counting
+ 	 * @return total files in that list of passed files/folders, honoring exclusions
+ 	 */
+	public static long countRegularFilesRecursively(List<File> entries, List<String> excludeFolders) throws Exception {
+		if (entries == null || entries.isEmpty()) {
+			return 0;
+		}
+
+		long count = 0;
+		for (File entry : entries) {
+			if (entry == null || !entry.exists()) {
+				continue;
+			}
+			if (entry.isFile()) {
+				count++;
+			} else if (entry.isDirectory()) {
+				// Skip entire directory if its name is in the exclude list.
+				if (excludeFolders != null && excludeFolders.contains(entry.getName())) {
+					continue;
+				}
+				final long[] dirCount = new long[1];
+				Path p = entry.toPath();
+				// Walk directory tree and count regular files, skipping excluded subtrees.
+				Files.walkFileTree(p, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attrs)
+							throws IOException {
+						if (excludeFolders != null
+								&& excludeFolders.stream().anyMatch(f -> folder.getFileName().toString().equals(f))) {
+							logger.info("{} is excluded for files count calculation", folder.getFileName().toString());
+							return FileVisitResult.SKIP_SUBTREE;
+						}
+						return FileVisitResult.CONTINUE;
+					}
+
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						if (attrs.isRegularFile()) {
+							dirCount[0]++;
+						}
+						return FileVisitResult.CONTINUE;
+					}
+				});
+				count += dirCount[0];
+			}
+		}
+		return count;
+	}
+  /**
+   * Builds a batch/grouping key for a folder name by splitting it using a configurable delimiter
+   * and joining the first {@code level} segments.
+   * Example:
+   * folderName = { "1_11_3"}, delimiter = { "_"}, level = { 2}  => { "1_11"}
+   * folderName = { "a-b-c-d"}, delimiter = { "-"}, level = { 3} => { "a-b-c"}
+   *
+   * @param folderName The input folder name to be grouped (e.g., {@code "1_11_3"}). Must be non-blank.
+   * @param delimiter  The delimiter used to split the folder name into segments (e.g., { "_"}, { "-"}, { "."})
+   * @param level      Number of segments (from the start of {@ folderName}) to include in the group key.
+   *                   Must be {@code >= 1}. If {@code level} is greater than the number of segments in the name,
+   *                   the result is {@link Optional#empty()}.
+   * @return An {@link Optional} containing the derived group key, or {@link Optional#empty()} if the inputs are invalid
+   *         (blank folderName/delimiter, level &lt; 1) or the folder name does not contain enough segments.
+   */
+  public static Optional<String> buildBatchGroupKey(String folderName, String delimiter, int level) {
+	    if (StringUtils.isBlank(folderName)) return Optional.empty();
+	    if (StringUtils.isBlank(delimiter)) return Optional.empty();
+	    if (level < 1) return Optional.empty();
+
+	    String[] parts = folderName.split(Pattern.quote(delimiter));
+	    if (parts.length < level) return Optional.empty();
+
+	    String key = String.join(delimiter, Arrays.copyOfRange(parts, 0, level));
+	    if (StringUtils.isBlank(key)) return Optional.empty();
+
+	    return Optional.of(key);
+	}
+  
+  /**
+   * Checks whether the given sourceDirLeafNode matches any folder name or pattern
+   * present in the multipleTarsFolders string.
+   * Example input for multipleTarsFolders:
+   * "abc,folderstart*,*folderend"
+   * @param multipleTarsFolders comma-separated folder names or patterns
+   * @param sourceDirLeafNode folder name to check
+   * @return true if sourceDirLeafNode matches any folder pattern, else false
+   */
+  public static boolean matchesAnyMultipleTarFolder(String multipleTarsFolders, String sourceDirLeafNode) {
+      if (multipleTarsFolders == null || sourceDirLeafNode == null) {
+          return false;
+      }
+
+      return Arrays.stream(multipleTarsFolders.split(","))
+              .map(String::trim)
+              .filter(s -> !s.isEmpty())
+              .anyMatch(pattern -> matchesPattern(pattern, sourceDirLeafNode));
+  }
+  /**
+   * Converts a wildcard pattern into regex and checks whether it matches
+   * the given sourceDirLeafNode.
+   */
+  private static boolean matchesPattern(String pattern, String sourceDirLeafNode) {
+      String regex = pattern
+              .replace(".", "\\.")
+              .replace("*", ".*");
+      // Check if the sourceDirLeafNode matches the generated regex
+      return sourceDirLeafNode.matches(regex);
   }
 }
