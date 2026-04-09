@@ -344,6 +344,10 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	
 	public String getAttrValueWithParitallyMatchingKey(String partialKey, String attrKey) throws DmeSyncMappingException {
 	    String key = null;
+	    
+	    if (metadataMapWithTwoKeys == null || metadataMapWithTwoKeys.isEmpty()) {
+	    	return null;
+	    }
 	    for (Map.Entry<String, Map<String, String>> entry : metadataMapWithTwoKeys.entrySet()) {
 	        if(StringUtils.contains(entry.getKey(), partialKey)) {
 	          //Partial key match.

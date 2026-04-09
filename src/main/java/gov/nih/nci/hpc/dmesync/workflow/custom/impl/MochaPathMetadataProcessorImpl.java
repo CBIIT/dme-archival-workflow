@@ -198,7 +198,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         	String runId = getRunId(object);
         	String flowcellId = getFlowcellId(object);
     	    String sampleId = getSampleId(object);
-			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName;
+			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 			HpcBulkMetadataEntry hpcBulkMetadataProjectEntries = populateStoredMetadataEntries(pathEntriesProject,
 					"Project", projectCollectionName, "mocha");
@@ -208,7 +208,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 				// It is null or empty means no mapping for project in database
 				String msg = "No metadata entries were found for Collection Type " + "Project"
 						+ " with Project Mapping Key: " + projectCollectionName;
-				logger.info(msg);
+				logger.error(msg);
 				throw new DmeSyncMappingException(msg);
 			}
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
