@@ -340,8 +340,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					}
 
 						StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-								.findTopStatusInfoByDocAndSourceFilePath(doc,
-										tarMappingFile.getAbsolutePath());
+								.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc,
+										tarMappingFile.getAbsolutePath() , object.getOriginalFilePath());
 
 						
 						

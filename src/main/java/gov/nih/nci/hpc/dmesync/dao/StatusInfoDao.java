@@ -116,9 +116,10 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * findTopStatusInfoByDocAndSourceFilePath
    * @param doc the doc
    * @param sourceFilePath 
+   * @param originalFilePath
    * @return the original StatusInfo object for multiple tars 
    */
-  StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath);
+  StatusInfo findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(String doc, String sourceFilePath , String originalFilePath);
 
   /**
    * findTopStatusInfoByDocAndSourceFilePathAndRunId

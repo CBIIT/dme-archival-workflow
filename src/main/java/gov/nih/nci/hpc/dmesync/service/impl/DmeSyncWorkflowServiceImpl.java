@@ -112,8 +112,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public StatusInfo findTopStatusInfoByDocAndSourceFilePath(String doc, String sourceFilePath) {
-    return statusInfoDao.findTopStatusInfoByDocAndSourceFilePath(doc, sourceFilePath);
+  public StatusInfo findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(String doc, String sourceFilePath , String originalFilePath) {
+    return statusInfoDao.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc, sourceFilePath , originalFilePath);
   }
   
   @Override

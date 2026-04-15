@@ -600,8 +600,8 @@ public class DmeSyncScheduler {
 			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
-						.findTopStatusInfoByDocAndSourceFilePath(doc,
-								file.getAbsolutePath());
+						.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc,
+								file.getAbsolutePath() , file.getAbsolutePath());
 				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
