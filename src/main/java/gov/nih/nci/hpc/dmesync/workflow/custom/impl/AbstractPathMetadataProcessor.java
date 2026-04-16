@@ -342,7 +342,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 		return (piMetadataMap.get(key) == null ? null : piMetadataMap.get(key).get(attrKey));
 	}
 	
-	public String getAttrValueWithParitallyMatchingKey(String partialKey, String attrKey) throws DmeSyncMappingException {
+	public String getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(String partialKey, String attrKey) throws DmeSyncMappingException {
 	    String key = null;
 	    
 	    if (metadataMapWithTwoKeys == null || metadataMapWithTwoKeys.isEmpty()) {

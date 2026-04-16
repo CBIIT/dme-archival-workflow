@@ -339,7 +339,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  // For fastq, get the Platform from the spreadsheet by using only Run_ID
 		  String runId = getRunId(object);
 		  try {
-			  platform = getAttrValueWithParitallyMatchingKey(runId, "Platform");
+			  platform = getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(runId, "Platform");
 		  } catch (DmeSyncMappingException e) {
 			  throw new DmeSyncMappingException("Run ID is missing from spreadsheet. Run_ID: " + runId);
 		  }
@@ -361,7 +361,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  flowcellId = StringUtils.substringAfterLast(runId, "_");
 		  flowcellId = StringUtils.substring(flowcellId, 1);
 	  } else {
-		  flowcellId = getAttrValueWithParitallyMatchingKey(runId, "Flowcell");
+		  flowcellId = getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(runId, "Flowcell");
 	  }
 	return flowcellId;
   }
