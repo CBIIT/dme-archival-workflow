@@ -192,14 +192,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				} else {
 				object.setTarStartTimestamp(new Date());
-				String tarFileName;
-				if (tarNameinExcelFile) {
-					threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
-					String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
-					tarFileName = getAttrValueWithKey(path, "tar_name");
-				} else {
-					tarFileName = object.getOrginalFileName() + ".tar";
-				}
+				// TarFileName is constructed in the Pre Processing task
+				String tarFileName = object.getSourceFileName();
 				String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 				tarFile = Paths.get(tarFile).normalize().toString();
 				File directory = new File(object.getOriginalFilePath());
@@ -213,8 +207,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					throw new Exception("No Read permission to " + object.getOriginalFilePath());
 				}
 				if (compress) {
-					tarFile = tarFile + ".gz";
-					tarFileName = tarFileName + ".gz";
 					if (!dryRun) {
 						TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
 					}
