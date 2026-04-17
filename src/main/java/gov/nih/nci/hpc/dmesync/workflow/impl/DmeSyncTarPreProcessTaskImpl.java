@@ -1,7 +1,5 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,7 +59,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 
 	@PostConstruct
 	public boolean init() {
-		super.setTaskName("TarTask");
+		super.setTaskName("TarPreProcessingTask");
 		if (tarIndividualFiles)
 			super.setCheckTaskForCompletion(false);
 		return true;
