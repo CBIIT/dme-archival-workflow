@@ -11,8 +11,11 @@ import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.dto.validation.FrameworkDocRulesResponse;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.service.FrameworkMetadataRulesService;
+import gov.nih.nci.hpc.dmesync.validation.FrameworkMetadataValidator;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
@@ -31,6 +34,12 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
 
+  @Autowired(required = false)
+  private FrameworkMetadataRulesService frameworkMetadataRulesService;
+  
+  @Autowired(required = false)
+  private FrameworkMetadataValidator frameworkMetadataValidator;
+
   @Value("${dmesync.doc.name:default}")
   private String doc;
 
@@ -45,6 +54,12 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
+  
+  @Value("${dmesync.framework.metadata.validation.enabled:false}")
+  private boolean frameworkMetadataValidationEnabled;
+  
+  @Value("${dmesync.framework.metadata.validation.validateObjectMetadata:false}")
+  private boolean validateObjectMetadata;
   
   @PostConstruct
   public boolean init() {
@@ -83,6 +98,24 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
         List<HpcMetadataEntry> extractedMetadataEntries = metadataTask.extractMetadataFromFile(new File(object.getOriginalFilePath()));
         dataObjectRegistrationRequestDTO.getExtractedMetadataEntries().addAll(extractedMetadataEntries);
       }
+      
+      //Validate metadata against framework rules if enabled
+      if(frameworkMetadataValidationEnabled) {
+        if(frameworkMetadataRulesService == null || frameworkMetadataValidator == null) {
+          logger.warn("Framework metadata validation is enabled but required beans are not available");
+        } else {
+          try {
+            FrameworkDocRulesResponse rules = frameworkMetadataRulesService.getRules(doc);
+            frameworkMetadataValidator.validate(object, doc, dataObjectRegistrationRequestDTO, rules, validateObjectMetadata);
+          } catch (DmeSyncMappingException e) {
+            throw e;
+          } catch (Exception e) {
+            logger.error("[{}] Error during framework metadata validation", super.getTaskName(), e);
+            throw new DmeSyncMappingException("Framework metadata validation failed: " + e.getMessage(), e);
+          }
+        }
+      }
+      
       //Save Metadata Info in DB
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
