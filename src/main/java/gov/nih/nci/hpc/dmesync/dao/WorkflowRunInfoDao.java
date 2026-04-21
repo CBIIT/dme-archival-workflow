@@ -8,6 +8,6 @@ import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 
 public interface WorkflowRunInfoDao<T extends WorkflowRunInfo> extends JpaRepository<T, Long> {
 
-	WorkflowRunInfo findFirstByRunIdAndUserId(String runId, String doc);
+	WorkflowRunInfo findFirstByRunIdAndDoc(String runId, String doc);
 
 }

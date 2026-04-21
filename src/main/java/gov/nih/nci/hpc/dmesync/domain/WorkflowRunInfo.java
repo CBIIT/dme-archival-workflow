@@ -19,8 +19,8 @@ public class WorkflowRunInfo {
 	@Column(name = "WORKFLOW_ID", nullable = false)
 	private String workflowId;
 
-	@Column(name = "USER_ID")
-	private String userId;
+	@Column(name = "doc")
+	private String doc;
 
 	@Column(name = "SERVER_ID", nullable = false)
 	private String serverId;
@@ -42,9 +42,6 @@ public class WorkflowRunInfo {
 
 	@Column(name = "SOURCE_PATH")
 	private String sourcePath;
-
-	@Column(name = "SETTINGS_HASH")
-	private String settingsHash;
 
 	@Column(name = "ERROR_MESSAGE")
 	private String errorMessage;
@@ -85,12 +82,12 @@ public class WorkflowRunInfo {
 		this.workflowId = workflowId;
 	}
 
-	public String getUserId() {
-		return userId;
+	public String getDoc() {
+		return doc;
 	}
 
-	public void setUserId(String userId) {
-		this.userId = userId;
+	public void setDoc(String doc) {
+		this.doc = doc;
 	}
 
 	public String getServerId() {
@@ -147,14 +144,6 @@ public class WorkflowRunInfo {
 
 	public void setSourcePath(String sourcePath) {
 		this.sourcePath = sourcePath;
-	}
-
-	public String getSettingsHash() {
-		return settingsHash;
-	}
-
-	public void setSettingsHash(String settingsHash) {
-		this.settingsHash = settingsHash;
 	}
 
 	public String getErrorMessage() {

@@ -39,7 +39,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 	@Override
 	public WorkflowRunInfo findFirstByRunIdAndUserId(String runId, String doc) {
-		return workflowRunInfoDao.findFirstByRunIdAndUserId(runId, doc);
+		return workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
 	}
 
 	@Override
@@ -51,7 +51,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 		
 		logger.info("Updating the Workflow run Information");
 		
-		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndUserId(runId, doc);
+		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
 
 		if (workflowRunInfo != null) {
 			

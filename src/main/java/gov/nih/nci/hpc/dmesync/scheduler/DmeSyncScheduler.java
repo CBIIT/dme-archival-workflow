@@ -1102,13 +1102,12 @@ public class DmeSyncScheduler {
 		    workflowRunInfo.setRunStartTimestamp(now);
 		    workflowRunInfo.setRunLastHeartbeatTimestamp(now);
 		    workflowRunInfo.setWorkflowId(dmesyncWorkflowId);
-		    workflowRunInfo.setUserId(doc);
+		    workflowRunInfo.setDoc(doc);
 		    workflowRunInfo.setServerId(serverId);
 		    workflowRunInfo.setDmeServerId(dmeServerId);
 		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
 		    workflowRunInfo.setThreads(workflowThreads);
 		    workflowRunInfo.setSourcePath(syncBaseDir);
-		    workflowRunInfo.setSettingsHash(null);
 		    workflowRunInfo.setCronExpression(cronExpression);    
 		    workflowRunInfo = dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(workflowRunInfo);
 		    return workflowRunInfo;
