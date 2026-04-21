@@ -59,6 +59,8 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   Map<String, Map<String, String>> metadataMap = null;
   
   Map<String, Map<String, String>> piMetadataMap = null;
+  
+  Map<String, Map<String, String>> metadataMapWithTwoKeys = null;
 
 
   protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
@@ -340,9 +342,13 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 		return (piMetadataMap.get(key) == null ? null : piMetadataMap.get(key).get(attrKey));
 	}
 	
-	public String getAttrValueWithParitallyMatchingKey(String partialKey, String attrKey) throws DmeSyncMappingException {
+	public String getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(String partialKey, String attrKey) throws DmeSyncMappingException {
 	    String key = null;
-	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	    
+	    if (metadataMapWithTwoKeys == null || metadataMapWithTwoKeys.isEmpty()) {
+	    	return null;
+	    }
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMapWithTwoKeys.entrySet()) {
 	        if(StringUtils.contains(entry.getKey(), partialKey)) {
 	          //Partial key match.
 	          key = entry.getKey();
@@ -353,7 +359,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	      logger.error("Excel mapping not found for partial key {}", partialKey);
 	      throw new DmeSyncMappingException("Excel mapping not found for " + partialKey);
 	    }
-	    String attrValue = metadataMap.get(key).get(attrKey);
+	    String attrValue = metadataMapWithTwoKeys.get(key).get(attrKey);
 	    return attrValue;
   }
 
@@ -362,7 +368,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	      logger.error("Excel mapping not found for {}", key1 + key2);
 	      return null;
 	    }
-	    return (metadataMap.get(key1 + "_" + key2) == null? null : metadataMap.get(key1 + "_" + key2).get(attrKey));
+	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
   
 
