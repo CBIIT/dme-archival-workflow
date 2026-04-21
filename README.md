@@ -240,6 +240,24 @@ The following properties can be set in `application.properties` file:
   * If specified, it will create batch tars for the folder with the count specified by below property.
 * `dmesync.multiple.tars.files.count=[50,..]`
   * If specified, it will create the tars for every specified batch files in the folder.
+* `dmesync.multiple.tars.batch.folders=[true|false]`
+  * Enables “grouped/batched folder” mode for multiple tar processing.
+  * If `true`, the workflow will create one tar per folder-group derived from the folder naming convention (see delimiter properties below), instead of creating tars based on `dmesync.multiple.tars.files.count`.
+  * Default: `false`
+
+* `dmesync.multiple.tars.batch.folder.delimiter=<delimiter>`
+  * Delimiter used to split each immediate child folder name (under the dataset directory) into segments to derive the group key.
+  * Default: ``
+  * Example: for folder name `1_11_3` with delimiter `_`, segments are `1`, `11`, `3`.
+
+* `dmesync.multiple.tars.batch.folder.delimiter.level=<N>`
+  * Number of leading segments (after splitting by `dmesync.multiple.tars.batch.folder.delimiter`) to join back together to form the **group key**.
+  * Default: `0`
+  * Example:
+    * folder `1_11_3`, delimiter `_`, level `2` → group key `1_11` → tar name `1_11.tar`
+    * folder `a-b-c-d`, delimiter `-`, level `3` → group key `a-b-c` → tar name `a-b-c.tar`
+  * Notes:
+    * When batching is enabled, all folders being grouped must match the naming convention (i.e., they must have at least `level` segments). If not, the workflow will fail verification.
 * `dmesync.tar.ignore.broken.link=[true|false]`
   * If set to false, the tar will not be created and the error from broken links will be recorded in the email report. If it is set to true, these errors will be ignored and the tar will be created. Default will be false.
 * `dmesync.admin.emails=<comma separated email addrresses>`
