@@ -1120,6 +1120,25 @@ public class DmeSyncScheduler {
 
 		sender.send(message, "inbound.queue");
 	}
+	
+	 private WorkflowRunInfo insertWorkflowRunInfo() {
+		    Timestamp now = Timestamp.from(Instant.now());
+
+		    WorkflowRunInfo workflowRunInfo = new WorkflowRunInfo();
+		    workflowRunInfo.setRunId(runId);
+		    workflowRunInfo.setRunStartTimestamp(now);
+		    workflowRunInfo.setRunLastHeartbeatTimestamp(now);
+		    workflowRunInfo.setWorkflowId(dmesyncWorkflowId);
+		    workflowRunInfo.setDoc(doc);
+		    workflowRunInfo.setServerId(serverId);
+		    workflowRunInfo.setDmeServerId(dmeServerId);
+		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
+		    workflowRunInfo.setThreads(workflowThreads);
+		    workflowRunInfo.setSourcePath(syncBaseDir);
+		    workflowRunInfo.setCronExpression(cronExpression);    
+		    workflowRunInfo = dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(workflowRunInfo);
+		    return workflowRunInfo;
+	}
 	/**
 	 * Selective scan processing.
 	 *
@@ -1172,25 +1191,6 @@ public class DmeSyncScheduler {
 
 			// Base directory used to compute relative paths.
 			final Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-
-	  private WorkflowRunInfo insertWorkflowRunInfo() {
-		    Timestamp now = Timestamp.from(Instant.now());
-
-		    WorkflowRunInfo workflowRunInfo = new WorkflowRunInfo();
-		    workflowRunInfo.setRunId(runId);
-		    workflowRunInfo.setRunStartTimestamp(now);
-		    workflowRunInfo.setRunLastHeartbeatTimestamp(now);
-		    workflowRunInfo.setWorkflowId(dmesyncWorkflowId);
-		    workflowRunInfo.setDoc(doc);
-		    workflowRunInfo.setServerId(serverId);
-		    workflowRunInfo.setDmeServerId(dmeServerId);
-		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
-		    workflowRunInfo.setThreads(workflowThreads);
-		    workflowRunInfo.setSourcePath(syncBaseDir);
-		    workflowRunInfo.setCronExpression(cronExpression);    
-		    workflowRunInfo = dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(workflowRunInfo);
-		    return workflowRunInfo;
-		  }
 
 			// Decide which folders should be tarred.
 
