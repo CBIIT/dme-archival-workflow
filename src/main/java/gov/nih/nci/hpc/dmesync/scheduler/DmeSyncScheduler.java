@@ -277,7 +277,7 @@ public class DmeSyncScheduler {
     try {
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
-    	  paths = queryDataObjects();
+    	  paths = queryDataObjectsForSoftlinkCreation();
       } else if (noScanRerun) {
         findFilesToRerun();
         logger.info(
@@ -530,7 +530,7 @@ public class DmeSyncScheduler {
     return result;
   }
   
-  private List<HpcPathAttributes> queryDataObjects() throws HpcException, IOException {
+  private List<HpcPathAttributes> queryDataObjectsForSoftlinkCreation() throws HpcException, IOException {
     List<HpcPathAttributes> result = new ArrayList<>();
     Path filePath = Paths.get(sourceSoftlinkFile);
     List<String> lines = Files.readAllLines(filePath);
