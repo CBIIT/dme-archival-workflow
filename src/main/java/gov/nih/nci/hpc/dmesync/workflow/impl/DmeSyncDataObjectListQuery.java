@@ -93,7 +93,6 @@ public class DmeSyncDataObjectListQuery {
 				HpcPathAttributes pathAttributes = new HpcPathAttributes();
 				pathAttributes.setName(Paths.get(dataObject.getDataObject().getAbsolutePath()).getFileName().toString());
 				pathAttributes.setPath(dataObject.getDataObject().getAbsolutePath());
-				pathAttributes.setUpdatedDate(dataObject.getDataObject().getCreatedAt().getTime());
 				pathAttributes.setAbsolutePath(dataObject.getDataObject().getAbsolutePath());
 				pathAttributes.setIsDirectory(false);
 				attributes.add(pathAttributes);

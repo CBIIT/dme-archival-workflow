@@ -57,7 +57,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     logger.info("[PathMetadataTask] Mocha getArchivePath called");
     
     // load the user metadata from the externally placed excel
-    metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Run_ID", "Sample");
+    metadataMapWithTwoKeys = dmeMetadataBuilder.getMetadataMapWithTwoKeys(metadataFile, "Run_ID", "Sample");
     
     // Example source path -
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
@@ -198,15 +198,25 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         	String runId = getRunId(object);
         	String flowcellId = getFlowcellId(object);
     	    String sampleId = getSampleId(object);
-			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName;
+			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
+			HpcBulkMetadataEntry hpcBulkMetadataProjectEntries = populateStoredMetadataEntries(pathEntriesProject,
+					"Project", projectCollectionName, "mocha");
+
+			if (hpcBulkMetadataProjectEntries == null || hpcBulkMetadataProjectEntries.getPathMetadataEntries() == null
+					|| hpcBulkMetadataProjectEntries.getPathMetadataEntries().isEmpty()) {
+				// It is null or empty means no mapping for project in database
+				String msg = "No metadata entries were found for Collection Type " + "Project"
+						+ " with Project Mapping Key: " + projectCollectionName;
+				logger.error(msg);
+				throw new DmeSyncMappingException(msg);
+			}
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
 			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_status", "Active"));
 			pathEntriesProject.setPath(projectCollectionPath);
-			hpcBulkMetadataEntries.getPathsMetadataEntries()
-			.add(populateStoredMetadataEntries(pathEntriesProject, "Project", projectCollectionName, "mocha"));
-		    
+			hpcBulkMetadataEntries.getPathsMetadataEntries().add(hpcBulkMetadataProjectEntries);
+			
 		    // Add path metadata entries for "Sample" collection
 		    // Example row: collectionType - Sample, collectionName - Sample_<SampleId>
 		    // sample_id, value = PDA01236 (derived)
@@ -329,7 +339,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  // For fastq, get the Platform from the spreadsheet by using only Run_ID
 		  String runId = getRunId(object);
 		  try {
-			  platform = getAttrValueWithParitallyMatchingKey(runId, "Platform");
+			  platform = getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(runId, "Platform");
 		  } catch (DmeSyncMappingException e) {
 			  throw new DmeSyncMappingException("Run ID is missing from spreadsheet. Run_ID: " + runId);
 		  }
@@ -351,7 +361,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  flowcellId = StringUtils.substringAfterLast(runId, "_");
 		  flowcellId = StringUtils.substring(flowcellId, 1);
 	  } else {
-		  flowcellId = getAttrValueWithParitallyMatchingKey(runId, "Flowcell");
+		  flowcellId = getAttrValueWithParitallyMatchingKeyFromMapWithTwoKeys(runId, "Flowcell");
 	  }
 	return flowcellId;
   }
@@ -377,8 +387,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		flowcellCollectionName = getCollectionNameFromParent(object, "mocha_static");
 	} else if (path.contains("mocha_ngs") && path.contains("Dragen_TSO500")) {
 		flowcellCollectionName = getCollectionNameFromParent(object, "dragen_bcl2fastqconvert");
-		//if (flowcellCollectionName != null)
-		///	flowcellCollectionName=flowcellCollectionName.replace("Dragen_BCL_", "");
+		 if (flowcellCollectionName != null)
+		   flowcellCollectionName=flowcellCollectionName.replace("Dragen_BCL_", "DRAGEN_TSO500_V2_");
 	}
 	return flowcellCollectionName;
   }
@@ -443,9 +453,9 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   
   private String getSampleFromFilePath(String path, String folderName) {
 	    String sampleName = null;
-	    for (Map.Entry<String, Map<String, String>> entry : metadataMap.entrySet()) {
+	    for (Map.Entry<String, Map<String, String>> entry : metadataMapWithTwoKeys.entrySet()) {
 	        if(StringUtils.startsWith(entry.getKey(), folderName)) {
-	        	String sampleEntry = metadataMap.get(entry.getKey()).get("Sample");
+	        	String sampleEntry = metadataMapWithTwoKeys.get(entry.getKey()).get("Sample");
 		        if(StringUtils.containsIgnoreCase(path, sampleEntry)) {
 		          //Sample is present in the file path
 		          sampleName = sampleEntry;

@@ -4,6 +4,8 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -30,8 +32,10 @@ import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeCSBMailBodyDto;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
+import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
@@ -39,6 +43,8 @@ import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
+
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -71,6 +77,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   private boolean createTarExcludedContentsFile;
   
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
+  
   
   
   
@@ -230,9 +237,17 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
       helper.setText(updatedBody,true);
       
+	  String status= (failedCount > 0) ? WorkflowConstants.RunStatus.FAILED.toString() : WorkflowConstants.RunStatus.SUCCEEDED.toString();
+      
       FileSystemResource file = new FileSystemResource(excelFile);
       helper.addAttachment(file.getFilename(), file);
       sender.send(message);
+      logger.info("Workflow Run is completed");
+      try {
+          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+       } catch (IllegalArgumentException ex) {
+          logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+      }
       
     } catch (MessagingException e) {
       throw new MailParseException(e);
@@ -376,4 +391,6 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 		}
 		return aggregateFolderRecords;
       }
+  
+	
 }
