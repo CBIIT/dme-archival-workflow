@@ -87,15 +87,22 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
         dataObjectRegistrationRequestDTO.getExtractedMetadataEntries().addAll(extractedMetadataEntries);
       }
       
-      HpcDomainValidationResult validationResult = isValidMetadataEntries( dataObjectRegistrationRequestDTO.getParentCollectionsBulkMetadataEntries().getPathsMetadataEntries(),false);
+      HpcBulkMetadataEntries  pathMetadataEntries = null;
+      if (dataObjectRegistrationRequestDTO != null) {
+    	  pathMetadataEntries = dataObjectRegistrationRequestDTO.getParentCollectionsBulkMetadataEntries() ;
+      }
       
-    /*  if (!validationResult.getValid()) {
+      if (pathMetadataEntries!=null && pathMetadataEntries.getPathsMetadataEntries()!= null) {
+        HpcDomainValidationResult validationResult = isValidMetadataEntries(pathMetadataEntries.getPathsMetadataEntries(),false);
+      
+        if (!validationResult.getValid()) {
 			if (StringUtils.isEmpty(validationResult.getMessage())) {
 				throw new DmeSyncMappingException(messageService.get("INVALID_METADATA_MSG"));
 			} else {
 				throw new DmeSyncMappingException(validationResult.getMessage());
 			}
-		} */
+		} 
+      }
       
       //Save Metadata Info in DB
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
@@ -168,16 +175,36 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 			boolean editMetadata) throws DmeSyncMappingException {
 		HpcDomainValidationResult validationResult = new HpcDomainValidationResult();
 		validationResult.setValid(true);
+		
+		if (bulkMetadataEntries == null) {
+ 			validationResult.setValid(false);
+ 			validationResult.setMessage("Metadata entry collection cannot be null.");
+ 			return validationResult;
+ 		}
 
 		for (HpcBulkMetadataEntry bulkMetadataEntry : bulkMetadataEntries) {
+			
+			if (bulkMetadataEntry == null) {
+ 				validationResult.setValid(false);
+ 				validationResult.setMessage("Bulk metadata entry cannot be null.");
+ 				return validationResult;
+ 			}
 
 			List<HpcMetadataEntry> list = bulkMetadataEntry.getPathMetadataEntries();
 			if (list == null) {
 				validationResult.setValid(false);
+				validationResult.setMessage("Path metadata entries cannot be null.");
 				return validationResult;
 			}
 			for (int i = 0; i < list.size(); i++) {
 				HpcMetadataEntry metadataEntry = list.get(i);
+				
+				if (metadataEntry == null) {
+ 					validationResult.setValid(false);
+ 					validationResult.setMessage("Metadata entry cannot be null.");
+ 					return validationResult;
+ 				}
+				
 				if (StringUtils.isEmpty(metadataEntry.getAttribute())) {
 					validationResult.setValid(false);
 					validationResult.setMessage(messageService.get("EMPTY_METADATA_MSG"));

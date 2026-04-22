@@ -1,5 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -59,7 +62,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 
 	@PostConstruct
 	public boolean init() {
-		super.setTaskName("TarPreProcessingTask");
+		super.setTaskName("TarPreProcessTask");
 		if (tarIndividualFiles)
 			super.setCheckTaskForCompletion(false);
 		return true;
@@ -76,8 +79,17 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
+		Path originalFilePath=Paths.get(object.getOriginalFilePath());
+		
+		if((processMultipleTars || createTarContentsFile)  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt")){
+			// Skipping this task for the contents file for multiple Tars and Tars processing
+			return object;	
+		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
+			// Skipping this task for the selective scan files upload
+			return object;
+		}else {
 
-		// Task: Create tar file in work directory for processing
+		// Task: update the tar file source name in database for metadata processing
 		try {
 
 			String tarFileName;
@@ -107,7 +119,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			threadLocalMap.remove();
 		}
 		return object;
-
+	  }
 	}
 
 	public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key)
