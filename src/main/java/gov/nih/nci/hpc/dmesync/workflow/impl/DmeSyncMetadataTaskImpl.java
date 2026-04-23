@@ -32,6 +32,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
+  @Autowired private MessageService messageService;
 
   @Value("${dmesync.doc.name:default}")
   private String doc;
@@ -96,8 +97,10 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       
         if (!validationResult.getValid()) {
 			if (StringUtils.isEmpty(validationResult.getMessage())) {
-				throw new DmeSyncMappingException("Invalid metadata entry in request");
+				logger.error("[{}] Validation Error while creating path and metadata:  {} ", super.getTaskName(), messageService.get("INVALID_METADATA_MSG"));
+				throw new DmeSyncMappingException(messageService.get("INVALID_METADATA_MSG"));
 			} else {
+				logger.error("[{}] Validation Error while creating path and metadata:  {} ", super.getTaskName(), validationResult.getMessage());
 				throw new DmeSyncMappingException(validationResult.getMessage());
 			}
 		} 
@@ -170,14 +173,14 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 	 * @return true if valid, false otherwise.
 	 * @throws DmeSyncMappingException 
 	 */
-	public static HpcDomainValidationResult isValidMetadataEntries(List<HpcBulkMetadataEntry> bulkMetadataEntries,
+	private HpcDomainValidationResult isValidMetadataEntries(List<HpcBulkMetadataEntry> bulkMetadataEntries,
 			boolean editMetadata) throws DmeSyncMappingException {
 		HpcDomainValidationResult validationResult = new HpcDomainValidationResult();
 		validationResult.setValid(true);
 		
 		if (bulkMetadataEntries == null) {
  			validationResult.setValid(false);
- 			validationResult.setMessage("Metadata entry collection cannot be null.");
+ 			validationResult.setMessage(messageService.get("EMPTY_COLLECTION_MSG"));
  			return validationResult;
  		}
 
@@ -185,14 +188,14 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 			
 			if (bulkMetadataEntry == null) {
  				validationResult.setValid(false);
- 				validationResult.setMessage("Bulk metadata entry cannot be null.");
+ 				validationResult.setMessage(messageService.get("EMPTY_BULK_METADATA_MSG"));
  				return validationResult;
  			}
 
 			List<HpcMetadataEntry> list = bulkMetadataEntry.getPathMetadataEntries();
 			if (list == null) {
 				validationResult.setValid(false);
-				validationResult.setMessage("Path metadata entries cannot be null.");
+				validationResult.setMessage(messageService.get("EMPTY_PATH_METADATA_MSG"));
 				return validationResult;
 			}
 			for (int i = 0; i < list.size(); i++) {
@@ -200,13 +203,13 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 				
 				if (metadataEntry == null) {
  					validationResult.setValid(false);
- 					validationResult.setMessage("Metadata entry cannot be null.");
+ 					validationResult.setMessage(messageService.get("NULL_METADATA_ENTRY_MSG"));
  					return validationResult;
  				}
 				
 				if (StringUtils.isEmpty(metadataEntry.getAttribute())) {
 					validationResult.setValid(false);
-					validationResult.setMessage("Empty metadata entry in request");
+					validationResult.setMessage(messageService.get("EMPTY_METADATA_MSG"));
 					return validationResult;
 
 				} else {

@@ -120,7 +120,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     // add a PreProcess task for tars
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
-    	if(tar ) {
+    	if(tar || tarIndividualFiles || selectiveScan ) {
     		tasks.add(tarPreProcessTask);
     	}
     }
