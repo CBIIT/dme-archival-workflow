@@ -32,7 +32,6 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
-  @Autowired static MessageService messageService;
 
   @Value("${dmesync.doc.name:default}")
   private String doc;
@@ -97,7 +96,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       
         if (!validationResult.getValid()) {
 			if (StringUtils.isEmpty(validationResult.getMessage())) {
-				throw new DmeSyncMappingException(messageService.get("INVALID_METADATA_MSG"));
+				throw new DmeSyncMappingException("Invalid metadata entry in request");
 			} else {
 				throw new DmeSyncMappingException(validationResult.getMessage());
 			}
@@ -207,7 +206,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 				
 				if (StringUtils.isEmpty(metadataEntry.getAttribute())) {
 					validationResult.setValid(false);
-					validationResult.setMessage(messageService.get("EMPTY_METADATA_MSG"));
+					validationResult.setMessage("Empty metadata entry in request");
 					return validationResult;
 
 				} else {
