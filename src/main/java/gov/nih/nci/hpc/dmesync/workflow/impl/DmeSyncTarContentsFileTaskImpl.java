@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
-
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -114,7 +114,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	private DmeSyncProducer sender;
 
 	@Override
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 				
 		
@@ -141,7 +141,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 								tarExcludedFile.getAbsolutePath());
 					}
 
-					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile);
+					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile, config);
 				} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 			throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
@@ -153,7 +153,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	
 	
 	// This method validate and sends content file request to JMS if contents file is not uploaded to DME
-	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
+	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object, DocConfig config) throws IOException {
 
 		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
 				.findTopStatusInfoByDocAndSourceFilePath(doc, tarMappingFile.getAbsolutePath());
@@ -189,13 +189,14 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			// This contentsFileRecord objectId is send to the message queue in the cleanup
 			DmeSyncMessageDto message = new DmeSyncMessageDto();
 			message.setObjectId(contentsFileRecord.getId());
+			message.setDocConfigId(config.getId());
 			sender.send(message, "inbound.queue");
 			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 		}
 
 	}
 	
-	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile)
+	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile, DocConfig config)
 			throws IOException, DmeSyncMappingException {
 
 		BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
@@ -258,7 +259,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
 					object.getOriginalFilePath(), includedTarFiles);
 			if (contentsFileCheck) {
-				sendContentsFileRequestToJms(tarMappingFile, object);
+				sendContentsFileRequestToJms(tarMappingFile, object, config);
 			}
 		    }
 			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
@@ -267,7 +268,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 						object.getOriginalFilePath(), excludedTarFiles);
 
 				if (excludedContentsFileCheck) {
-					sendContentsFileRequestToJms(tarExcludedFile, object);
+					sendContentsFileRequestToJms(tarExcludedFile, object, config);
 				}
 			}
 

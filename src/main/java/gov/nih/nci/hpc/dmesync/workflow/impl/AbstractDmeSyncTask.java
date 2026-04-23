@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -26,14 +27,14 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
 
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
-  public StatusInfo processTask(StatusInfo object)
+  public StatusInfo processTask(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException {
 
     if (!checkComplete(object.getId())) {
 
       logger.info("[{}] Started", taskName);
 
-      object = process(object);
+      object = process(object, config);
 
       //record task completion
       upsertTask(object.getId());
@@ -43,7 +44,7 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
     return object;
   }
 
-  protected abstract StatusInfo process(StatusInfo object)
+  protected abstract StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException;
 
   private boolean checkComplete(Long objectId) {

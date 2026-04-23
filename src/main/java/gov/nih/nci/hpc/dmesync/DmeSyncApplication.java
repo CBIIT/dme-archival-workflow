@@ -62,10 +62,6 @@ public class DmeSyncApplication {
       System.setProperty("auth.token", authToken);
       System.setProperty("hpc.server.url", getServerUrl(env));
       context = SpringApplication.run(DmeSyncApplication.class, args);
-      if (runImmediateFlag) {
-        DmeSyncScheduler scheduler = context.getBean(DmeSyncScheduler.class);
-        scheduler.findFilesToPush();
-      }
     }
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -61,7 +62,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig docConfig)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 	HpcExceptionDTO errorResponse;

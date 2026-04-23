@@ -22,12 +22,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-import gov.nih.nci.hpc.domain.datatransfer.HpcFileLocation;
-import gov.nih.nci.hpc.domain.datatransfer.HpcUploadSource;
 import gov.nih.nci.hpc.dto.error.HpcExceptionDTO;
 
 /**
@@ -54,7 +53,7 @@ public class DmeSyncCreateSoftlinkTaskImpl extends AbstractDmeSyncTask implement
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig docConfig)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 	HpcExceptionDTO errorResponse;

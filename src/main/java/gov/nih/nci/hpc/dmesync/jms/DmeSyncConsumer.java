@@ -17,9 +17,11 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.service.DocConfigService;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
 
 /**
@@ -38,6 +40,8 @@ public class DmeSyncConsumer {
   @Autowired private DmeSyncWorkflow dmeSyncWorkflow;
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  
+  @Autowired private DocConfigService docConfigService;
   
   private final AtomicInteger activeThreads = new AtomicInteger(0);
 
@@ -68,6 +72,7 @@ public class DmeSyncConsumer {
 
       // Get StatusInfo from DB
       Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
+      Optional<DocConfig> docConfig = docConfigService.getDocConfigById(syncMessage.getDocConfigId());
       if(!statusInfo.isPresent()) {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);
         return null;
@@ -78,7 +83,7 @@ public class DmeSyncConsumer {
       MDC.put("object.path", statusInfo.get().getOriginalFilePath() + " - " + statusInfo.get().getSourceFileName());
 
       // Start the workflow
-      dmeSyncWorkflow.start(statusInfo.get());
+      dmeSyncWorkflow.start(statusInfo.get(), docConfig.get());
 
     } finally {
       MDC.clear();

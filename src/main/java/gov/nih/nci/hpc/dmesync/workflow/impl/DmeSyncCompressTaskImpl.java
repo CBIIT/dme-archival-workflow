@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -40,7 +42,7 @@ public class DmeSyncCompressTaskImpl extends AbstractDmeSyncTask implements DmeS
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig docConfig)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
     
     //Task: Compress file in work directory for processing

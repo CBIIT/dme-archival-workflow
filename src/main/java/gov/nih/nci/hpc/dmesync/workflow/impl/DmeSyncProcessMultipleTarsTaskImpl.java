@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -101,7 +102,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object, DocConfig config)
 			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 		/**
@@ -165,7 +166,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					if (multipleTarBatchFoldersEnabled) {
 						
-						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter );
+						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter, config );
 					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -267,7 +268,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 										//If tar start index matches and existing tar record is available in database , then send the existing Id to database
 										logger.info("[{}]Enqueuing the existing tar request {} with Id{} from DB {}",
 												super.getTaskName(), tarFileName ,recordForTarfile.getId(), tarFilePath);
-										enqueueRequestToJms(recordForTarfile);
+										enqueueRequestToJms(recordForTarfile, config);
 									}
 									
 							}else {
@@ -279,7 +280,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								// Send the objectId to the message queue for processing
 								logger.info("[{}]Enqueuing the new tar request {} with Id {}", super.getTaskName(),
 										tarFileName,newTarRequest.getId());
-								enqueueRequestToJms(newTarRequest);
+								enqueueRequestToJms(newTarRequest, config);
 							}
 							
 						} else {
@@ -287,7 +288,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null , tarContentsCount);
 							logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
 									newTarRequest.getId());
-							enqueueRequestToJms(newTarRequest);
+							enqueueRequestToJms(newTarRequest, config);
 						}
 
 						writeToContentsFile(notesWriter, tarFileName, subList);
@@ -361,7 +362,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 										tarMappingFile.getName());
 							checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
 							checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
-							enqueueRequestToJms(checkForUploadedContentsFile);
+							enqueueRequestToJms(checkForUploadedContentsFile, config);
 						   }
 						} else {
 							// If there is no content files record in DB, create a new one.
@@ -375,7 +376,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
 								logger.info("[{}]Enqueuing the contents file upload request {}", super.getTaskName(),
 											tarMappingFile.getName());
-								enqueueRequestToJms(contentsFileRecord);
+								enqueueRequestToJms(contentsFileRecord, config);
 							}
 							// This contentsFileRecord objectId is send to the message queue in the cleanup task after all tars are uploaded
 						 }
@@ -461,9 +462,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		notesWriter.write("\n");
 	}
 	
-	private void enqueueRequestToJms(StatusInfo object ) {
+	private void enqueueRequestToJms(StatusInfo object, DocConfig config) {
 		DmeSyncMessageDto message = new DmeSyncMessageDto();
 		message.setObjectId(object.getId());
+		message.setDocConfigId(config.getId());
 		sender.send(message, "inbound.queue");
 		logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 		
@@ -471,7 +473,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	
 	
 	private StatusInfo processGroupedFolderTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
-			BufferedWriter notesWriter) throws IOException, DmeSyncVerificationException {
+			BufferedWriter notesWriter, DocConfig config) throws IOException, DmeSyncVerificationException {
 
 		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), batchFolderDelimiter,
 				batchFolderDelimiterLevel);
@@ -554,7 +556,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					// reuse existing row
 					logger.info("[{}] Enqueuing existing grouped tar request {} id={} path={}", super.getTaskName(),
 							tarFileName, recordForTarfile.getId(), tarFilePath);
-					enqueueRequestToJms(recordForTarfile);
+					enqueueRequestToJms(recordForTarfile, config);
 
 				} else {
 					// create new row
@@ -563,7 +565,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					newTarRequest.setTarContentsCount(foldersInGroup.size());
 					logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
 							newTarRequest.getId());
-					enqueueRequestToJms(newTarRequest);
+					enqueueRequestToJms(newTarRequest, config);
 				}
 
 			} else {
@@ -571,7 +573,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						tarContentsCount);
 				logger.info("[{}] Enqueuing new grouped tar request {} id={}", super.getTaskName(), tarFileName,
 						newTarRequest.getId());
-				enqueueRequestToJms(newTarRequest);
+				enqueueRequestToJms(newTarRequest, config);
 			}
 
 			//  mapping file: write tar -> folder names

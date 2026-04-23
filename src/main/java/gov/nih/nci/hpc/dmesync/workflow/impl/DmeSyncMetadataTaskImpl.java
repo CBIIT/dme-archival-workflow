@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -54,11 +55,11 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
     try {
-      DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
+      DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
       String archivePath = metadataTask.getArchivePath(object);
       if(moveProcessedFiles)
     	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());

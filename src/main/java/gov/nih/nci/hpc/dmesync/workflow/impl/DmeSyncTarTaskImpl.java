@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -131,7 +132,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory; 
 	
 	@Override
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object, DocConfig docConfig)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
 

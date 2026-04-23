@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
@@ -71,7 +72,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   }
   
   @Override
-  public StatusInfo process(StatusInfo object) {
+  public StatusInfo process(StatusInfo object, DocConfig config) {
 
     //Cleanup any files from the work directory.
     if (tar || untar || compress || tarIndividualFiles || selectiveScan) {
@@ -88,7 +89,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 					if (processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )
 							&& object.getTarEndTimestamp() != null) {
 
-						cleanUpTaskForMultipleTars(object);
+						cleanUpTaskForMultipleTars(object, config);
 
 					} else {
 						TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
@@ -114,7 +115,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
     return object;
   }
   
-  private void cleanUpTaskForMultipleTars(StatusInfo object) throws IOException {
+  private void cleanUpTaskForMultipleTars(StatusInfo object, DocConfig config) throws IOException {
 	  
 	// Seperate cleanup logic is implemented for the multiple tars design CSB movies folder.
 		/*
@@ -168,6 +169,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 						// Send the Tar contents file record to the message queue for processing
 						DmeSyncMessageDto message = new DmeSyncMessageDto();
 						message.setObjectId(recordForContentsfile.getId());
+						message.setDocConfigId(config.getId());
 						sender.send(message, "inbound.queue");
 						logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
 					}

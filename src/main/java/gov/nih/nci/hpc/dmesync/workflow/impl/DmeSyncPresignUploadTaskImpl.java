@@ -46,6 +46,7 @@ import com.google.common.io.BaseEncoding;
 import gov.nih.nci.hpc.dmesync.CustomLowerCamelCase;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
@@ -112,7 +113,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncWorkflowException, DmeSyncVerificationException {
 
     HpcDataObjectRegistrationResponseDTO serviceResponse = null;
@@ -237,7 +238,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 					logger.info("[{}] Uploading modified file with extension -ver- for DME Path{}",
 							super.getTaskName(), object.getFullDestinationPath());
-					process(object);
+					process(object, config);
 					return object;
 
 				}

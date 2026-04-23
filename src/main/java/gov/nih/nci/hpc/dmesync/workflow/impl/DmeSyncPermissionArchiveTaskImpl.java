@@ -15,6 +15,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -49,7 +50,7 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object) throws DmeSyncWorkflowException {
+	public StatusInfo process(StatusInfo object, DocConfig docConfig) throws DmeSyncWorkflowException {
 
 		if (object.getArchivePermissionsRequestDTO() != null) {
 			try {
