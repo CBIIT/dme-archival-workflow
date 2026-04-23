@@ -162,13 +162,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    File Folder = new File(object.getOriginalFilePath());
 	        
 	        object.setTarStartTimestamp(new Date());
-			// Construct work dir path
-			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+			// Retrieve the work dir path from database object
 			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
-			Path relativePath = baseDirPath.relativize(sourceDirPath);
-			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
-			Path tarWorkDirPath = Paths.get(tarWorkDir);
+			
+	        Path tarFilepath = Paths.get(object.getSourceFilePath());
+	        String tarFile = tarFilepath.toString();
+	        Path tarWorkDirPath = tarFilepath.getParent();
+	        
 			
 			synchronized (this) {
 			Files.createDirectories(tarWorkDirPath);
@@ -180,7 +180,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// should be done for files in folders
 			if (processMultipleTars && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
-				object=createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
+				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders);
 				
 			} else {
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
@@ -194,8 +194,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object.setTarStartTimestamp(new Date());
 				// TarFileName is constructed in the Pre Processing task
 				String tarFileName = object.getSourceFileName();
-				String tarFile = tarWorkDir + File.separatorChar + tarFileName;
-				tarFile = Paths.get(tarFile).normalize().toString();
+				// String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 				File directory = new File(object.getOriginalFilePath());
 
 				logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
@@ -233,7 +232,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				object.setFilesize(createdTarFileSize);
 				object.setSourceFileName(tarFileName);
-				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 

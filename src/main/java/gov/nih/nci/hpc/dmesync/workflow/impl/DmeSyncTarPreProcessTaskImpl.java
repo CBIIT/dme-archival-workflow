@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -63,8 +64,6 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("TarPreProcessTask");
-		if (tarIndividualFiles)
-			super.setCheckTaskForCompletion(false);
 		return true;
 	}
 
@@ -89,10 +88,19 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			return object;
 		}else {
 
-		// Task: update the tar file source name in database for metadata processing
+		// Task: update the tar file source name and source path in database for metadata processing
 		try {
-
-			String tarFileName;
+			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
+			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
+			Path relativePath = baseDirPath.relativize(sourceDirPath);
+			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
+			String tarFileName = null ;
+			
+			if(processMultipleTars) {
+				tarFileName = object.getSourceFileName();
+			}else {
+			
 			if (tarNameinExcelFile) {
 				threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
 				String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
@@ -100,8 +108,11 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			} else {
 				tarFileName = object.getOrginalFileName() + ".tar";
 			}
+			}
+			String tarFile = tarWorkDir + File.separatorChar + tarFileName;
+			tarFile = Paths.get(tarFile).normalize().toString();
 
-			logger.info("[{}] Updating source file name in {}", super.getTaskName(), tarFileName);
+			logger.info("[{}] Updating source file name {} and source file path  {}", super.getTaskName(), tarFileName , tarFile );
 
 			if (compress) {
 				tarFileName = tarFileName + ".gz";
@@ -110,6 +121,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 
 			// Update the record for metadata processing
 			object.setSourceFileName(tarFileName);
+			object.setSourceFilePath(tarFile);
 			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
 		} catch (Exception e) {
