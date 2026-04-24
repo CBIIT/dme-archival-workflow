@@ -202,8 +202,8 @@ public class DmeSyncScheduler {
   @Value("${dmesync.dme.server.id:}")
   private String dmeServerId;
   
-  @Value("${dmesync.server.id:}")
-  private String serverId;
+  @Value("${dmesync.workflow.server.id:}")
+  private String workflowServerId;
   
   @Value("${spring.jms.listener.concurrency:}")
   private Integer workflowThreads;
@@ -1130,7 +1130,7 @@ public class DmeSyncScheduler {
 		    workflowRunInfo.setRunLastHeartbeatTimestamp(now);
 		    workflowRunInfo.setWorkflowId(dmesyncWorkflowId);
 		    workflowRunInfo.setDoc(doc);
-		    workflowRunInfo.setServerId(serverId);
+		    workflowRunInfo.setServerId(workflowServerId);
 		    workflowRunInfo.setDmeServerId(dmeServerId);
 		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
 		    workflowRunInfo.setThreads(workflowThreads);
