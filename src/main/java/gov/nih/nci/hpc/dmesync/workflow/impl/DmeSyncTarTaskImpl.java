@@ -35,7 +35,8 @@ import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
+import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 /**
  * DME Sync Tar Task Implementation
  * 
@@ -136,6 +137,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 
 		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
+		final HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails = object.getDataObjectRegistrationRequestDTO();
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 		
@@ -180,7 +182,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// should be done for files in folders
 			if (processMultipleTars && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
-				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders);
+				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders , hpcDataObjectRegistrationRequestDetails);
 				
 			} else {
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
@@ -234,6 +236,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object.setSourceFileName(tarFileName);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
 
 			}
 			}
@@ -254,7 +257,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	}
 
 	private StatusInfo createTarForFiles(StatusInfo object, Path sourceDirPath, String tarWorkDir,
-			List<String> excludeFolders) throws Exception {
+			List<String> excludeFolders, HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails) throws Exception {
 		
 		try{
 
@@ -370,6 +373,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		object.setTarEndTimestamp(new Date());
 		object.setTarContentsCount(tarContentsCount);
 		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+		object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
+		
 	}catch(Exception e)
 	{
 		logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

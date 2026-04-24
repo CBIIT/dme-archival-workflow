@@ -60,6 +60,9 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 
 	@Value("${dmesync.process.multiple.tars:false}")
 	private boolean processMultipleTars;
+	
+	@Value("${dmesync.multiple.tars.dir.folders:}")
+	private String multipleTarsFolders;
 
 	@PostConstruct
 	public boolean init() {
@@ -96,8 +99,15 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			Path relativePath = baseDirPath.relativize(sourceDirPath);
 			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
 			String tarFileName = null ;
+		
+			String sourceDirLeafNode = object.getOriginalFilePath() != null
+					? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
+					: null;
 			
-			if(processMultipleTars) {
+			/** This condition when dmesync.process.multiple.tars is true  only applies to multipleTarsFolders
+			 * because the processMultipleTarsTask will set the sourcefilename
+			 */
+			if(processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
 				tarFileName = object.getSourceFileName();
 			}else {
 			
