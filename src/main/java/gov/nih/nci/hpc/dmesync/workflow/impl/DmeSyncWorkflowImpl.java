@@ -57,7 +57,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
   @Autowired private DmeSyncCreateCollectionSoftlinkTaskImpl createCollectionSoftlinkTask;
   @Autowired private DmeSyncMoveDataObjectTaskImpl moveDataObjectTask;
-  
+  @Autowired private DmeSyncTarPreProcessTaskImpl tarPreProcessTask;
   @Value("${dmesync.db.access:local}")
   private String access;
 
@@ -116,6 +116,17 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   public boolean init() {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
+    
+    // add a PreProcess task for tars
+    if (!awsFlag) {
+    	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
+    	if(tar || tarIndividualFiles || selectiveScan ) {
+    		tasks.add(tarPreProcessTask);
+    	}
+    }
+    
+    tasks.add(metadataTask);
+    
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
 	    if (tar || tarIndividualFiles || selectiveScan ) {
@@ -127,8 +138,6 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 	    else if (compress) tasks.add(compressTask);
 	    if (untar) tasks.add(untarTask);
     }
-
-    tasks.add(metadataTask);
 
     if (!dryRun) {
       if(checksum && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag)

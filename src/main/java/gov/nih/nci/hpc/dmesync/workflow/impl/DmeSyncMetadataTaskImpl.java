@@ -15,6 +15,8 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
+import gov.nih.nci.hpc.domain.error.HpcDomainValidationResult;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
@@ -30,6 +32,7 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
+  @Autowired private MessageService messageService;
 
   @Value("${dmesync.doc.name:default}")
   private String doc;
@@ -83,6 +86,26 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
         List<HpcMetadataEntry> extractedMetadataEntries = metadataTask.extractMetadataFromFile(new File(object.getOriginalFilePath()));
         dataObjectRegistrationRequestDTO.getExtractedMetadataEntries().addAll(extractedMetadataEntries);
       }
+      
+      HpcBulkMetadataEntries  pathMetadataEntries = null;
+      if (dataObjectRegistrationRequestDTO != null) {
+    	  pathMetadataEntries = dataObjectRegistrationRequestDTO.getParentCollectionsBulkMetadataEntries() ;
+      }
+      
+      if (pathMetadataEntries!=null && pathMetadataEntries.getPathsMetadataEntries()!= null) {
+        HpcDomainValidationResult validationResult = isValidMetadataEntries(pathMetadataEntries.getPathsMetadataEntries(),false);
+      
+        if (!validationResult.getValid()) {
+			if (StringUtils.isEmpty(validationResult.getMessage())) {
+				logger.error("[{}] Validation Error while creating path and metadata:  {} ", super.getTaskName(), messageService.get("INVALID_METADATA_MSG"));
+				throw new DmeSyncMappingException(messageService.get("INVALID_METADATA_MSG"));
+			} else {
+				logger.error("[{}] Validation Error while creating path and metadata:  {} ", super.getTaskName(), validationResult.getMessage());
+				throw new DmeSyncMappingException(validationResult.getMessage());
+			}
+		} 
+      }
+      
       //Save Metadata Info in DB
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
@@ -140,5 +163,76 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       }
     }
   }
+  
+  /**
+	 * Validate metadata entry collection.
+	 *
+	 * @param list Metadata entry collection.
+	 * @param editMetadata    true if the metadata is being edited. This is to
+	 *                        enable delete.
+	 * @return true if valid, false otherwise.
+	 * @throws DmeSyncMappingException 
+	 */
+	private HpcDomainValidationResult isValidMetadataEntries(List<HpcBulkMetadataEntry> bulkMetadataEntries,
+			boolean editMetadata) throws DmeSyncMappingException {
+		HpcDomainValidationResult validationResult = new HpcDomainValidationResult();
+		validationResult.setValid(true);
+		
+		if (bulkMetadataEntries == null) {
+ 			validationResult.setValid(false);
+ 			validationResult.setMessage(messageService.get("EMPTY_COLLECTION_MSG"));
+ 			return validationResult;
+ 		}
+
+		for (HpcBulkMetadataEntry bulkMetadataEntry : bulkMetadataEntries) {
+			
+			if (bulkMetadataEntry == null) {
+ 				validationResult.setValid(false);
+ 				validationResult.setMessage(messageService.get("EMPTY_BULK_METADATA_MSG"));
+ 				return validationResult;
+ 			}
+
+			List<HpcMetadataEntry> list = bulkMetadataEntry.getPathMetadataEntries();
+			if (list == null) {
+				validationResult.setValid(false);
+				validationResult.setMessage(messageService.get("EMPTY_PATH_METADATA_MSG"));
+				return validationResult;
+			}
+			for (int i = 0; i < list.size(); i++) {
+				HpcMetadataEntry metadataEntry = list.get(i);
+				
+				if (metadataEntry == null) {
+ 					validationResult.setValid(false);
+ 					validationResult.setMessage(messageService.get("NULL_METADATA_ENTRY_MSG"));
+ 					return validationResult;
+ 				}
+				
+				if (StringUtils.isEmpty(metadataEntry.getAttribute())) {
+					validationResult.setValid(false);
+					validationResult.setMessage(messageService.get("EMPTY_METADATA_MSG"));
+					return validationResult;
+
+				} else {
+					if (editMetadata == false && StringUtils.isEmpty(metadataEntry.getValue())) {
+						if (validationResult.getValid()) {
+							validationResult.setMessage(
+									"The following entries cannot be empty: " + metadataEntry.getAttribute());
+						} else {
+							validationResult
+									.setMessage(validationResult.getMessage() + ", " + metadataEntry.getAttribute());
+						}
+						validationResult.setValid(false);
+					} else {
+						list.get(i).setAttribute(list.get(i).getAttribute().trim());
+						list.get(i).setValue(StringUtils.isEmpty(metadataEntry.getValue()) ? metadataEntry.getValue()
+								: list.get(i).getValue().trim());
+					}
+				}
+			}
+		}
+		return validationResult;
+
+	}
+  
   
 }
