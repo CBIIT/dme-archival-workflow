@@ -6,6 +6,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +16,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
-import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -54,108 +57,166 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Autowired private DmeSyncCreateSoftlinkTaskImpl createSoftlinkTask;
   @Autowired private DmeSyncCreateCollectionSoftlinkTaskImpl createCollectionSoftlinkTask;
   @Autowired private DmeSyncMoveDataObjectTaskImpl moveDataObjectTask;
-  
+  @Autowired private DmeSyncTarPreProcessTaskImpl tarPreProcessTask;
   @Value("${dmesync.db.access:local}")
   private String access;
- 
-  public void start(StatusInfo statusInfo, DocConfig config) throws DmeSyncWorkflowException {
 
-    logger.info("[Workflow] Starting for DOC {} (version {})", config.getDocName(), config.getVersion());
+  @Value("${dmesync.tar:false}")
+  private boolean tar;
+  
+  @Value("${dmesync.file.tar:false}")
+  private boolean tarIndividualFiles;
+
+  @Value("${dmesync.untar:false}")
+  private boolean untar;
+
+  @Value("${dmesync.dryrun:false}")
+  private boolean dryRun;
+
+  @Value("${dmesync.compress:false}")
+  private boolean compress;
+  
+  @Value("${dmesync.checksum:true}")
+  private boolean checksum;
+  
+  @Value("${dmesync.check.end.workflow:false}")
+  private boolean checkEndWorkflow;
+  
+  @Value("${dmesync.filesystem.upload:false}")
+  private boolean fileSystemUpload;
+  
+  @Value("${dmesync.create.softlink:false}")
+  private boolean createSoftlink;
+  
+  @Value("${dmesync.create.collection.softlink:false}")
+  private boolean createCollectionSoftlink;
+  
+  @Value("${dmesync.metadata.update.only:false}")
+  private boolean metadataUpdateOnly;
+  
+  @Value("${dmesync.move.processed.files:false}")
+  private boolean moveProcessedFiles;
+  
+  @Value("${dmesync.source.aws:false}")
+  private boolean awsFlag;
+  
+  @Value("${dmesync.process.multiple.tars:false}")
+  private boolean processMultipleTars;
+  
+  @Value("${dmesync.multiple.tars.dir.folders:}")
+  private String multpleTarsFolders;
+  
+  @Value("${dmesync.tar.contents.file:false}")
+  private boolean createTarContentsFile;
+  
+  @Value("${dmesync.selective.scan:false}")
+  private boolean selectiveScan;
+  
+  @PostConstruct
+  public boolean init() {
+    // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
-
-    DocConfig.SourceRule sourceRule = config.getSourceRule();
-    DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
-    DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
-    DocConfig.UploadConfig upload = config.getUploadConfig();
-
-    // Workflow select tasks based on config, also need to create taskImpl class
-    tasks = new ArrayList<>();
-    if (!sourceRule.aws) {
-    	if (preRule.processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (pre.tar || pre.fileTar || sourceRule.selectiveScan) {
+    
+    // add a PreProcess task for tars
+    if (!awsFlag) {
+    	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
+    	if(tar || tarIndividualFiles || selectiveScan ) {
+    		tasks.add(tarPreProcessTask);
+    	}
+    }
+    
+    tasks.add(metadataTask);
+    
+    if (!awsFlag) {
+    	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
+	    if (tar || tarIndividualFiles || selectiveScan ) {
 	    	tasks.add(tarTask);
-	    	if(preRule.tarContentsFile) {
+	    	if(createTarContentsFile) {
 	    		tasks.add(tarContentsfileTask);
 	    	}
 	    }
-	    else if (pre.compressTar) tasks.add(compressTask);
-	    if (pre.untar) tasks.add(untarTask);
+	    else if (compress) tasks.add(compressTask);
+	    if (untar) tasks.add(untarTask);
     }
 
-    tasks.add(metadataTask);
+    if (!dryRun) {
+      if(checksum && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag)
+        tasks.add(createChecksumTask);
+      if(fileSystemUpload)
+    	  tasks.add(fileSystemUploadTask);
+      else if (metadataUpdateOnly)
+    	  tasks.add(syncUploadTask);
+      else if (createSoftlink)
+    	  tasks.add(createSoftlinkTask);
+      else if (createCollectionSoftlink)
+    	  tasks.add(createCollectionSoftlinkTask);
+      else if (moveProcessedFiles)
+    	  tasks.add(moveDataObjectTask);
+      else if (awsFlag)
+    	  tasks.add(awsS3UploadTask);
+      else
+    	  tasks.add(presignUploadTask);
+      if(!metadataUpdateOnly && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag) {
+	      tasks.add(verifyTask);
+	      tasks.add(permissionBookmarkTask);
+	      if(fileSystemUpload)
+	    	  tasks.add(permissionArchiveTask);
+	      if (tar || tarIndividualFiles || untar || compress || selectiveScan) tasks.add(cleanupTask);
+      }
+    }
+    
+    return true;
+  }
 
-    if (!upload.dryRun) {
-	      if(upload.checksum && !upload.softlink && !upload.collectionSoftlink && !upload.moveProcessedFiles && !sourceRule.aws)
-	        tasks.add(createChecksumTask);
-	      if(upload.fileSystemUpload)
-	    	  tasks.add(fileSystemUploadTask);
-	      else if (upload.metadataUpdateOnly)
-	    	  tasks.add(syncUploadTask);
-	      else if (upload.softlink)
-	    	  tasks.add(createSoftlinkTask);
-	      else if (upload.collectionSoftlink)
-	    	  tasks.add(createCollectionSoftlinkTask);
-	      else if (upload.moveProcessedFiles)
-	    	  tasks.add(moveDataObjectTask);
-	      else if (sourceRule.aws)
-	    	  tasks.add(awsS3UploadTask);
-	      else
-	    	  tasks.add(presignUploadTask);
-	      if(!upload.metadataUpdateOnly && !upload.softlink && !upload.collectionSoftlink && !upload.moveProcessedFiles && !sourceRule.aws) {
-		      tasks.add(verifyTask);
-		      tasks.add(permissionBookmarkTask);
-		      if(upload.fileSystemUpload)
-		    	  tasks.add(permissionArchiveTask);
-		      if (pre.tar || pre.fileTar || pre.untar || pre.compressTar || sourceRule.selectiveScan) tasks.add(cleanupTask);
-	      }
-	      
-	    // Execute tasks. If any task fails with a need for retry, throw exception for rollback
-	 
-	    try {
-	      //Clear any previous error in case of a retry
-	      statusInfo.setError("");
-	      statusInfo.setStartTimestamp(new Date());
-	      
-	      String sourceDirLeafNode = statusInfo.getSourceFilePath() != null
-					? ((Paths.get(statusInfo.getSourceFilePath())).getFileName()).toString()
-					: null;
-	      
-	      for (DmeSyncTask task : tasks) {
-	    	   statusInfo = task.processTask(statusInfo, config);
-	    	   // This condition is used when we want to perform specific task and complete the workflow
-	    	   if((upload.checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
-	    		      logger.info("[Workflow] End Workflow Flag is set to true , so no further task processing is required");
-	    		   break;
-	    	   }
-	      }
-	      
-	      dmeSyncWorkflowService.getService(access).completeWorkflow(statusInfo);
-	      logger.info("[Workflow] Completed");
-	      
-	    } catch (DmeSyncMappingException | DmeSyncVerificationException  e) {
-	      
-	      // In case of mapping or verification exception on async, retry will not help.
-	      statusInfo.setError(e.getMessage());
-	      dmeSyncWorkflowService.getService(access).recordError(statusInfo);
-	      
-	    } catch (DmeSyncStorageException e) {
-	        
-	        // In case of space issue while tarring, retry will not help.
-	        statusInfo.setError(e.getMessage());
-	        dmeSyncWorkflowService.getService(access).recordError(statusInfo);
-	        
-	    }catch (DmeSyncWorkflowException e) {
-	      
-	      statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
-	      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
-	      
-	      throw e;
-	      
-	    } catch (Exception e) {
-	      
-	      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
-	    }
-	  } // not dry run
+  @Override
+  public void start(StatusInfo statusInfo) throws DmeSyncWorkflowException {
+    // Execute tasks. If any task fails with a need for retry, throw exception for rollback
+    logger.info("[Workflow] Starting");
+
+    try {
+      //Clear any previous error in case of a retry
+      statusInfo.setError("");
+      statusInfo.setStartTimestamp(new Date());
+      
+      String sourceDirLeafNode = statusInfo.getSourceFilePath() != null
+				? ((Paths.get(statusInfo.getSourceFilePath())).getFileName()).toString()
+				: null;
+      
+      for (DmeSyncTask task : tasks) {
+    	   statusInfo = task.processTask(statusInfo);
+    	   // This condition is used when we want to peform specific task and complete the workflow
+    	   if((checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
+    		      logger.info("[Workflow] End Workflow Flag is set to true , so no further task processing is required");
+    		   break;
+    	   }
+      }
+      
+      dmeSyncWorkflowService.getService(access).completeWorkflow(statusInfo);
+      logger.info("[Workflow] Completed");
+      
+    } catch (DmeSyncMappingException | DmeSyncVerificationException  e) {
+      
+      // In case of mapping or verification exception on async, retry will not help.
+      statusInfo.setError(e.getMessage());
+      dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+      
+    } catch (DmeSyncStorageException e) {
+        
+        // In case of space issue while tarring, retry will not help.
+        statusInfo.setError(e.getMessage());
+        dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+        
+      }catch (DmeSyncWorkflowException e) {
+      
+      statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+      
+      throw e;
+      
+    } catch (Exception e) {
+      
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+    }
   }
 
   private boolean checkEndWorkflowFlag(Long objectId) {

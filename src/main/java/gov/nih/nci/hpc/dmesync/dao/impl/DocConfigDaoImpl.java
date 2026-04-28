@@ -100,7 +100,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
                 rs.getString("TAR_FILE_EXIST_EXT"),
                 "1".equals(rs.getString("TAR_FILENAME_EXCEL_EXIST")),
                 "1".equals(rs.getString("TAR_IGNORE_BROKEN_LINK")),
-                "1".equals(rs.getString("TAR_SKIP_LEAF_FOLDER")),
+                "1".equals(rs.getString("TAR_SKIP_NON_LEAF_FOLDER")),
                 rs.getString("TAR_INCLUDE_PATTERN"),
                 "1".equals(rs.getString("PROCESS_MULTIPLE_TARS")),
                 rs.getInt("MULTIPLE_TARS_FILES_COUNT"),

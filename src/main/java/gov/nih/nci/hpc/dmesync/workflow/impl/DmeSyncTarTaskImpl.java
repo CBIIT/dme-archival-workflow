@@ -25,7 +25,6 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
-import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -36,7 +35,8 @@ import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
+import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 /**
  * DME Sync Tar Task Implementation
  * 
@@ -44,15 +44,82 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
+	
+	
+	@Value("${dmesync.doc.name}")
+	private String doc;
 
+	@Value("${dmesync.compress:false}")
+	private boolean compress;
+
+	@Value("${dmesync.source.base.dir}")
+	private String syncBaseDir;
+
+	@Value("${dmesync.work.base.dir}")
+	private String syncWorkDir;
+
+	@Value("${dmesync.dryrun:false}")
+	private boolean dryRun;
+
+	@Value("${dmesync.tar.exclude.folder:}")
+	private String excludeFolder;
+
+	@Value("${dmesync.file.tar:false}")
+	private boolean tarIndividualFiles;
+
+	@Value("${dmesync.multiple.tars.dir.folders:}")
+	private String multpleTarsFolders;
+
+	@Value("${dmesync.multiple.tars.files.count:0}")
+	private Integer filesPerTar;
+
+	@Value("${dmesync.verify.prev.upload:none}")
+	private String verifyPrevUpload;
+
+	@Value("${dmesync.multiple.tars.files.validation:true}")
+	private boolean verifyTarFilesCount;
+
+	@Value("${dmesync.tar.filename.excel.exist:false}")
+	private boolean tarNameinExcelFile;
+
+	@Value("${dmesync.additional.metadata.excel:}")
+	private String metadataFile;
+	
+	@Value("${dmesync.tar.contents.file:false}")
+	private boolean createTarContentsFile;
+	
+	@Value("${dmesync.tar.excluded.contents.file:false}")
+	private boolean createTarExcludedContentsFile;
+	
 	@Value("${dmesync.max.recommended.file.size}")
 	private String maxRecommendedFileSize;
 	
+	@Value("${dmesync.tar.ignore.broken.link:false}")
+	private boolean ignoreBrokenLinksInTar;
+	
+	@Value("${dmesync.selective.scan:false}")
+    private boolean selectiveScan;
+	
+	@Value("${dmesync.multiple.tar.exclude.folders.prefix:}")
+	private String multipleTarsExcludeFolderPrefixes;
+	
+	@Value("${dmesync.multiple.tars.batch.folders:false}")
+	private boolean multipleTarBatchFoldersEnabled;
+	
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter:}")
+	private String batchFolderDelimiter;
+
+	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
+	private int batchFolderDelimiterLevel;
+	
+	@Value("${dmesync.process.multiple.tars:false}")
+	private boolean processMultipleTars;
+
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("TarTask");
-		//if (tarIndividualFiles)
-		//	super.setCheckTaskForCompletion(false);
+		if (tarIndividualFiles)
+			super.setCheckTaskForCompletion(false);
 		return true;
 	}
 
@@ -65,18 +132,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory; 
 	
 	@Override
-	public StatusInfo process(StatusInfo object, DocConfig config)
+	public StatusInfo process(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
-		DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
-		DocConfig.SourceRule sourceRule = config.getSourceRule();
-		DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
-		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
-		DocConfig.UploadConfig upload = config.getUploadConfig();
-		
-		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
-		List<String> excludeFolders = preRule.tarExcludeFolder == null || preRule.tarExcludeFolder.isEmpty() ? null
-				: new ArrayList<>(Arrays.asList(preRule.tarExcludeFolder.split(",")));
+
+		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
+		final HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails = object.getDataObjectRegistrationRequestDTO();
+		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
+				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 		
 		long maxAllowedFileSize = Long.parseLong(maxRecommendedFileSize);
 
@@ -85,14 +148,14 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
         
 		
-		if(preRule.processMultipleTars   && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"TarContentsFile.txt")){
+		if(processMultipleTars   && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"TarContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars processing
 			return object;
 			
-		}else if (preRule.tarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
+		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else if (sourceRule.selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
+		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
 			// Skipping this task for the selective scan files
 			return object;
 		}else if( metadataTask.isMetadataAvailable(object)) {
@@ -101,13 +164,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    File Folder = new File(object.getOriginalFilePath());
 	        
 	        object.setTarStartTimestamp(new Date());
-			// Construct work dir path
-			Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
-			Path workDirPath = Paths.get(sourceConfig.workBaseDir).toRealPath();
+			// Retrieve the work dir path from database object
 			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
-			Path relativePath = baseDirPath.relativize(sourceDirPath);
-			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
-			Path tarWorkDirPath = Paths.get(tarWorkDir);
+			
+	        Path tarFilepath = Paths.get(object.getSourceFilePath());
+	        String tarFile = tarFilepath.toString();
+	        Path tarWorkDirPath = tarFilepath.getParent();
+	        
 			
 			synchronized (this) {
 			Files.createDirectories(tarWorkDirPath);
@@ -117,9 +180,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 			// if this index range are given for files in status_info object then the tar
 			// should be done for files in folders
-			if (preRule.processMultipleTars && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
+			if (processMultipleTars && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
-				object=createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders, config);
+				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders , hpcDataObjectRegistrationRequestDetails);
 				
 			} else {
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
@@ -131,16 +194,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				} else {
 				object.setTarStartTimestamp(new Date());
-				String tarFileName;
-				if (preRule.tarFilenameExcelExist) {
-					threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Path"));
-					String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
-					tarFileName = getAttrValueWithKey(path, "tar_name");
-				} else {
-					tarFileName = object.getOrginalFileName() + ".tar";
-				}
-				String tarFile = tarWorkDir + File.separatorChar + tarFileName;
-				tarFile = Paths.get(tarFile).normalize().toString();
+				// TarFileName is constructed in the Pre Processing task
+				String tarFileName = object.getSourceFileName();
+				// String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 				File directory = new File(object.getOriginalFilePath());
 
 				logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
@@ -151,15 +207,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 					throw new Exception("No Read permission to " + object.getOriginalFilePath());
 				}
-				if (pre.compressTar) {
-					tarFile = tarFile + ".gz";
-					tarFileName = tarFileName + ".gz";
-					if (!upload.dryRun) {
-						TarUtil.targz(tarFile, excludeFolders, preRule.tarIgnoreBrokenLink, directory);
+				if (compress) {
+					if (!dryRun) {
+						TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
 					}
 				} else {
-					if (!upload.dryRun) {
-						TarUtil.tar(tarFile, excludeFolders, preRule.tarIgnoreBrokenLink, directory);
+					if (!dryRun) {
+						TarUtil.tar(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
 					}
 				}
 
@@ -170,19 +224,19 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				if (createdTarFileSize > maxAllowedFileSize) {
 					logger.error("[{}] error :Source folder with size {}  that exceeds the recommended file size of  {}",
 							super.getTaskName(), createdTarFileSize , maxAllowedFileSize);
-		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
+		             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
 					throw new DmeSyncStorageException("Source folder exceeds the permitted size of "
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				}
 				
-				if(!upload.dryRun)
+				if(!dryRun)
 				verifyTarSizeAgainstSourceFolder(sourceDirPath.toString(), folderSize,tarFileName, createdTarFileSize);
 
 				object.setFilesize(createdTarFileSize);
 				object.setSourceFileName(tarFileName);
-				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
 
 			}
 			}
@@ -203,12 +257,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	}
 
 	private StatusInfo createTarForFiles(StatusInfo object, Path sourceDirPath, String tarWorkDir,
-			List<String> excludeFolders, DocConfig config) throws Exception {
-		
-		DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
-		DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
-		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
-		DocConfig.UploadConfig upload = config.getUploadConfig();
+			List<String> excludeFolders, HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails) throws Exception {
 		
 		try{
 
@@ -227,10 +276,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		if (files != null && files.length > 0) {
 			// Exclude folders listed in multiple tars excludeFolder property from files array
 						
-				if ( StringUtils.isNotBlank(preRule.multipleTarsExcludeFoldersPrefix)) {
+				if ( StringUtils.isNotBlank(multipleTarsExcludeFolderPrefixes)) {
 					
-					 logger.info("{} is excluded for Batch Tar Processing", preRule.multipleTarsExcludeFoldersPrefix);
-				    files = TarUtil.excludeBatchFoldersByPrefix(files, preRule.multipleTarsExcludeFoldersPrefix);
+					 logger.info("{} is excluded for Batch Tar Processing", multipleTarsExcludeFolderPrefixes);
+				    files = TarUtil.excludeBatchFoldersByPrefix(files, multipleTarsExcludeFolderPrefixes);
 				}
 		}
 		List<File> fileList = new ArrayList<>(Arrays.asList(files));
@@ -244,7 +293,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			logger.info("[{}] Tar work space directory doesn't exists {}", super.getTaskName(), tarWorkDirectory);
 			
 		}
-        if(preRule.multipleTarsBatchFolders) {
+        if(multipleTarBatchFoldersEnabled) {
         
 			// --- NEW: grouped-Batch folders tar by name ---
 
@@ -254,10 +303,10 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			String groupKey = tarFileName.replace(".tar", ""); // e.g. "1_11" from "1_11.tar"
 			
 			logger.info("[{}] Batch tar request detected: tar={}, delimiter='{}', level={}, groupKey={}",
-					super.getTaskName(), tarFileName, preRule.multipleTarsBatchFolderDelimiter, preRule.multipleTarsBatchFolderLevel, groupKey);
+					super.getTaskName(), tarFileName, batchFolderDelimiter, batchFolderDelimiterLevel, groupKey);
 
 			List<File> matchedFolders = Arrays.stream(files).filter(File::isDirectory)
-					.filter(f -> TarUtil.buildBatchGroupKey(f.getName(),preRule.multipleTarsBatchFolderDelimiter, preRule.multipleTarsBatchFolderLevel).map(groupKey::equals).orElse(false))
+					.filter(f -> TarUtil.buildBatchGroupKey(f.getName(),batchFolderDelimiter,batchFolderDelimiterLevel).map(groupKey::equals).orElse(false))
 					.sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
 
 			if (matchedFolders.isEmpty()) {
@@ -286,15 +335,15 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}
        
 		
-		if (pre.compressTar) {
+		if (compress) {
 			tarFile = tarFile + ".gz";
 			tarFileName = tarFileName + ".gz";
-			if (!upload.dryRun) {
-				TarUtil.targz(tarFile, excludeFolders, preRule.tarIgnoreBrokenLink, filesArray);
+			if (!dryRun) {
+				TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, filesArray);
 			}
 		} else {
-			if (!upload.dryRun) {
-				TarUtil.tar(tarFile, excludeFolders, preRule.tarIgnoreBrokenLink, filesArray);
+			if (!dryRun) {
+				TarUtil.tar(tarFile, excludeFolders, ignoreBrokenLinksInTar, filesArray);
 			}
 		}
 		
@@ -304,12 +353,12 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		if (createdTarFile.length() > maxFileSize) {
 			logger.error("[{}] error :Batch Tar with size {}  that exceeds the recommended file size of  {}",
 					super.getTaskName(), object.getFilesize(), maxFileSize);
-             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
+             TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
 			throw new DmeSyncStorageException("Batch Tar exceeds the permitted size of "
 					+ ExcelUtil.humanReadableByteCount(maxFileSize, true));
 		}
 
-		if(!preRule.multipleTarsBatchFolders || upload.dryRun) {
+		if(!multipleTarBatchFoldersEnabled || dryRun) {
 			if (totalFiles != tarContentsCount) {
 				// Tar Verification.
 				String msg = "Files in the tar " + tarContentsCount + " doesn't matched with files in the original path"+ totalFiles;
@@ -324,6 +373,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		object.setTarEndTimestamp(new Date());
 		object.setTarContentsCount(tarContentsCount);
 		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+		object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
+		
 	}catch(Exception e)
 	{
 		logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

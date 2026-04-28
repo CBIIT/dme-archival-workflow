@@ -146,7 +146,7 @@ public class DocConfig {
 		public final String tarFileExistExt;
 		public final boolean tarFilenameExcelExist;
 		public final boolean tarIgnoreBrokenLink;
-		public final boolean tarSkipLeafFolder;
+		public final boolean tarSkipNonLeafFolder;
 		public final String tarIncludePattern;
 		public final boolean processMultipleTars;
 		public final Integer multipleTarsFilesCount;
@@ -161,7 +161,7 @@ public class DocConfig {
 
 		public PreprocessingRule(boolean extractMetadata, String extractMetadataExt, String tarExcludeFolder,
 				boolean tarContentsFile, boolean tarExcludedContentsFile, String tarFileExist, String tarFileExistExt,
-				boolean tarFilenameExcelExist, boolean tarIgnoreBrokenLink, boolean tarSkipLeafFolder,
+				boolean tarFilenameExcelExist, boolean tarIgnoreBrokenLink, boolean tarSkipNonLeafFolder,
 				String tarIncludePattern, boolean processMultipleTars, Integer multipleTarsFilesCount,
 				String multipleTarsDirFolders, String multipleTarsDirFoldersPrefix,
 				String multipleTarsExcludeFoldersPrefix, boolean multipleTarsFilesValidation,
@@ -176,7 +176,7 @@ public class DocConfig {
 			this.tarFileExistExt = tarFileExistExt;
 			this.tarFilenameExcelExist = tarFilenameExcelExist;
 			this.tarIgnoreBrokenLink = tarIgnoreBrokenLink;
-			this.tarSkipLeafFolder = tarSkipLeafFolder;
+			this.tarSkipNonLeafFolder = tarSkipNonLeafFolder;
 			this.tarIncludePattern = tarIncludePattern;
 			this.processMultipleTars = processMultipleTars;
 			this.multipleTarsFilesCount = multipleTarsFilesCount;
