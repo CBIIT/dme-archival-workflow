@@ -24,17 +24,6 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 @Component
 public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
-  @Value("${dmesync.source.base.dir}")
-  private String syncBaseDir;
-
-  @Value("${dmesync.work.base.dir}")
-  private String syncWorkDir;
-
-  @Value("${dmesync.cleanup:false}")
-  private boolean cleanup;
-  
-  @Value("${dmesync.doc.name:default}")
-  private String doc;
   @PostConstruct
   public boolean init() {
     super.setTaskName("UntarTask");
@@ -45,11 +34,14 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
   public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+		
     //Untar files in work directory for processing if the specified file does not exist.
     try {
       //Construct work dir path
-      Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-      Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+      Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
+      Path workDirPath = Paths.get(sourceConfig.workBaseDir).toRealPath();
       Path sourceDirPath = Paths.get(object.getOriginalFilePath());
       Path relativePath = baseDirPath.relativize(sourceDirPath);
       String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.getParent().toString();
@@ -69,10 +61,10 @@ public class DmeSyncUntarTaskImpl extends AbstractDmeSyncTask implements DmeSync
             dmeSyncWorkflowService.getService(access).findAllStatusInfoByOriginalFilePathAndStatusAndRunId(
                 object.getOriginalFilePath(), "COMPLETED", object.getRunId());
         for (StatusInfo completedFile : completedFiles) {
-          if(cleanup)
-            TarUtil.deleteTarAndParentsIfEmpty(completedFile.getSourceFilePath(), syncWorkDir, doc);
+          if(upload.cleanupWorkdir)
+            TarUtil.deleteTarAndParentsIfEmpty(completedFile.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
           else
-            logger.info("[{}] Test so it will not remove any files but remove called for {}  WORK_DIR: {}", super.getTaskName(), completedFile.getSourceFilePath(), syncWorkDir);
+            logger.info("[{}] Test so it will not remove any files but remove called for {}  WORK_DIR: {}", super.getTaskName(), completedFile.getSourceFilePath(), sourceConfig.workBaseDir);
         }
       }
 

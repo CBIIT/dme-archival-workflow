@@ -40,8 +40,6 @@ public class DmeSyncMoveDataObjectTaskImpl extends AbstractDmeSyncTask implement
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
   
-  @Value("${hpc.server.url}")
-  private String serverUrl;
 
   @Value("${auth.token}")
   private String authToken;
@@ -53,7 +51,7 @@ public class DmeSyncMoveDataObjectTaskImpl extends AbstractDmeSyncTask implement
   }
   
   @Override
-  public StatusInfo process(StatusInfo object, DocConfig docConfig)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 	HpcExceptionDTO errorResponse;
@@ -65,7 +63,7 @@ public class DmeSyncMoveDataObjectTaskImpl extends AbstractDmeSyncTask implement
     	  HpcCollectionRegistrationDTO collectionDTO = new HpcCollectionRegistrationDTO();
     	  collectionDTO.getMetadataEntries().addAll(entry.getPathMetadataEntries());
     	  final URI collectionUrl =
-    	          UriComponentsBuilder.fromHttpUrl(serverUrl)
+    	          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
     	              .path("/collection".concat(entry.getPath()))
     	              .queryParam("alignArchivePath", Boolean.FALSE.toString())
     	              .build().encode()
@@ -95,7 +93,7 @@ public class DmeSyncMoveDataObjectTaskImpl extends AbstractDmeSyncTask implement
     	
       //Call moveDataObject API
       
-		String dataObjectUrl = serverUrl + 
+		String dataObjectUrl = config.getDmeServerUrl() + 
 				"/dataObject/"
 						.concat(URLEncoder.encode(object.getMoveDataObjectOrignalPath().substring(1), StandardCharsets.UTF_8.name()))
 						.concat("/move/")

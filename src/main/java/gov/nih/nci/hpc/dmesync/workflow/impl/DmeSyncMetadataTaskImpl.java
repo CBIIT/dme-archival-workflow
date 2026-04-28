@@ -32,21 +32,6 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
 
-  @Value("${dmesync.doc.name:default}")
-  private String doc;
-
-  @Value("${dmesync.extract.metadata:false}")
-  private boolean extractMetadata;
-  
-  @Value("${dmesync.extract.metadata.ext:}")
-  private String extractMetadatafileTypes;
-  
-  @Value("${dmesync.filesystem.upload:false}")
-  private boolean fileSystemUpload;
-  
-  @Value("${dmesync.move.processed.files:false}")
-  private boolean moveProcessedFiles;
-  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -58,10 +43,13 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	  DocConfig.UploadConfig upload = config.getUploadConfig();
+	  DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+	  
     try {
       DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
       String archivePath = metadataTask.getArchivePath(object);
-      if(moveProcessedFiles)
+      if(upload.moveProcessedFiles)
     	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());
       object.setFullDestinationPath(archivePath);
       //Save Archive Path in DB
@@ -73,9 +61,9 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 
       //If automated metadata extraction is turned on, extractMetadata
       String fileType = object.getOriginalFilePath().substring(object.getOriginalFilePath().lastIndexOf('.') + 1);
-      boolean extractMetadataFromFile = extractMetadata;
-      if(StringUtils.isNotBlank(fileType) && StringUtils.isNotBlank(extractMetadatafileTypes)) {
-        List<String> extractMetadataFileTypeList = Arrays.asList(extractMetadatafileTypes.toLowerCase().split("\\s*,\\s*"));
+      boolean extractMetadataFromFile = preRule.extractMetadata;
+      if(StringUtils.isNotBlank(fileType) && StringUtils.isNotBlank(preRule.extractMetadataExt)) {
+        List<String> extractMetadataFileTypeList = Arrays.asList(preRule.extractMetadataExt.toLowerCase().split("\\s*,\\s*"));
         if(!extractMetadataFileTypeList.contains(fileType.toLowerCase()))
             extractMetadataFromFile=false;
       }
@@ -88,7 +76,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
       //If file system upload, get the archive permission
-      if (fileSystemUpload) {
+      if (upload.fileSystemUpload) {
         HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO =
               metadataTask.getArchivePermission(object);
         object.setArchivePermissionsRequestDTO(archivePermissionsRequestDTO);

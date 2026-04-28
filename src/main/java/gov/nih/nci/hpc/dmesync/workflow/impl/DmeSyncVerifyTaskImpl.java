@@ -42,20 +42,8 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   public static final String DEEP_ARCHIVE_STATUS_ARCHIVED = "DEEP_ARCHIVE";
   public static final String DEEP_ARCHIVE_STATUS_IN_PROGRESS = "IN_PROGRESS"; 
   
-  @Value("${hpc.server.url}")
-  private String serverUrl;
-
   @Value("${auth.token}")
   private String authToken;
-
-  @Value("${dmesync.checksum:true}")
-  private boolean checksum;
-  
-  @Value("${dmesync.filesystem.upload:false}")
-  private boolean fileSystemUpload;
-  
-  @Value("${dmesync.source.aws:false}")
-  private boolean awsFlag;
   
   @Autowired private RestTemplateFactory restTemplateFactory;
   
@@ -68,16 +56,17 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   }
   
   @Override
-  public StatusInfo process(StatusInfo object, DocConfig docConfig) throws DmeSyncWorkflowException, DmeSyncVerificationException {
+  public StatusInfo process(StatusInfo object, DocConfig config) throws DmeSyncWorkflowException, DmeSyncVerificationException {
 	  
 		
-	  
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+	DocConfig.SourceRule sourceRule = config.getSourceRule();
 
     //Verify, call GET dataObject and verify file size and checksum against local db.
     try {
       //Call dataObject API
       final URI dataObjectUrl =
-          UriComponentsBuilder.fromHttpUrl(serverUrl)
+          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
               .path("/dataObject".concat(object.getFullDestinationPath()))
               .queryParam("excludeParentMetadata", Boolean.TRUE.toString())
               .queryParam("excludeNonMetadataAttributes", Boolean.TRUE.toString())
@@ -113,7 +102,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
                 .collect(
                     Collectors.toMap(HpcMetadataEntry::getAttribute, HpcMetadataEntry::getValue));
 
-        if (!awsFlag && map.get("source_file_size") != null) {
+        if (!sourceRule.aws && map.get("source_file_size") != null) {
         	
             if( !map.get("source_file_size").equals(object.getFilesize().toString())) {
           String msg =
@@ -124,7 +113,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           logger.error("[{}] {}", super.getTaskName(), msg);
           object.setError(msg);
     	  throw new DmeSyncVerificationException(msg);
-        }else if(!awsFlag && map.get("source_file_size") == null) {
+        }else if(!sourceRule.aws && map.get("source_file_size") == null) {
         	
         	String msg =
                     "System generated metadata source_file_size is missing.";
@@ -134,7 +123,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
 
         }
         }
-        if (!awsFlag && checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
+        if (!sourceRule.aws && upload.checksum && map.get("checksum") != null && !map.get("checksum").contains("-") && !map.get("checksum").equals(object.getChecksum())) {
           String msg =
               "Checksum does not match local "
                   + object.getChecksum()
@@ -149,7 +138,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
           String msg =
               "Data_transfer_status is not in ARCHIVED, it is " + map.get("data_transfer_status");
           object.setError(msg);
-          if (fileSystemUpload || awsFlag) {
+          if (upload.fileSystemUpload || sourceRule.aws) {
         	  throw new DmeSyncVerificationException(msg);
           }
           logger.error("[{}] {}", super.getTaskName(), msg);
@@ -183,7 +172,7 @@ public class DmeSyncVerifyTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         logger.error(
             "[{}] Received bad response from verify dataObject, responseCode {}", super.getTaskName(),
                 response.getStatusCode());
-        if (fileSystemUpload) {
+        if (upload.fileSystemUpload) {
           //For file system async upload, this means that the registration itself was not successful. Cleanup the tasks to start over.
           dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(object.getId());
       	  throw new DmeSyncVerificationException("Data object registration not successful");

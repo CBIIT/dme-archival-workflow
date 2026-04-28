@@ -27,36 +27,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
-
-  @Value("${dmesync.tar:false}")
-  private boolean tar;
-
-  @Value("${dmesync.untar:false}")
-  private boolean untar;
-
-  @Value("${dmesync.work.base.dir}")
-  private String syncWorkDir;
   
-  @Value("${dmesync.cleanup:false}")
-  private boolean cleanup;
-
-  @Value("${dmesync.compress:false}")
-  private boolean compress;
-  
-  @Value("${dmesync.file.tar:false}")
-  private boolean tarIndividualFiles;
-  
-  @Value("${dmesync.doc.name:default}")
-  private String doc;
-  
-  @Value("${dmesync.process.multiple.tars:false}")
-  private boolean processMultipleTars;
-  
-  @Value("${dmesync.multiple.tars.dir.folders:}")
-  private String multipleTarsFolders;
-  
-  @Value("${dmesync.selective.scan:false}")
-  private boolean selectiveScan;
   @Autowired
   private DmeSyncProducer sender;
   
@@ -74,30 +45,36 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   @Override
   public StatusInfo process(StatusInfo object, DocConfig config) {
 
+    DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+    DocConfig.SourceRule sourceRule = config.getSourceRule();
+	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
+	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+		  
     //Cleanup any files from the work directory.
-    if (tar || untar || compress || tarIndividualFiles || selectiveScan) {
+    if (pre.tar || pre.untar || pre.compressTar || pre.fileTar || sourceRule.selectiveScan) {
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
-			if (cleanup) {				
-				if (selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()))) {
+			if (upload.cleanupWorkdir) {				
+				if (sourceRule.selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()))) {
 					// Skipping this task for the selective scan files
 					return object;
 				} else {
 					String sourceDirLeafNode = object.getSourceFilePath() != null
 							? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
 							: null;
-					if (processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )
+					if (preRule.processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , sourceDirLeafNode )
 							&& object.getTarEndTimestamp() != null) {
 
 						cleanUpTaskForMultipleTars(object, config);
 
 					} else {
-						TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+						TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
 					}
 				}
 			} else
 				logger.info("[{}] Test so it will not remove but clean up called for {} WORK_DIR: {}",
-						super.getTaskName(), object.getSourceFilePath(), syncWorkDir);
+						super.getTaskName(), object.getSourceFilePath(), sourceConfig.workBaseDir);
 		} catch (Exception e) {
 
     	  String errorMessage="Upload successful but failed to remove file ";
@@ -106,8 +83,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
         // Record it in DB as well
         object.setError(errorMessage);
         dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-        updateTarCounterForMultipleTars(object);
-        dmeSyncMailServiceFactory.getService(doc).sendErrorMail("HPCDME Auto Archival Cleanup Error " ,
+        updateTarCounterForMultipleTars(object, config);
+        dmeSyncMailServiceFactory.getService(config.getDocName()).sendErrorMail("HPCDME Auto Archival Cleanup Error " ,
         		errorMessage + object.getSourceFilePath()+ ": " + e.getMessage() + "\n\n" + e.getCause().getMessage());
       }
     }
@@ -127,6 +104,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 		 * If false then just delete the tar file.
 		 * 
 		 */
+	  	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 		
 		// Retrieve the record for contents file.
 		String tarFileParentName   = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
@@ -160,7 +138,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 							tarFolderRow.getTarContentsCount());
 					
 					// Delete both Parent folder and Tar file
-					TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), syncWorkDir, doc);
+					TarUtil.deleteTarAndParentsIfEmpty(object.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
 
 					if (recordForContentsfile != null && tarFolderRow.getError() == null) {
 						logger.info("[{}] Enqueing the tarContents File upload to JMS {} with id {} ",
@@ -179,16 +157,17 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 							super.getTaskName(), object.getSourceFilePath(),
 							tarFolderRow.getTarContentsCount());
 					// Delete only TarFile.
-					TarUtil.deleteTarFile(object.getSourceFilePath(), syncWorkDir, doc);
+					TarUtil.deleteTarFile(object.getSourceFilePath(), sourceConfig.workBaseDir, config.getDocName());
 				}
 
 			}
 
 		}
   }
-  void updateTarCounterForMultipleTars(StatusInfo object){
-	  
-	if(processMultipleTars) {
+  void updateTarCounterForMultipleTars(StatusInfo object, DocConfig config){
+	
+	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+	if(preRule.processMultipleTars) {
 	  // This block only executes for mulitpleTars feature
 	  synchronized (this) {
 		// retrieve the movies folder row from DB for the counter. the movies row will have the sourcefilename as movies  other rows have tarnames.

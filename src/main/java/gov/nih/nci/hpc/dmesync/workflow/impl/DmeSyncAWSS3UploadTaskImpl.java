@@ -43,9 +43,6 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 
@@ -68,13 +65,13 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object, DocConfig docConfig) throws DmeSyncMappingException, DmeSyncWorkflowException {
+	public StatusInfo process(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		object.setUploadStartTimestamp(new Date());
 
 		try {
 			// Call dataObjectRegistration API
-			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 					.path("/v2/dataObject".concat(object.getFullDestinationPath())).build().encode().toUri();
 
 			HttpHeaders header = new HttpHeaders();

@@ -40,8 +40,6 @@ public class DmeSyncCreateSoftlinkTaskImpl extends AbstractDmeSyncTask implement
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
   
-  @Value("${hpc.server.url}")
-  private String serverUrl;
 
   @Value("${auth.token}")
   private String authToken;
@@ -53,7 +51,7 @@ public class DmeSyncCreateSoftlinkTaskImpl extends AbstractDmeSyncTask implement
   }
   
   @Override
-  public StatusInfo process(StatusInfo object, DocConfig docConfig)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 	HpcExceptionDTO errorResponse;
@@ -64,7 +62,7 @@ public class DmeSyncCreateSoftlinkTaskImpl extends AbstractDmeSyncTask implement
     	
       //Call dataObjectRegistration API
       final URI dataObjectUrl =
-          UriComponentsBuilder.fromHttpUrl(serverUrl)
+          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
               .path("/v2/dataObject".concat(object.getFullDestinationPath()))
               .build().encode()
               .toUri();

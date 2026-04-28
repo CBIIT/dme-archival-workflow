@@ -40,17 +40,8 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
 
-  @Value("${hpc.server.url}")
-  private String serverUrl;
-
   @Value("${auth.token}")
   private String authToken;
-
-  @Value("${dmesync.checksum:true}")
-  private boolean checksum;
-  
-  @Value("${dmesync.metadata.update.only:false}")
-  private boolean metadataUpdateOnly;
   
   @Value("${dmesync.destination.s3.archive.configuration.id:}")
   private String s3ArchiveConfigurationId;
@@ -62,15 +53,16 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
   }
   
   @Override
-  public StatusInfo process(StatusInfo object, DocConfig docConfig)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	DocConfig.UploadConfig upload = config.getUploadConfig();
     object.setUploadStartTimestamp(new Date());
 
     try {
       //Call dataObjectRegistration API
       final URI dataObjectUrl =
-          UriComponentsBuilder.fromHttpUrl(serverUrl)
+          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
               .path("/dataObject".concat(object.getFullDestinationPath()))
               .build().encode()
               .toUri();
@@ -83,7 +75,7 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
 
       // creating an HttpEntity for dataObjectRegistration
       //Include checksum in DataObjectRegistrationRequestDTO
-      if(checksum)
+      if(upload.checksum)
     	  object.getDataObjectRegistrationRequestDTO().setChecksum(object.getChecksum());
       
       if(StringUtils.isNotBlank(s3ArchiveConfigurationId)) {
@@ -99,7 +91,7 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
       body.add("dataObjectRegistration", jsonHttpEntity);
       
       // creating an HttpEntity for dataObject
-      if(metadataUpdateOnly) {
+      if(upload.metadataUpdateOnly) {
     	  body.add("dataObject", null);
       } else {
 	      HttpHeaders fileHeader = new HttpHeaders();
@@ -131,7 +123,7 @@ public class DmeSyncUploadTaskImpl extends AbstractDmeSyncTask implements DmeSyn
         throw new DmeSyncWorkflowException("Upload failed with responseCode " + serviceResponse.getStatusCode());
       }
     } catch (Exception e) {
-      if (!metadataUpdateOnly) {
+      if (!upload.metadataUpdateOnly) {
     	  logger.error("[{}] error occured during upload task", super.getTaskName(), e);
 	      throw new DmeSyncWorkflowException("Error occured during upload", e);
       }

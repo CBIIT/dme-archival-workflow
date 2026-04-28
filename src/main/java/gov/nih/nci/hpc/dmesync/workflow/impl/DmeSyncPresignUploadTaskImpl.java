@@ -73,9 +73,6 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Autowired private ObjectMapper objectMapper;
   @Autowired private DmeSyncDeleteDataObject dmeSyncDeleteDataObject;
 
-  @Value("${hpc.server.url}")
-  private String serverUrl;
-
   @Value("${auth.token}")
   private String authToken;
 
@@ -94,15 +91,6 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Value("${dmesync.multipart.threadpoolsize}")
   private String threadPoolSize;
   
-  @Value("${dmesync.checksum:true}")
-  private boolean checksum;
-  
-  @Value("${dmesync.replace.modified.files:false}")
-  private boolean replaceModifiedFiles;
-  
-  @Value("${dmesync.upload.modified.files:false}")
-  private boolean uploadModifiedFiles;
-  
   @Value("${dmesync.destination.s3.archive.configuration.id:}")
   private String s3ArchiveConfigurationId;
   
@@ -116,6 +104,8 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncWorkflowException, DmeSyncVerificationException {
 
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+	  
     HpcDataObjectRegistrationResponseDTO serviceResponse = null;
     HpcExceptionDTO errorResponse;
     ResponseEntity<Object> response;
@@ -148,7 +138,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     try {
       //Call dataObjectRegistration API
       final URI dataObjectUrl =
-          UriComponentsBuilder.fromHttpUrl(serverUrl)
+          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
               .path("/v2/dataObject".concat(object.getFullDestinationPath()))
               .build().encode()
               .toUri();
@@ -160,7 +150,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
       //Include checksum in DataObjectRegistrationRequestDTO
-      if(checksum) {
+      if(upload.checksum) {
     	  HpcMetadataEntry objectEntry = new HpcMetadataEntry();
     	  objectEntry.setAttribute("source_checksum");
     	  objectEntry.setValue(object.getChecksum());
@@ -209,13 +199,13 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       } else {
     	String json = objectMapper.writeValueAsString(response.getBody());
 	    errorResponse = objectMapper.readValue(json, HpcExceptionDTO.class);
-    	if(replaceModifiedFiles && errorResponse.getMessage().contains("already archived")) {
+    	if(upload.replaceModifiedFiles && errorResponse.getMessage().contains("already archived")) {
     		//Perform soft delete and call registration again.
-    		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath());
+    		dmeSyncDeleteDataObject.deleteDataObject(object.getFullDestinationPath(), config);
     		throw new DmeSyncWorkflowException(errorResponse.getMessage());
     	}
     	
-		if (uploadModifiedFiles && errorResponse.getMessage().contains("already archived")) {
+		if (upload.uploadModifiedFiles && errorResponse.getMessage().contains("already archived")) {
 			// upload the file with a configurable extension if the file size and checksum
 			// does not match with what was previously uploaded to the DME path. 
 		    logger.info("[{}] Checking if the previous uploaded file matches the checksum and size {}", super.getTaskName());
@@ -263,13 +253,15 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     	  responseCode = uploadToUrls(object,
                   serviceResponse.getMultipartUpload(),
                   file,
-                  partSize);
+                  partSize,
+                  config);
       } else {
     	  responseCode =
           uploadToUrl(object,
               serviceResponse.getUploadRequestURL(),
               file,
-              object.getDataObjectRegistrationRequestDTO().getChecksum());
+              object.getDataObjectRegistrationRequestDTO().getChecksum(),
+              config);
       }
 
       if (responseCode == 200) {
@@ -292,7 +284,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
     return object;
   }
   
-  private int uploadToUrl(StatusInfo object, String urlStr, File file, String checksum) throws IOException, DmeSyncWorkflowException {
+  private int uploadToUrl(StatusInfo object, String urlStr, File file, String checksum, DocConfig config) throws IOException, DmeSyncWorkflowException {
     
     logger.info("[{}] uploadToUrl {}", super.getTaskName(), urlStr);
     logger.info("[{}] checksum {}", super.getTaskName(), checksum);
@@ -333,12 +325,12 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       // Close the URL connections.
       httpConnection.disconnect();
 
-      return completeMultipartUpload(object, null);
+      return completeMultipartUpload(object, null, config);
     }
     
   }
   
-  private int uploadToUrls(StatusInfo object, HpcMultipartUpload multipartUpload, File file, long partSize) throws DmeSyncWorkflowException {
+  private int uploadToUrls(StatusInfo object, HpcMultipartUpload multipartUpload, File file, long partSize, DocConfig config) throws DmeSyncWorkflowException {
 	
 		HpcCompleteMultipartUploadRequestDTO dto = new HpcCompleteMultipartUploadRequestDTO();
 		dto.setMultipartUploadId(multipartUpload.getId());
@@ -367,10 +359,10 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 		
 		executorService.shutdown();
 		
-		return completeMultipartUpload(object, dto);
+		return completeMultipartUpload(object, dto, config);
 	}
   
-	private int completeMultipartUpload(StatusInfo object, HpcCompleteMultipartUploadRequestDTO dto)
+	private int completeMultipartUpload(StatusInfo object, HpcCompleteMultipartUploadRequestDTO dto, DocConfig config)
 			throws DmeSyncWorkflowException {
 
 		HpcExceptionDTO errorResponse;
@@ -378,7 +370,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
 		try {
 			// Call completeMultipartUpload API
-			final URI completeUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+			final URI completeUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 					.path("/dataObject".concat(object.getFullDestinationPath()).concat("/completeMultipartUpload"))
 					.build().encode().toUri();
 

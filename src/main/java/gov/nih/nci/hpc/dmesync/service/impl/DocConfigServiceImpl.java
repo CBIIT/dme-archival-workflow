@@ -13,20 +13,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class DocConfigServiceImpl implements DocConfigService {
-    private final DocConfigDao docConfigDao;
+    private final DocConfigDao configDao;
     private volatile List<DocConfig> enabledDocs = List.of();
     private final Map<String, DocConfig> docsByName = new ConcurrentHashMap<>();
     private final Map<Long, DocConfig> docsById = new ConcurrentHashMap<>();
 
-    public DocConfigServiceImpl(DocConfigDao docConfigDao) {
-        this.docConfigDao = docConfigDao;
+    public DocConfigServiceImpl(DocConfigDao configDao) {
+        this.configDao = configDao;
         refresh();
     }
 
     @Scheduled(fixedDelayString = "${app.config.refresh-ms:60000}")
     @Override
     public synchronized void refresh() {
-        List<DocConfig> docs = docConfigDao.findEnabledDocs();
+        List<DocConfig> docs = configDao.findEnabledDocs();
         // TODO: Add validation logic here
         this.enabledDocs = List.copyOf(docs);
         this.docsByName.clear();

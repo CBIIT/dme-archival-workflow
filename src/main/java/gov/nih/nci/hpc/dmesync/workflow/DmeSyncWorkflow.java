@@ -14,8 +14,8 @@ public interface DmeSyncWorkflow {
    * Start the workflow
    * 
    * @param statusInfo StatusInfo object
-   * @param docConfig DOC configuration
+   * @param config DOC configuration
    * @throws DmeSyncWorkflowException on workflow error
    */
-  void start(StatusInfo statusInfo, DocConfig docConfig) throws DmeSyncWorkflowException;
+  void start(StatusInfo statusInfo, DocConfig config) throws DmeSyncWorkflowException;
 }

@@ -57,57 +57,22 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   
   @Value("${dmesync.db.access:local}")
   private String access;
-
-  @Value("${dmesync.file.tar:false}")
-  private boolean tarIndividualFiles;
-
-  @Value("${dmesync.dryrun:false}")
-  private boolean dryRun;
-
-  @Value("${dmesync.checksum:true}")
-  private boolean checksum;
-  
-  @Value("${dmesync.check.end.workflow:false}")
-  private boolean checkEndWorkflow;
-  
-  @Value("${dmesync.filesystem.upload:false}")
-  private boolean fileSystemUpload;
-  
-  @Value("${dmesync.create.softlink:false}")
-  private boolean createSoftlink;
-  
-  @Value("${dmesync.create.collection.softlink:false}")
-  private boolean createCollectionSoftlink;
-  
-  @Value("${dmesync.metadata.update.only:false}")
-  private boolean metadataUpdateOnly;
-  
-  @Value("${dmesync.move.processed.files:false}")
-  private boolean moveProcessedFiles;
-  
-  @Value("${dmesync.source.aws:false}")
-  private boolean awsFlag;
-  
-  @Value("${dmesync.multiple.tars.dir.folders:}")
-  private String multpleTarsFolders;
-  
-  @Value("${dmesync.selective.scan:false}")
-  private boolean selectiveScan;
-  
+ 
   public void start(StatusInfo statusInfo, DocConfig config) throws DmeSyncWorkflowException {
 
     logger.info("[Workflow] Starting for DOC {} (version {})", config.getDocName(), config.getVersion());
     tasks = new ArrayList<>();
 
+    DocConfig.SourceRule sourceRule = config.getSourceRule();
     DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
     DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
     DocConfig.UploadConfig upload = config.getUploadConfig();
 
     // Workflow select tasks based on config, also need to create taskImpl class
     tasks = new ArrayList<>();
-    if (!awsFlag) {
+    if (!sourceRule.aws) {
     	if (preRule.processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (pre.tar || tarIndividualFiles || selectiveScan) {
+	    if (pre.tar || pre.fileTar || sourceRule.selectiveScan) {
 	    	tasks.add(tarTask);
 	    	if(preRule.tarContentsFile) {
 	    		tasks.add(tarContentsfileTask);
@@ -119,29 +84,29 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 
     tasks.add(metadataTask);
 
-    if (!dryRun) {
-	      if(checksum && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag)
+    if (!upload.dryRun) {
+	      if(upload.checksum && !upload.softlink && !upload.collectionSoftlink && !upload.moveProcessedFiles && !sourceRule.aws)
 	        tasks.add(createChecksumTask);
-	      if(fileSystemUpload)
+	      if(upload.fileSystemUpload)
 	    	  tasks.add(fileSystemUploadTask);
-	      else if (metadataUpdateOnly)
+	      else if (upload.metadataUpdateOnly)
 	    	  tasks.add(syncUploadTask);
-	      else if (createSoftlink)
+	      else if (upload.softlink)
 	    	  tasks.add(createSoftlinkTask);
-	      else if (createCollectionSoftlink)
+	      else if (upload.collectionSoftlink)
 	    	  tasks.add(createCollectionSoftlinkTask);
-	      else if (moveProcessedFiles)
+	      else if (upload.moveProcessedFiles)
 	    	  tasks.add(moveDataObjectTask);
-	      else if (awsFlag)
+	      else if (sourceRule.aws)
 	    	  tasks.add(awsS3UploadTask);
 	      else
 	    	  tasks.add(presignUploadTask);
-	      if(!metadataUpdateOnly && !createSoftlink && !createCollectionSoftlink && !moveProcessedFiles && !awsFlag) {
+	      if(!upload.metadataUpdateOnly && !upload.softlink && !upload.collectionSoftlink && !upload.moveProcessedFiles && !sourceRule.aws) {
 		      tasks.add(verifyTask);
 		      tasks.add(permissionBookmarkTask);
-		      if(fileSystemUpload)
+		      if(upload.fileSystemUpload)
 		    	  tasks.add(permissionArchiveTask);
-		      if (pre.tar || tarIndividualFiles || pre.untar || pre.compressTar || selectiveScan) tasks.add(cleanupTask);
+		      if (pre.tar || pre.fileTar || pre.untar || pre.compressTar || sourceRule.selectiveScan) tasks.add(cleanupTask);
 	      }
 	      
 	    // Execute tasks. If any task fails with a need for retry, throw exception for rollback
@@ -158,7 +123,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 	      for (DmeSyncTask task : tasks) {
 	    	   statusInfo = task.processTask(statusInfo, config);
 	    	   // This condition is used when we want to perform specific task and complete the workflow
-	    	   if((checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
+	    	   if((upload.checkEndWorkflow && checkEndWorkflowFlag(statusInfo.getId())) ){
 	    		      logger.info("[Workflow] End Workflow Flag is set to true , so no further task processing is required");
 	    		   break;
 	    	   }

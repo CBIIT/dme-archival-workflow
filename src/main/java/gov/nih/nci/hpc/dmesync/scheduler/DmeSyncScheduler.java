@@ -80,47 +80,20 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Value("${dmesync.db.access:local}")
   private String access;
   
-  @Value("${dmesync.verify.prev.upload:none}")
-  private String verifyPrevUpload;
-
-  @Value("${dmesync.depth.leaf.folder.skip:true}")
-  private boolean skipIfNotLeafFolder;
-
   @Value("${dmesync.run.once.and.shutdown:false}")
   private boolean shutDownFlag;
 
   @Value("${dmesync.run.once.run_id:}")
   private String oneTimeRunId;
 
-  @Value("${dmesync.tar.file.exist:}")
-  private String checkExistsFile;
-  
   @Value("${dmesync.file.noArchive.exist:}")
   private String checkNoArchiveExistsFile;
   
   @Value("${dmesync.file.archive.exist:}")
   private String checkArchiveExistsFile;
   
-  @Value("${dmesync.multiple.tars.dir.folders:}")
-  private String multpleTarsFolders;
-  
   @Value("${logging.file.name}")
   private String logFile;
-
-  @Value("${dmesync.create.softlink:false}")
-  private boolean createSoftlink;
-  
-  @Value("${dmesync.create.collection.softlink:false}")
-  private boolean createCollectionSoftlink;
-  
-  @Value("${dmesync.move.processed.files:false}")
-  private boolean moveProcessedFiles;
-  
-  @Value("${dmesync.source.softlink.file:}")
-  private String sourceSoftlinkFile;
-  
-  @Value("${dmesync.source.aws:false}")
-  private boolean awsFlag;
   
   @Value("${dmesync.source.aws.bucket:}")
   private String awsBucket;
@@ -134,15 +107,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Value("${dmesync.source.aws.region:}")
   private String awsRegion;
   
-  @Value("${dmesync.selective.scan:false}")
-  private boolean selectiveScan;
-
-  @Value("${dmesync.tar.include.pattern:}")
-  private String tarIncludePattern;
-  
-  @Value("${dmesync.retry.prior.run.failures:false}")
-  private boolean retryPriorRunFailures;
-  
   private String runId;
 
   /**
@@ -155,10 +119,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
+	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
 	  
 	dmeMetadataBuilder.evictMetadataMap();
 
-	if (moveProcessedFiles) {
+	if (upload.moveProcessedFiles) {
 		findFilesToMove(config);
 		return;
 	}
@@ -193,19 +159,19 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     MDC.put("doc", config.getDocName());
     MDC.put("run.id", runId);
 
-    if(createSoftlink)
+    if(upload.softlink)
     	 logger.info(
     		        "[Scheduler] Current time: {} executing Run ID: {} softlink file to read {}",
     		        dateFormat.format(new Date()),
     		        runId,
-    		        sourceSoftlinkFile);
-    else if(createCollectionSoftlink) {
-    	if(StringUtils.isNotBlank(sourceSoftlinkFile)) {
+    		        upload.softlinkFile);
+    else if(upload.collectionSoftlink) {
+    	if(StringUtils.isNotBlank(upload.softlinkFile)) {
     		logger.info(
    		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink file to read {}",
    		        dateFormat.format(new Date()),
    		        runId,
-   		        sourceSoftlinkFile);
+   		        upload.softlinkFile);
     	} else {
     		logger.info(
 		        "[Scheduler] Current time: {} executing Run ID: {} collection softlink directory to scan {}",
@@ -228,8 +194,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
     try {
       List<HpcPathAttributes> paths = null;
-      if(createSoftlink) {
-    	  paths = queryDataObjectsForSoftlinkCreation();
+      if(upload.softlink) {
+    	  paths = queryDataObjectsForSoftlinkCreation(config);
       } else if (sourceRule.noscanRerun) {
         findFilesToRerun(config);
         logger.info(
@@ -239,8 +205,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
             sourceConfig.sourceBaseDir);
         MDC.clear();
         return;
-      } else if (awsFlag) {
-    	  paths = dmeSyncAWSScanDirectory.getPathAttributes(sourceConfig.sourceBaseDir);
+      } else if (sourceRule.aws) {
+    	  paths = dmeSyncAWSScanDirectory.getPathAttributes(sourceConfig.sourceBaseDir, config);
       } else {
       // Scan through the specified base directory and find candidates for processing
     	  paths = scanDirectory(config);
@@ -254,9 +220,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         return;
       } else {
         for (HpcPathAttributes pathAttr : paths) {
-          if (pathAttr.getIsDirectory() && !createCollectionSoftlink) {
+          if (pathAttr.getIsDirectory() && !upload.collectionSoftlink) {
             //If depth of -1 is specified, skip if it is not a leaf folder
-            if (pre.tar && pre.depth.equals("-1") && skipIfNotLeafFolder) {
+            if (pre.tar && pre.depth.equals("-1") && preRule.tarSkipLeafFolder) {
               try(Stream<Path> stream = Files.list(Paths.get(pathAttr.getAbsolutePath()))) {
                if(stream.anyMatch(x -> x.toFile().isDirectory()))
                   continue;
@@ -280,7 +246,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       }
 
    // --- Selective Scan Enhancement ---
-      if (selectiveScan) {
+      if (sourceRule.selectiveScan) {
        selectiveScanProcessing(folders, files, config);
       }
       
@@ -296,7 +262,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         }
       } else {
         // Process the list of files
-    	  if(createCollectionSoftlink) {
+    	  if(upload.collectionSoftlink) {
     		  for (HpcPathAttributes file : files) {
     	          //List tar files from each folder
     	          List<HpcPathAttributes> collectionLinkList = listCollectionsToLink(file.getAbsolutePath());
@@ -306,7 +272,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     	  } else
     		  processFiles(files, config);
       }
-	   if (retryPriorRunFailures) {
+	   if (sourceRule.retryPriorRunFailures) {
 			includePriorRunFailuresInCurrentRunWorklist(config);
 	   }
       logger.info(
@@ -493,13 +459,14 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     return result;
   }
   
-  private List<HpcPathAttributes> queryDataObjectsForSoftlinkCreation() throws HpcException, IOException {
+  private List<HpcPathAttributes> queryDataObjectsForSoftlinkCreation(DocConfig config) throws HpcException, IOException {
+	DocConfig.UploadConfig upload = config.getUploadConfig();
     List<HpcPathAttributes> result = new ArrayList<>();
-    Path filePath = Paths.get(sourceSoftlinkFile);
+    Path filePath = Paths.get(upload.softlinkFile);
     List<String> lines = Files.readAllLines(filePath);
     //process each collection
     for(String collectionPath: lines) {
-      result.addAll(dmeSyncDataObjectListQuery.getPathAttributes(collectionPath));
+      result.addAll(dmeSyncDataObjectListQuery.getPathAttributes(collectionPath, config));
     }
     return result;
   }
@@ -553,21 +520,21 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
-	DocConfig.UploadConfig uploadConfig = config.getUploadConfig();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
 	  
     for (HpcPathAttributes file : files) {
 
       StatusInfo statusInfo = null;
 
       //If we need to verify previous upload, check
-      if ("local".equals(verifyPrevUpload)) {
+      if ("local".equals(upload.verifyPrevUpload)) {
         // Checks the local db to see if it has been completed
         if (pre.untar) {
           statusInfo =
               dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(
                   file.getAbsolutePath(), file.getTarEntry(), "COMPLETED");
 		} else if ( preRule.processMultipleTars && 
-				   TarUtil.matchesAnyMultipleTarFolder( multpleTarsFolders , file.getName() )) {
+				   TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , file.getName() )) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(config.getDocName(),file.getAbsolutePath() + '%');
@@ -670,7 +637,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 				}
 			}
 		}
-		else if(createCollectionSoftlink) {
+		else if(upload.collectionSoftlink) {
 			statusInfo =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
@@ -683,7 +650,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         if (statusInfo != null) {
           logger.debug(
               "[Scheduler] File has already been uploaded: {}", statusInfo.getOriginalFilePath());
-          if(!uploadConfig.replaceModifiedFiles)
+          if(!upload.replaceModifiedFiles)
         	  continue;
           
           Date modifiedTimestamp = file.getUpdatedDate();
@@ -759,21 +726,21 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 		// If folder does not contain a specified file, skip
 		if (!sourceRule.fileExistUnderBaseDir
-					&& (StringUtils.isNotEmpty(preRule.tarFileExistExt) || StringUtils.isNotEmpty(checkExistsFile))) {
+					&& (StringUtils.isNotEmpty(preRule.tarFileExistExt) || StringUtils.isNotEmpty(preRule.tarFileExist))) {
 
 	    Path folder = Paths.get(file.getAbsolutePath());
         if(!pre.tar) {
           folder = Paths.get(file.getAbsolutePath()).getParent();
         }
-        if(StringUtils.isNotEmpty(checkExistsFile)) {
+        if(StringUtils.isNotEmpty(preRule.tarFileExist)) {
         	try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder,
-    				path -> path.getFileName().toString().equals(checkExistsFile))) {
+    				path -> path.getFileName().toString().equals(preRule.tarFileExist))) {
         		if (!stream.iterator().hasNext()) {
-    				String message ="The directory " + folder.toString() + " does not contain file " + checkExistsFile;
+    				String message ="The directory " + folder.toString() + " does not contain file " + preRule.tarFileExist;
     	            logger.info(
     	              "[Scheduler] Skipping: {} folder which does not contain the specified file {}.",
     	              folder.toString(),
-    	              checkExistsFile);
+    	              preRule.tarFileExist);
     	            //TBD: Check if we need to insert record in DB as COMPLETED before sending an email.
     	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message);
     				continue;
@@ -804,7 +771,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       
       //If folder under the base dir does not contain a specified file for both files and tar, skip
       if (sourceRule.fileExistUnderBaseDir 
-    		  && (StringUtils.isNotEmpty(preRule.tarFileExistExt) || StringUtils.isNotEmpty(checkExistsFile))) {
+    		  && (StringUtils.isNotEmpty(preRule.tarFileExistExt) || StringUtils.isNotEmpty(preRule.tarFileExist))) {
         
         //Find the directory being archived under the base dir
         Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
@@ -813,14 +780,14 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         Path subPath1 = relativePath.subpath(0, sourceRule.fileExistUnderBaseDirDepth+1);
         Path checkExistFilePath = baseDirPath.resolve(subPath1);
         
-        if(StringUtils.isNotEmpty(checkExistsFile)) {
-	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.getFileName().toString().equals(checkExistsFile))) {
+        if(StringUtils.isNotEmpty(preRule.tarFileExist)) {
+	        try (DirectoryStream<Path> stream = Files.newDirectoryStream(checkExistFilePath, path -> path.getFileName().toString().equals(preRule.tarFileExist))) {
 	
 	          if (!stream.iterator().hasNext()) {
 	            logger.info(
 	              "[Scheduler] Skipping: {} Folder to process does not contain the specified file {}.",
 	              checkExistFilePath,
-	              checkExistsFile);
+	              preRule.tarFileExist);
 	            continue;
 	          }
 	        }  catch (IOException ex) {
@@ -904,13 +871,14 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
   private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed, DocConfig config) {
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
 	  
     StatusInfo statusInfo = new StatusInfo();
     statusInfo.setRunId(runId);
     statusInfo.setOrginalFileName(file.getName());
     statusInfo.setOriginalFilePath(file.getAbsolutePath());
     statusInfo.setSourceFileName(pre.untar ? file.getTarEntry() : file.getName());
-    statusInfo.setSourceFilePath(createCollectionSoftlink ? file.getPath() : file.getAbsolutePath());
+    statusInfo.setSourceFilePath(upload.collectionSoftlink ? file.getPath() : file.getAbsolutePath());
     statusInfo.setFilesize(file.getSize());
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(config.getDocName());
@@ -929,8 +897,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	   
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
 	
-	if(awsFlag) return;
+	if(sourceRule.aws) return;
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
@@ -956,7 +925,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       }     
 	 } else {
       StatusInfo latest = null;
-      if(createSoftlink || createCollectionSoftlink) {
+      if(upload.softlink || upload.collectionSoftlink) {
     	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(config.getDocName());
       } else {
 	      //Add base path also to distinguish multiple docs running the workflow.
@@ -1001,8 +970,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
    for (DocConfig config : configService.getEnabledDocs()) {
 	   
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	  
-	if(!awsFlag) return;
+	if(!sourceRule.aws) return;
 	
 	boolean completedFlag = true;
     String currentRunId = null;
@@ -1133,8 +1103,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			throws Exception {
 
 		DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 		
-		logger.info("[Scheduler] Selective Scan mode Started. tarIncludePattern='{}'", tarIncludePattern);
+		logger.info("[Scheduler] Selective Scan mode Started. tarIncludePattern='{}'", preRule.tarIncludePattern);
 
 		try {
 
@@ -1147,7 +1118,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			// Examples:
 			// 2025/movies/CS-fam*
 			// 2025/**/CS-fam*
-			final List<PathMatcher> tarPatternsMatcher = buildPathMatchers(tarIncludePattern);
+			final List<PathMatcher> tarPatternsMatcher = buildPathMatchers(preRule.tarIncludePattern);
 
 			// Base directory used to compute relative paths.
 			final Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();

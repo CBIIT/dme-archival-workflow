@@ -23,18 +23,6 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 @Component
 public class DmeSyncCompressTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
-  @Value("${dmesync.compress:false}")
-  private boolean compress;
-
-  @Value("${dmesync.source.base.dir}")
-  private String syncBaseDir;
-
-  @Value("${dmesync.work.base.dir}")
-  private String syncWorkDir;
-
-  @Value("${dmesync.dryrun:false}")
-  private boolean dryRun;
-  
   @PostConstruct
   public boolean init() {
     super.setTaskName("CompressTask");
@@ -42,14 +30,17 @@ public class DmeSyncCompressTaskImpl extends AbstractDmeSyncTask implements DmeS
   }
   
   @Override
-  public StatusInfo process(StatusInfo object, DocConfig docConfig)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
     
+	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+
     //Task: Compress file in work directory for processing
     try {
       //Construct work dir path
-      Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-      Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+      Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
+      Path workDirPath = Paths.get(sourceConfig.workBaseDir).toRealPath();
       Path sourceDirPath = Paths.get(object.getOriginalFilePath());
       Path relativePath = baseDirPath.relativize(sourceDirPath);
       String compressWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
@@ -63,7 +54,7 @@ public class DmeSyncCompressTaskImpl extends AbstractDmeSyncTask implements DmeS
 
       logger.info("[{}] Creating compress file in {}", super.getTaskName(), compressFile);
       
-      if (!dryRun) {
+      if (!upload.dryRun) {
           TarUtil.compress(compressFile, originalFile);
       }
 

@@ -41,7 +41,7 @@ public class DmeSyncConsumer {
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
-  @Autowired private DocConfigService docConfigService;
+  @Autowired private DocConfigService configService;
   
   private final AtomicInteger activeThreads = new AtomicInteger(0);
 
@@ -72,7 +72,7 @@ public class DmeSyncConsumer {
 
       // Get StatusInfo from DB
       Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
-      Optional<DocConfig> docConfig = docConfigService.getDocConfigById(syncMessage.getDocConfigId());
+      Optional<DocConfig> config = configService.getDocConfigById(syncMessage.getDocConfigId());
       if(!statusInfo.isPresent()) {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);
         return null;
@@ -83,7 +83,7 @@ public class DmeSyncConsumer {
       MDC.put("object.path", statusInfo.get().getOriginalFilePath() + " - " + statusInfo.get().getSourceFileName());
 
       // Start the workflow
-      dmeSyncWorkflow.start(statusInfo.get(), docConfig.get());
+      dmeSyncWorkflow.start(statusInfo.get(), config.get());
 
     } finally {
       MDC.clear();
