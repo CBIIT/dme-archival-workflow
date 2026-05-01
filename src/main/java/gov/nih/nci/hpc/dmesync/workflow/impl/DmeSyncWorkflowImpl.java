@@ -117,9 +117,10 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     // Workflow init, add all applicable tasks, also need to create taskImpl class
     tasks = new ArrayList<>();
     
-    // add a PreProcess task for tars
+   
     if (!awsFlag) {
     	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
+    	 // add a PreProcess task for tars
     	if(tar || tarIndividualFiles || selectiveScan ) {
     		tasks.add(tarPreProcessTask);
     	}
@@ -128,7 +129,6 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
     
     if (!awsFlag) {
-    	if (processMultipleTars)  tasks.add(processMultipleTarsTask);
 	    if (tar || tarIndividualFiles || selectiveScan ) {
 	    	tasks.add(tarTask);
 	    	if(createTarContentsFile) {
