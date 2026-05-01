@@ -13,6 +13,7 @@ import java.util.List;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
@@ -29,6 +30,7 @@ import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
  */
 class DmeSyncSchedulerPriorRunRetryTest {
 
+  static DocConfig config = null;
 
   private static DmeSyncScheduler newSchedulerWithContext(
       DmeSyncProducer sender,
@@ -45,9 +47,9 @@ class DmeSyncSchedulerPriorRunRetryTest {
     ReflectionTestUtils.setField(scheduler, "dmeSyncWorkflowService", factory);
 
     ReflectionTestUtils.setField(scheduler, "access", access);
-    ReflectionTestUtils.setField(scheduler, "doc", doc);
-    ReflectionTestUtils.setField(scheduler, "syncBaseDir", baseDir);
     ReflectionTestUtils.setField(scheduler, "runId", runId);
+    DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(baseDir, null, "/TEST_Archive", 1);
+	config = new DocConfig(null, doc, null, null, null, null, null, false, null, 0, null, null, sourceConfig, null, null, null, null, null);
 
     when(factory.getService(access)).thenReturn((DmeSyncWorkflowService) workflowSvc);
     return scheduler;
@@ -62,7 +64,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     DmeSyncScheduler scheduler = newSchedulerWithContext(
         sender, factory, workflowSvc, "local", "DOC1", "/source", "");
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verifyNoInteractions(factory);
     verifyNoInteractions(sender);
@@ -82,7 +84,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of());
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verify(sender, never()).send(any(DmeSyncMessageDto.class), anyString());
     verify(workflowSvc, never()).saveStatusInfo(any());
@@ -109,7 +111,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of());
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verify(sender, never()).send(any(DmeSyncMessageDto.class), anyString());
     verify(workflowSvc, never()).saveStatusInfo(any());
@@ -143,7 +145,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(completed));
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verify(sender, never()).send(any(DmeSyncMessageDto.class), anyString());
     verify(workflowSvc, never()).saveStatusInfo(any());
@@ -183,7 +185,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(failedOutside));
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verify(sender, never()).send(any(DmeSyncMessageDto.class), anyString());
     verify(workflowSvc, never()).saveStatusInfo(any());
@@ -222,7 +224,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(failedMissing));
 
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     verify(sender, never()).send(any(DmeSyncMessageDto.class), anyString());
     verify(workflowSvc, never()).saveStatusInfo(any());
@@ -279,7 +281,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     when(workflowSvc.saveStatusInfo(any(StatusInfo.class))).thenAnswer(inv -> inv.getArgument(0));
 
     // Act
-    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
+    ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist", config);
 
     // Assert
     verify(workflowSvc, times(1)).saveStatusInfo(argThat(s ->

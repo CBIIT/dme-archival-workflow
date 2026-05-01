@@ -30,7 +30,8 @@ public abstract class AbstractDmeSyncTask implements DmeSyncTask {
   public StatusInfo processTask(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException {
 
-    if (!checkComplete(object.getId())) {
+	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
+    if (taskName.equals("TarTask") && pre.fileTar || !checkComplete(object.getId())) {
 
       logger.info("[{}] Started", taskName);
 

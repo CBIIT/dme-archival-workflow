@@ -2,21 +2,20 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -26,27 +25,33 @@ import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest({
-  "hpc.server.url=https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server",
-  "auth.token=xxxx"
-})
+
 public class LCBPathMetadataProcessorImplTest {
 
   //The service under test.
-  @Autowired LCBPathMetadataProcessorImpl lcbPathMetadataProcessorImpl;
+  LCBPathMetadataProcessorImpl lcbPathMetadataProcessorImpl;
+  DocConfig config;
+  DmeSyncWorkflowServiceFactory dmeSyncWorkflowServiceFactory;
+  @Mock
+  DmeSyncWorkflowService dmeSyncWorkflowService;
 
-  @Before
+  @BeforeEach
   public void init() {
-    //Create the statusInfo object with the test Path
-    lcbPathMetadataProcessorImpl.destinationBaseDir = "/CCR_LCB_SubramaniamLab_Archive";
+	lcbPathMetadataProcessorImpl = new LCBPathMetadataProcessorImpl();
+	DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/CCR_LCB_SubramaniamLab_Archive", 1);
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
+    config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
+    
     //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB.
-
-    lcbPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
-    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
+    // Use a mock for the service factory and service
+ 	dmeSyncWorkflowServiceFactory = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+ 	dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+ 	lcbPathMetadataProcessorImpl.dmeSyncWorkflowService = dmeSyncWorkflowServiceFactory;
+ 	Mockito.when(dmeSyncWorkflowServiceFactory.getService(any())).thenReturn(dmeSyncWorkflowService);
+ 	 
     CollectionNameMapping piMapping = new CollectionNameMapping();
     piMapping.setMapValue("Subramaniam");
-    when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
+    Mockito.when(lcbPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")
             .findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Livlab", "PI_Lab", "lcb"))
         .thenReturn(piMapping);
   }
@@ -55,7 +60,6 @@ public class LCBPathMetadataProcessorImplTest {
     StatusInfo statusInfoObj = new StatusInfo();
     statusInfoObj.setOriginalFilePath(originalFilePath);
     statusInfoObj.setSourceFilePath(sourceFilePath);
-    lcbPathMetadataProcessorImpl.destinationBaseDir = "/CCR_LCB_SubramaniamLab_Archive";
 
     return statusInfoObj;
   }
@@ -72,7 +76,7 @@ public class LCBPathMetadataProcessorImplTest {
     ////data/Livlab/projects/GluK2
     String expectedArchivePath =
         "/CCR_LCB_SubramaniamLab_Archive/PI_Subramaniam/projects/GluK2.tar";
-    String computedArchivePath = lcbPathMetadataProcessorImpl.getArchivePath(statusInfoNS);
+    String computedArchivePath = lcbPathMetadataProcessorImpl.getArchivePath(statusInfoNS, config);
 
     //Confirm they are same
     assertEquals(expectedArchivePath, computedArchivePath);
@@ -91,7 +95,7 @@ public class LCBPathMetadataProcessorImplTest {
 
     //Execute the method to test
     HpcDataObjectRegistrationRequestDTO requestDto =
-        lcbPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS);
+        lcbPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS, config);
 
     //Validate collection metadata results
     Map<String, String> dataMap = new HashMap<>();

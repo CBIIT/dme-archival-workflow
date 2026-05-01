@@ -4,20 +4,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -40,18 +38,13 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	// DCEG CGR Custom logic for DME path construction and meta data creation
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.source.base.dir}")
-	protected String sourceBaseDir;
-
 	@Autowired
 	private DCEGCollectionTypeMapper mapper;
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] DCEG CGR getArchivePath called");
 
 		// For dceg, take all folders name under sequencing as collections.
@@ -63,13 +56,13 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String archivePath;
 		if (!relativePathStr.contains("/")) {
 			// File belongs directly under the destination dir
-			archivePath = destinationBaseDir + "/" + object.getSourceFileName();
+			archivePath = sourceConfig.destinationBaseDir + "/" + object.getSourceFileName();
 		} else if (relativePath.toString().endsWith(object.getSourceFileName())) {
 			// Case when the file name is not altered.
-			archivePath = destinationBaseDir + "/" + relativePathStr;
+			archivePath = sourceConfig.destinationBaseDir + "/" + relativePathStr;
 		} else {
 			// Case when the filename in the destination changes.
-			archivePath = destinationBaseDir + "/" + relativePath.getParent().toString().replace("\\", "/") + "/"
+			archivePath = sourceConfig.destinationBaseDir + "/" + relativePath.getParent().toString().replace("\\", "/") + "/"
 					+ object.getSourceFileName().replace("\\", "/");
 		}
 
@@ -103,9 +96,10 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
 		// Add to HpcBulkMetadataEntries for path attributes
@@ -124,9 +118,9 @@ public class DCEGPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Tokenize DME path starting from platform
 		StringTokenizer tokenizer = new StringTokenizer(
-				object.getFullDestinationPath().substring(destinationBaseDir.length() + 1), "/");
+				object.getFullDestinationPath().substring(sourceConfig.destinationBaseDir.length() + 1), "/");
 		StringBuilder collectionPathBuilder = new StringBuilder();
-		collectionPathBuilder.append(destinationBaseDir);
+		collectionPathBuilder.append(sourceConfig.destinationBaseDir);
 		boolean skipped = false;
 		int skipCount = 0;
 		String collectionName = null;

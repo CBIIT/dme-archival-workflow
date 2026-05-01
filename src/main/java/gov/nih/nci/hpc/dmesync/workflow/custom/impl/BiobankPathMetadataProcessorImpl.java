@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -33,8 +35,10 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
   //CMB Custom logic for DME path construction and meta data creation
 	
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	
     logger.info("[PathMetadataTask] Biobank getArchivePath called");
       
     //Get the PI collection name from the PI column from metadata file using path
@@ -74,7 +78,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
     }
     
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName()
             + "/Project_"
@@ -94,9 +98,9 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-
+	  SourceConfig sourceConfig = config.getSourceConfig();
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {   
 
@@ -109,7 +113,7 @@ public class BiobankPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		  //key = affiliation, value = ? (supplied)
 	     
 	      String piCollectionName = getPiCollectionName();
-	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+	      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);

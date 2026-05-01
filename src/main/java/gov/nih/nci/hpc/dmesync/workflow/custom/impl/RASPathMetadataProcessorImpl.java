@@ -1,15 +1,15 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -27,28 +27,25 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	protected String sourceBaseDir;
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
 	// DOC CCR RAS logic for DME path construction and meta data creation
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		
 		logger.info("[PathMetadataTask] RAS getArchivePath called");
 
+		// load the user metadata from the externally placed excel
+		metadataMap = loadMetadataFile(sourceRule.metadataFile, "Tar_file_location");
+		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String tarFilePath = object.getOriginalFilePath();
-		logger.info("[PathMetadataTask] metadata file {} tarFilePath {}", metadataFile, tarFilePath );
+		logger.info("[PathMetadataTask] metadata file {} tarFilePath {}", sourceRule.metadataFile, tarFilePath );
 		
 
-		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object,tarFilePath) + "/Run_" + getRunID(object,tarFilePath) + "/" + fileName;
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -59,9 +56,10 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] RAS getMetaDataJson called");
 		String tarFilePath = object.getOriginalFilePath();
 
@@ -74,7 +72,7 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object,tarFilePath);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 		pathEntriesPI.setPath(piCollectionPath);
@@ -184,18 +182,6 @@ public class RASPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     }
 	return (metadataMap.get(key) == null ? null : metadataMap.get(key).get(attrKey));
 	
-	}
-
-	@PostConstruct
-	private void init() throws IOException {
-		if ("ras".equalsIgnoreCase(doc)) {
-			try {
-				// load the user metadata from the externally placed excel
-				metadataMap = loadMetadataFile(metadataFile, "Tar_file_location");
-				} catch (DmeSyncMappingException e) {
-				logger.error("Failed to initialize metadata  path metadata processor", e);
-			}
-		}
 	}
 
 }

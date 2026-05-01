@@ -6,7 +6,11 @@ import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -25,32 +29,24 @@ public class MochaPDMRPathMetadataProcessorImpl extends AbstractPathMetadataProc
     implements DmeSyncPathMetadataProcessor {
 
   // Mocha PDMR data DME path construction and meta data creation
-
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String sourceDir;
-  
-  @Value("${dmesync.tar:false}")
-  private boolean tar;
   
   Map<String, Map<String, String>> metadataMap = null;
   
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] Mocha PDMR data getArchivePath called");
 
+    metadataMap = ExcelUtil.parseBulkMetadataEntries(sourceRule.metadataFile, "Sample_ID");
+    
     // Example source path -
     // /mnt/mocha_ngs/active/MoCha-NGS_BW_transfers/PDX_fastq_backup
     // /mnt/mocha_scratch/BW_transfers/processedDATA
     String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/Lab_"
             + getPiCollectionName()
             + "/Platform_"
@@ -74,9 +70,10 @@ public class MochaPDMRPathMetadataProcessorImpl extends AbstractPathMetadataProc
 
 
 @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
     String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
@@ -86,7 +83,7 @@ public class MochaPDMRPathMetadataProcessorImpl extends AbstractPathMetadataProc
     // key = data_owner, value = Mickey Williams (supplied)
     // key = data_owner_affiliation, value = Molecular Characterization Laboratory, FNLCR (supplied)
     String piCollectionName = getPiCollectionName();
-    String piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
+    String piCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
@@ -240,15 +237,4 @@ public class MochaPDMRPathMetadataProcessorImpl extends AbstractPathMetadataProc
 	  return fileName.substring(fileName.indexOf('.') + 1);
   }
   
-  @PostConstruct
-  private void init() {
-	if("mocha-pdmr".equalsIgnoreCase(doc)) {
-	    try {
-	      metadataMap = ExcelUtil.parseBulkMetadataEntries(metadataFile, "Sample_ID");
-	    } catch (DmeSyncMappingException e) {
-	        logger.error(
-	            "Failed to initialize metadata  path metadata processor", e);
-	    }
-	}
-  }
 }

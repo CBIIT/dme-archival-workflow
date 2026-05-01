@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -37,20 +38,13 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public static final int FOLDER_FIELD_DESCRIPTOR = 4;
 	public static final int FOLDER_FIELD_STAFF = 5;
 	
-	
-	@Value("${dmesync.doc.name}")
-	private String doc;
-	
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-	
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] PCL getArchivePath called");
 
 		// extract the detail from the Path
@@ -67,7 +61,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String parentFolderName = filePath.getParent().getFileName().toString().replace("\"", "");
 	
 
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(parentFolderName) + "/POC_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(parentFolderName) + "/POC_"
 				+ getPOCCollectionName(parentFolderName) + "/Staff_" + getStaffCollectionName(parentFolderName) + "/Year_"
 				+ getYearCollectionName(parentFolderName, true) + "/Project_" + getProjectCollectionName(parentFolderName) + "/" + fileName;
 
@@ -81,10 +75,11 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 		
-		
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 
 		Path filePath = Paths.get(object.getSourceFilePath());
 		String fileName = filePath.toFile().getName();
@@ -97,7 +92,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String descriptor = getFieldFromFolderName(folderName, FOLDER_FIELD_DESCRIPTOR);
 		
 		// load the user metadata from the externally placed excel
-		 metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Folder");
+		 metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "Folder");
 
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -110,7 +105,7 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// key = data_generator_affiliation, value = CCR PCL
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		String piCollectionName = getPiCollectionName(folderName);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		//String metadataFileKey= fileName.replace(".tar", "");
 
 		pathEntriesPI.setPath(piCollectionPath);

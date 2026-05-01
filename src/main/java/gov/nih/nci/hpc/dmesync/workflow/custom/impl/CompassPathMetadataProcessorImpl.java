@@ -17,7 +17,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -36,17 +39,15 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
   // Compass Custom logic for DME path construction and meta data creation
 
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
   @Value("${compass.prefix.files:}")
   private String prefixFiles;
   
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
     logger.info("[PathMetadataTask] Compass getArchivePath called");
 
+    SourceConfig sourceConfig = config.getSourceConfig();
 
     // Example source path -
     // /data/Compass/DATA/NextSeq/FastqFolder/NA18487_100ng_N1D_PS2
@@ -65,7 +66,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     
     if (projectCollectionName.equals("TSO500v2") && isProcessedResults(object)) {
       archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/PI_"
               + getPiCollectionName()
               + "/Project_"
@@ -76,7 +77,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
               + fileName;
     } else if ((projectCollectionName.equals("TSO500v2") || projectCollectionName.equals("ExomeRNA")) && !isProcessedResults(object)) {
       archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/PI_"
               + getPiCollectionName()
               + "/Project_"
@@ -91,7 +92,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     		fileName = libraryName + "-" + fileName;
     	}
     	archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/PI_"
               + getPiCollectionName()
               + "/Project_"
@@ -102,7 +103,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
               + fileName;
     } else if (projectCollectionName.equals("Methylation") && !isProcessedResults(object)) {
       archivePath =
-            destinationBaseDir
+    	  sourceConfig.destinationBaseDir
                 + "/PI_"
                 + getPiCollectionName()
                 + "/Project_"
@@ -113,7 +114,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
                 + fileName;
     }  else if (projectCollectionName.equals("Methylation")) {
       archivePath =
-            destinationBaseDir
+    	  sourceConfig.destinationBaseDir
                 + "/PI_"
                 + getPiCollectionName()
                 + "/Project_"
@@ -135,10 +136,12 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-    
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
+	    
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -148,7 +151,7 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
     // key = affiliation, value = Compass PI_Lab affiliation (supplied)
 
     String piCollectionName = getPiCollectionName();
-    String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+    String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
@@ -226,10 +229,10 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("patient_id", sampleId));
         pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("library_name", sampleId));
         // load the user metadata from the externally placed excel
-        if(StringUtils.isNotBlank(metadataFile)){
+        if(StringUtils.isNotBlank(sourceRule.metadataFile)){
           String sentrixId = getMethylationSentrixId(object);
           String key = sentrixId + "_" + sampleId;
-          threadLocalMap.set(loadMetadataFile(metadataFile, "Sentrix_ID", "Sample_Name"));
+          threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Sentrix_ID", "Sample_Name"));
           String materialType = getAttrValueWithExactKey(key, "Material_Type") == null ? "Unspecified": getAttrValueWithExactKey(key, "Material_Type");
           pathEntriesMethylationSample.getPathMetadataEntries().add(createPathEntry("material_type", materialType));
           String sex = getAttrValueWithExactKey(key, "Sex") == null ? "Unspecified": getAttrValueWithExactKey(key, "Sex");
@@ -275,8 +278,8 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		if(StringUtils.isNotBlank(libraryName)) {
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("library_name", libraryName));
 			// load the user metadata from the externally placed excel
-	        if(StringUtils.isNotBlank(metadataFile)){
-	          threadLocalMap.set(loadMetadataFile(metadataFile, "Library ID"));
+	        if(StringUtils.isNotBlank(sourceRule.metadataFile)){
+	          threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Library ID"));
 	          String flowcellId = getAttrValueWithExactKey(libraryName, "FCID") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "FCID");
 	          dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 	          String runDate = getAttrValueWithExactKey(libraryName, "Sequencing Date") == null ? "Unspecified": getAttrValueWithExactKey(libraryName, "Sequencing Date");
@@ -301,8 +304,8 @@ public class CompassPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String libraryName = getTSO500LibraryName(object);
 		
         // load the user metadata from the externally placed excel
-        if(StringUtils.isNotBlank(metadataFile)){
-          threadLocalMap.set(loadMetadataFile(metadataFile, "Accession ID_CP #"));
+        if(StringUtils.isNotBlank(sourceRule.metadataFile)){
+          threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Accession ID_CP #"));
           if(!threadLocalMap.get().containsKey(libraryName)) {
         	  throw new DmeSyncMappingException("Library name " + libraryName + " is not available in metafile.");
           }

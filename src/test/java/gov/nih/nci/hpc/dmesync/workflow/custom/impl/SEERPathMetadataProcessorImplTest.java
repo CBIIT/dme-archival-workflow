@@ -2,22 +2,21 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.runner.RunWith;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -29,36 +28,37 @@ import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 
-@RunWith(SpringRunner.class)
-@SpringBootTest({"hpc.server.url=https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server", "auth.token=xxxx"})
 public class SEERPathMetadataProcessorImplTest {
 
 
 //The service under test.
-@Autowired
 SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;	
+DocConfig config;
+DmeSyncWorkflowServiceFactory dmeSyncWorkflowServiceFactory;
+@Mock
+DmeSyncWorkflowService dmeSyncWorkflowService;
 
-
-
- @Before
+ @BeforeEach
  public void init() {
 	 
-	 seerPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
-
+	 DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/SEER_VTR_SRP_Archive", 1);
+     config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, null, null, null, null, null);
+     seerPathMetadataProcessorImpl = new SEERPathMetadataProcessorImpl();
+     // Use a mock for the service factory and service
+  	 dmeSyncWorkflowServiceFactory = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+  	 dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+  	 seerPathMetadataProcessorImpl.dmeSyncWorkflowService = dmeSyncWorkflowServiceFactory;
+  	 Mockito.when(dmeSyncWorkflowServiceFactory.getService(any())).thenReturn(dmeSyncWorkflowService); 
 	 //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB. 
 	 
 	 CollectionNameMapping piMapping = new CollectionNameMapping();
+
 	 piMapping.setMapValue("Alison_Van_Dyke");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "PI_Lab", "seer")).thenReturn(piMapping);
+	 Mockito.when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Alison_Van_Dyke", "PI_Lab", "seer")).thenReturn(piMapping);
 	  
 	 CollectionNameMapping projectMapping = new CollectionNameMapping();
-	 projectMapping.setMapValue("BCT_Pilot");
-	 when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("BCT", "Project", "seer")).thenReturn(projectMapping);
-	 
-	 
-     //Create the statusInfo object with the test Path
-	 seerPathMetadataProcessorImpl.destinationBaseDir = "/SEER_VTR_SRP_Archive";
+	 projectMapping.setMapValue("Alison_Van_Dyke");
+	 Mockito.when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc("Alison_Van_Dyke", "Project", "seer")).thenReturn(projectMapping);
 	 
 	 
  }
@@ -74,12 +74,12 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
   @Test
   public void testGetArchivePath() throws DmeSyncMappingException {
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/seer-VTR/BCT/VTRBCT_BC7001_BL3_XX.svs", 
+	  StatusInfo statusInfoNS = setupStatusInfo("/seer-VTR/Alison_Van_Dyke/VTRBCT_BC7001_BL3_XX.svs", 
 	  		 "/mnt/IRODsScratch/work/VTRBCT_BC7001_BL3_XX.svs");
 	  
 	  //Determine the expected and actual archive path
-	  String expectedArchivePath = "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_BCT_Pilot/Dataset_BC7001/VTRBCT_BC7001_BL3_XX.svs";
-	  String computedArchivePath = seerPathMetadataProcessorImpl.getArchivePath(statusInfoNS);
+	  String expectedArchivePath = "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_Alison_Van_Dyke/Dataset_BC7001/VTRBCT_BC7001_BL3_XX.svs";
+	  String computedArchivePath = seerPathMetadataProcessorImpl.getArchivePath(statusInfoNS, config);
 	  
 	  //Confirm they are same
 	  assertEquals(expectedArchivePath, computedArchivePath);
@@ -90,15 +90,15 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
   public void testGetMetadataJson() throws DmeSyncMappingException, DmeSyncWorkflowException {
 	  
 	  
-	  StatusInfo statusInfoNS = setupStatusInfo("/seer-VTR/BCT/VTRBCT_BC7001_BL3_XX.svs", 
+	  StatusInfo statusInfoNS = setupStatusInfo("/seer-VTR/Alison_Van_Dyke/VTRBCT_BC7001_BL3_XX.svs", 
 		  		 "/mnt/IRODsScratch/work/VTRBCT_BC7001_BL3_XX.svs");
 	  
 	  setupDataForMetadataJsonTest("Alison_Van_Dyke", "Alison Van Dyke", "NCI, DCCP, SRP", 
-			  "BCT_Pilot", "SEER VTR BCT Pilot", "whole-slide-images", "12/12/2018");
+			  "Alison_Van_Dyke", "SEER VTR BCT Pilot", "whole-slide-images", "12/12/2018");
 	 
 	  //Execute the method to test
 	  HpcDataObjectRegistrationRequestDTO requestDto = 
-		seerPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS);
+		seerPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS, config);
 	  
 	  
 	//Validate collection metadata results
@@ -117,8 +117,8 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  dataMap.put("person_id", "BC7001");
 	  
 	  dataMap.put("piArchivePath",  "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke");
-	  dataMap.put("projectArchivePath", "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_BCT_Pilot");
-	  dataMap.put("datasetArchivePath",  "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_BCT_Pilot/Dataset_BC7001");
+	  dataMap.put("projectArchivePath", "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_Alison_Van_Dyke");
+	  dataMap.put("datasetArchivePath",  "/SEER_VTR_SRP_Archive/PI_Alison_Van_Dyke/Project_Alison_Van_Dyke/Dataset_BC7001");
 	  
 	  
 	  validateCollectionMetadataResults(requestDto, dataMap);
@@ -130,7 +130,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  assertEquals(7, entries.size());
 	  
 	  assertEquals("source_path", entries.get(0).getAttribute());
-	  assertEquals("/seer-VTR/BCT/VTRBCT_BC7001_BL3_XX.svs", entries.get(0).getValue());
+	  assertEquals("/seer-VTR/Alison_Van_Dyke/VTRBCT_BC7001_BL3_XX.svs", entries.get(0).getValue());
 	  assertEquals("object_name", entries.get(1).getAttribute());
 	  assertEquals("VTRBCT_BC7001_BL3_XX.svs", entries.get(1).getValue());
 	  assertEquals("file_type", entries.get(2).getAttribute());
@@ -238,7 +238,7 @@ SEERPathMetadataProcessorImpl seerPathMetadataProcessorImpl;
 	  projectNameMapping.setMetaDataValue("VTRBCT");
 	  projectNameMetaMappings.add(projectNameMapping);
 	  
-	  when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
+	  Mockito.when(seerPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local").findAllMetadataMappingByCollectionTypeAndCollectionNameAndDoc(
 			  "Project", projectCollectionName, "seer")).thenReturn(projectNameMetaMappings);
 	  
   }

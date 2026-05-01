@@ -3,9 +3,12 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -23,24 +26,16 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class CIOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	protected String sourceBaseDir;
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
 	// DOC CCR CIO logic for DME path construction and meta data creation
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
 		logger.info("[PathMetadataTask] CIO getArchivePath called");
-
+		SourceConfig sourceConfig = config.getSourceConfig();
+		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object) + "/Case_" + getCaseId(object) + "/" + fileName;
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -49,13 +44,15 @@ public class CIOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("[PathMetadataTask] CIO getMetaDataJson called");
-
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "project_id"));
+		threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "project_id"));
 		  
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
@@ -65,7 +62,7 @@ public class CIOPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(projectCollectionName, "data_owner")));

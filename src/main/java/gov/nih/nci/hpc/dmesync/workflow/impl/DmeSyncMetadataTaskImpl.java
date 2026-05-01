@@ -6,7 +6,6 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
@@ -51,7 +50,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
 	  
     try {
       DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
-      String archivePath = metadataTask.getArchivePath(object);
+      String archivePath = metadataTask.getArchivePath(object, config);
       if(upload.moveProcessedFiles)
     	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());
       object.setFullDestinationPath(archivePath);
@@ -59,7 +58,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       saveArchivePath(object, archivePath);
 
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
-          metadataTask.getMetaDataJson(object);
+          metadataTask.getMetaDataJson(object, config);
       object.setDataObjectRegistrationRequestDTO(dataObjectRegistrationRequestDTO);
 
       //If automated metadata extraction is turned on, extractMetadata

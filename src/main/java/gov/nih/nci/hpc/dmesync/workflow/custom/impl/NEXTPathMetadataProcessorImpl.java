@@ -8,9 +8,11 @@ import java.util.Date;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -29,12 +31,10 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	// NExT Custom logic for DME path construction and meta data creation
 
-	@Value("${dmesync.source.base.dir}")
-	private String sourceBaseDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] NExT getArchivePath called");
 		// Example source path:
 		// nanoimaging-data/797/2022/wbg2g22jun22a/frames/rawdata/references
@@ -45,7 +45,7 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		Path sourceDirPath = Paths.get(object.getOriginalFilePath());
 
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Project_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName() + "/Project_"
 				+ getProjectCollectionName(object) + "/Period_" + getYearCollectionName(object) + "/Session_"
 				+ getSessionId(object)
 				+ (isReferenceFile(object.getOriginalFilePath()) ? "/Rawdata/References" : "/Rawdata") + "/"
@@ -64,9 +64,10 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
 		// Add to HpcBulkMetadataEntries for path attributes
@@ -77,7 +78,7 @@ public class NEXTPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// key = data_owner, value = (derived)
 
 		String piCollectionName = getPiCollectionName();
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		pathEntriesPI.setPath(piCollectionPath);

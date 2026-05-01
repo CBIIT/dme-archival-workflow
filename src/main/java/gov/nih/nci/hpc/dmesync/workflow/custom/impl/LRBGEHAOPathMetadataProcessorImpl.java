@@ -10,11 +10,12 @@ import java.util.Comparator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -35,18 +36,14 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.source.base.dir}")
-	private String syncBaseDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 		logger.info("[PathMetadataTask] HAO getArchivePath called");
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "Path");
 
 		String sourcePath = object.getOriginalFilePath();
 		String fileName = object.getSourceFileName();
@@ -65,18 +62,18 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 																			
 			if(sampleId !=null) {
 			
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName 
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName 
 						+ "/" + outcollectionName + "/Raw_Data" + "/" + sampleId + "/" + fileName;
 			
 			}
 		} else if (StringUtils.equalsIgnoreCase(subcollectionType, "Analysis")) {
 
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
 					+ outcollectionName + "/Analysis" + "/" + fileName;
 
 		} else if (StringUtils.equalsIgnoreCase(subcollectionType, "QC")) {
 
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/"
 					+ outcollectionName + "/QC" + "/" + fileName;
 
 		}
@@ -85,7 +82,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		//if there is readme.txt add readme file under out directory collection
 	   if (archivePath == null && StringUtils.equalsIgnoreCase(fileName, "readme.txt")) {
 			if (outcollectionName != null) {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 						+ "/" + outcollectionName + "/" + fileName;
 			}
 		}
@@ -105,9 +102,10 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -132,7 +130,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			// affiliation, email
 			// data_generator, affiliation, email
 
-			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+			String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
@@ -383,7 +381,7 @@ public class LRBGEHAOPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		String metadataKeypath = getCollectionPathFromParent(fullPath,"OUT").toString();
 
 		// Normalize known roots to /data
-		int idx = metadataKeypath.indexOf("/Hager/");
+		int idx = metadataKeypath.indexOf(File.separator + "Hager" + File.separator);
 		if (idx >= 0) {
 			return "/data" + metadataKeypath.substring(idx);
 		}

@@ -9,16 +9,12 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Pattern;
 import java.io.File;
 
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
@@ -28,6 +24,10 @@ import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -58,8 +58,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public static final String PROJECT_ID = "NAS Project ID";
 	public static final String PI = "Principal Investigator";
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 
 	@Value("${dmesync.sample.report:}")
 	private String sampleFile;
@@ -69,24 +67,20 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String finalReportPath;
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	private String sourceDir;
-
 	// Instance variable to hold the extracted fields
 	private Map<String, String> medatadaMapFromReport;
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
 				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
 
-			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
+			threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Project"));
 			constructFinalReportPath(object);
 			if(finalReportPath!=null)
 			extractMetadataFromFinalReport(finalReportPath.toString());
@@ -96,12 +90,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String archivePath = null;
 			String sampleCollectionType = getSampleCollectionType(object);
 			if (StringUtils.isBlank(sampleCollectionType)) {
-				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+				archivePath = sourceConfig.destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
 
 			} else {
 
-				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+				archivePath = sourceConfig.destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/"
 						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType);
 
@@ -122,9 +116,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		String sampleCollectionType = getSampleCollectionType(object);
@@ -133,7 +129,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Add path metadata entries for "PI_XXX" collection
 		String metadataFileKey = getProjectPathName(object);
 		String piCollectionName = getPiCollectionName(object, metadataFileKey);
-		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 		piCollectionPath = piCollectionPath.replace(" ", "_");

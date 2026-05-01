@@ -2,13 +2,13 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
-
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -35,18 +35,17 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	public static final String ANALYSIS = "Analysis";
 	public static final String FASTQ = "Fastq";
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		logger.info("[PathMetadataTask] POBCCDIgetArchivePath called");
 
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+		threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "path"));
 
 		// find the metadataFilePathKey to use as key value for the metadata from file.
 		String metadataFilePathKey = getPathForMetadata(object);
@@ -60,11 +59,11 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			if (isRawDataFile(object)) {
 				// if 00_RawSequencingData/file.txt directly upload under the fastg
 				// Lab_X/project_X/Fastq/
-				archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
+				archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 						+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "/FASTQ/" + fileName;
 			} else {
 				// Lab_X/project_X/Fastq/seq_x/tarfiles:
-				archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
+				archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 						+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "/FASTQ/"
 						+ getSeqCollectionName(object) + "/" + fileName;
 			}
@@ -72,7 +71,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			if (isMetricsFile(object)) {
 				// if Extracted data then directly upload under analysis folder:
 				// Lab_X/project_X/Analysis/file
-				archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
+				archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 						+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "" + "/Analysis/"
 						+ fileName;
 			} else {
@@ -80,7 +79,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 				if (isFullRangerOutput(object)) {
 					// Lab_X/project_X/Analysis/PrimaryAnalysisOutput/<Genome>/00_FullCellrangerOutputs/tarfile
-					archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
+					archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 							+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "" + "/Analysis/"
 							+ getAnalysisCollectionName(object) + "/"
 							+ (geonomeType != null ? geonomeType + "/" + "FullCellrangerOutputs/"
@@ -89,7 +88,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 				} else {
 					// Lab_X/project_X/Analysis/<Analysis sub folder>/tarfile
-					archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
+					archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(object, metadataFilePathKey)
 							+ "/Project_" + getProjectCollectionName(object, metadataFilePathKey) + "" + "/Analysis/"
 							+ getAnalysisCollectionName(object) + "/" + (geonomeType != null ? geonomeType + "/" : "")
 							+ fileName;
@@ -107,9 +106,10 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -131,7 +131,7 @@ public class POBCCDIPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// data_generator, affiliation, email
 
 			String labCollectionName = getPiCollectionName(object, metadataFilePathKey);
-			String labCollectionPath = destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
+			String labCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(labCollectionPath);
