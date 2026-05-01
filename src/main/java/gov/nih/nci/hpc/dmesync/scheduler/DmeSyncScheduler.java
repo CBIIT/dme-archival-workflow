@@ -286,7 +286,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       if(CollectionUtils.isEmpty(currentRun)) {
     	  logger.info("[Scheduler] No files/folders found for RunID." + runId + " Doc "+ config.getDocName());
     	  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir,
-    			  emailBody);
+    			  emailBody, config);
           try {
               dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
             } catch (IllegalArgumentException e) {
@@ -301,7 +301,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       //Send email notification
 	  logger.error("[Scheduler] Failed to access files in directory, {}", sourceConfig.sourceBaseDir, e);
 	  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Error: " + e.getMessage(),
-				e.getMessage() + "\n\n" + e.getCause().getMessage());
+				e.getMessage() + "\n\n" + e.getCause().getMessage(), config);
     } finally {
       MDC.clear();
       runId = null;
@@ -742,7 +742,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     	              folder.toString(),
     	              preRule.tarFileExist);
     	            //TBD: Check if we need to insert record in DB as COMPLETED before sending an email.
-    	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message);
+    	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message, config);
     				continue;
     			}
         	}  catch (IOException ex) {
@@ -760,7 +760,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	              preRule.tarFileExistExt);
 	            //Insert record in DB as COMPLETED and send an email.
 	            statusInfo = insertRecordDb(file, true, config);
-	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message);
+	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message, config);
 	            continue;
 	          }
 	        }  catch (IOException ex) {
@@ -832,7 +832,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	              checkExistFilePath,
 	              checkNoArchiveExistsFile
 	              );
-	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message);
+	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message, config);
 
 	            continue;
 	          }else {
@@ -843,7 +843,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    	              "[Scheduler] Skipping: {} Folder to process does contain the specified file {}.",
 	    	              checkExistFilePath,
 	    	              checkArchiveExistsFile);
-	    	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message);
+	    	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message, config);
 	    	            continue;
 	        	  
 	          }
@@ -917,7 +917,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 						+ (!StringUtils.isEmpty(sourceRule.sourceBaseDirFolders) ? " in " + sourceRule.sourceBaseDirFolders + " folders" : "")
 						+ ".";
 				dmeSyncMailServiceFactory.getService(config.getDocName())
-						.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody);
+						.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody, config);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 				DmeSyncApplication.shutdown();
 			}
@@ -952,7 +952,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       if (!excel.exists()) {
         //Export and send email for completed run
         logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
-        dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId);
+        dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
 
         if (shutDownFlag) {
           logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
@@ -1017,7 +1017,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     	
         //Export and send email for completed run
         if(completedFlag)
-        	dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId);
+        	dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
 
         if (shutDownFlag && completedFlag) {
           logger.info("[Scheduler] Queue is empty. Shutting down the application.");

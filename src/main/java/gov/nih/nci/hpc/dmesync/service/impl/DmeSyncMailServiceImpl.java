@@ -4,13 +4,9 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,9 +26,9 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
-import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeCSBMailBodyDto;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
@@ -49,17 +45,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.db.access:local}")
   private String access;
 
-  @Value("${dmesync.admin.emails}")
-  private String adminEmails;
-  
   @Value("${logging.file.name}")
   private String logFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String syncBaseDir;
   
   @Value("${dmesync.max.recommended.file.size}")
   private String maxRecommendedFileSize;
@@ -67,28 +54,20 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Value("${dmesync.min.tar.file.size:1024}")
   private String minTarFile;
   
-  @Value("${dmesync.multiple.tars.files.count:0}")
-  private Integer filesPerTar;
-  
-  @Value("${dmesync.tar.contents.file:false}")
-  private boolean createTarContentsFile;
-  
-  @Value("${dmesync.tar.excluded.contents.file:false}")
-  private boolean createTarExcludedContentsFile;
-  
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
   
   
   
   
   @Override
-  public String sendMail(String subject, String text) {
+  public String sendMail(String subject, String text, DocConfig config) {
+	DocConfig.NotificationConfig mailConfig = config.getNotificationConfig();
     MimeMessage message = sender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message);
 
     try {
       helper.setFrom("hpcdme-sync");
-      helper.setTo(adminEmails.split(","));
+      helper.setTo(mailConfig.recipients.split(","));
       helper.setText(text);
       helper.setSubject(subject);
     } catch (MessagingException e) {
@@ -100,7 +79,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   }
   
   @Override
-  public String sendErrorMail(String subject, String text) {
+  public String sendErrorMail(String subject, String text, DocConfig config) {
     MimeMessage message = sender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message);
 
@@ -118,19 +97,22 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   }
 
   @Override
-  public void sendResult(String runId) {
+  public void sendResult(String runId, DocConfig config) {
+	DocConfig.NotificationConfig mailConfig = config.getNotificationConfig();
+	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
     MimeMessage message = sender.createMimeMessage();
     int minTarFileCount = 0; 
     String subject;
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, config.getDocName());
      
-      if(createTarContentsFile) {
-    	  statusInfo=generateAggregrateRecords(statusInfo);
+      if(preRule.tarContentsFile) {
+    	  statusInfo=generateAggregrateRecords(statusInfo, config);
       }
-      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
+      List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
       // Sort in-place ascending (A->Z), nulls last
 	  statusInfo.sort(Comparator.comparing(StatusInfo::getOriginalFilePath,
 				Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
@@ -147,10 +129,10 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       
       MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
       helper.setFrom("hpcdme-sync");
-      helper.setTo(adminEmails.split(","));
+      helper.setTo(mailConfig.recipients.split(","));
         
       String body = "<p>The attached file contains results from DME auto-archive.</p>";
-      body = body + "<p>Base Path: " + syncBaseDir + "</p>";
+      body = body + "<p>Base Path: " + sourceConfig.sourceBaseDir + "</p>";
       body = body + "<p>Below is the summary:</p>";
               
       // Check to see if any files were over the recommended size and flag if it was.
@@ -196,7 +178,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     	  body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
       String updatedBody=body;
       
-      if("csb".equals(doc)) {
+      if("csb".equals(config.getDocName())) {
 
 			Set<String> folderPaths = statusInfo.stream().map(StatusInfo::getOriginalFilePath)
 					.collect(Collectors.toSet());
@@ -204,7 +186,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 			for (String name : folderPaths) {
 				if (name.contains("movies")) {
 					List<StatusInfo> allUploads = dmeSyncWorkflowService.getService(access)
-							.findAllByDocAndLikeOriginalFilePath(doc, name);
+							.findAllByDocAndLikeOriginalFilePath(config.getDocName(), name);
 					// Removing the movies folder, tar contents file since we are only displaying the data for tars
 					allUploads.removeIf(file -> {
 			            String filename = file.getSourceFileName();
@@ -214,7 +196,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
 					File directory = new File(name);
 					File[] files = directory.listFiles();
-					int expectedTars = (files.length + filesPerTar - 1) / filesPerTar;
+					int expectedTars = (files.length + preRule.multipleTarsFilesCount - 1) / preRule.multipleTarsFilesCount;
 					folder.setFolderName(name);
 					folder.setFilesCount(files.length);
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
@@ -232,8 +214,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     	 updatedBody= body+ htmlContent;
       }
 	  subject = (failedCount > 0) ? "Failed " : "Completed ";
-	  helper.setSubject("DME Auto Archival " + subject + "for  " + doc.toUpperCase() + " - Run_ID: " + runId
-				+ " - Base Path:  " + syncBaseDir);
+	  helper.setSubject("DME Auto Archival " + subject + "for  " + config.getDocName().toUpperCase() + " - Run_ID: " + runId
+				+ " - Base Path:  " + sourceConfig.sourceBaseDir);
 
       helper.setText(updatedBody,true);
       
@@ -244,9 +226,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       sender.send(message);
       logger.info("Workflow Run is completed");
       try {
-          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+          dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), status, null);
        } catch (IllegalArgumentException ex) {
-          logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+          logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, config.getDocName(), ex.getMessage());
       }
       
     } catch (MessagingException e) {
@@ -293,8 +275,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   }
   
 	
-  private List<StatusInfo> generateAggregrateRecords(List<StatusInfo> runIdRecords) {
+  private List<StatusInfo> generateAggregrateRecords(List<StatusInfo> runIdRecords, DocConfig config) {
 	  
+	  	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 		List<StatusInfo> aggregateFolderRecords = new ArrayList<>();
 
 		Set<String> folderPaths = runIdRecords.stream().map(StatusInfo::getOriginalFilePath)
@@ -303,7 +286,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 		for (String folder : folderPaths) {
 
 			List<StatusInfo> folderRows = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(doc, folder);
+					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), folder);
 
 			Optional<StatusInfo> tarRecordOpt = folderRows.stream()
 					.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
@@ -324,7 +307,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 			if (tarRecordOpt.isPresent()) {
 
 				// Handle contents files
-				if (createTarExcludedContentsFile && excludedFileRecord!=null ) {
+				if (preRule.tarExcludedContentsFile && excludedFileRecord!=null ) {
 
 
 					if (includedFileRecord != null 

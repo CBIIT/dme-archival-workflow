@@ -226,13 +226,13 @@ public class DocConfig {
         }
     }
     public static class NotificationConfig {
-        public final String notifyType;
-        public final String recipient;
+        public final String recipients;
+        public final boolean sendUser;
         public final boolean enabled;
         public final int version;
-        public NotificationConfig(String notifyType, String recipient, boolean enabled, int version) {
-            this.notifyType = notifyType;
-            this.recipient = recipient;
+        public NotificationConfig(String recipients, boolean sendUser, boolean enabled, int version) {
+            this.recipients = recipients;
+            this.sendUser = sendUser;
             this.enabled = enabled;
             this.version = version;
         }

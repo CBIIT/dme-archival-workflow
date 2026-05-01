@@ -22,6 +22,7 @@ import org.thymeleaf.util.StringUtils;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
@@ -38,21 +39,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 
   @Value("${dmesync.db.access:local}")
   private String access;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.admin.emails}")
-  private String adminEmails;
-
-  @Value("${dmesync.send.user.emails:false}")
-  private boolean sendUserEmails;
-
+ 
   @Value("${logging.file.name}")
   private String logFile;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String syncBaseDir;
   
   @Value("${dmesync.max.recommended.file.size}")
   private String maxRecommendedFileSize;
@@ -63,25 +52,26 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
   @Override
-  public String sendMail(String subject, String text) {
+  public String sendMail(String subject, String text, DocConfig config) {
+	DocConfig.NotificationConfig mailConfig = config.getNotificationConfig();
     MimeMessage message = sender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message);
     String userEmails = null;
-    String allEmails = adminEmails;
+    String allEmails = mailConfig.recipients;
 
     try {
       helper.setFrom("hpcdme-sync");
       // Check if missing mrf file email, then extract
       // the user from the path to send out to the user as well as admin.
       if (StringUtils.contains(text, "does not contain any").booleanValue()) {
-        userEmails = extractUserEmailFromPath(text);
-        if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, adminEmails);
+        userEmails = extractUserEmailFromPath(text, config);
+        if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, mailConfig.recipients);
       }
-      if (sendUserEmails) {
+      if (mailConfig.sendUser) {
         helper.setTo(allEmails.split(","));
         helper.setSubject(subject);
       } else {
-        helper.setTo(adminEmails.split(","));
+        helper.setTo(mailConfig.recipients.split(","));
         helper.setSubject(subject + " [to: " + allEmails + "]");
       }
       helper.setText(text);
@@ -94,7 +84,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   }
   
   @Override
-  public String sendErrorMail(String subject, String text) {
+  public String sendErrorMail(String subject, String text, DocConfig config) {
     MimeMessage message = sender.createMimeMessage();
     MimeMessageHelper helper = new MimeMessageHelper(message);
 
@@ -112,18 +102,20 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   }
 
   @Override
-  public void sendResult(String runId) {
+  public void sendResult(String runId, DocConfig config) {
+	DocConfig.NotificationConfig mailConfig = config.getNotificationConfig();
+	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
     MimeMessage message = sender.createMimeMessage();
     String userEmails = null;
-    String allEmails = adminEmails;
+    String allEmails = mailConfig.recipients;
     int minTarFileCount = 0; 
     String subject;
 
     try {
 
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, doc);
+      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, config.getDocName());
       if (CollectionUtils.isNotEmpty(statusInfo)) {
-        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, doc);
+        List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
         Path path = Paths.get(logFile);
         String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
 
@@ -131,12 +123,12 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 
         helper.setFrom("hpcdme-sync");
         // Extract all users from the original file path and add to the to line.
-        userEmails = extractUserEmailsFromRun(runId);
-        if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, adminEmails);
+        userEmails = extractUserEmailsFromRun(runId, config);
+        if (!StringUtils.isEmpty(userEmails)) allEmails = String.join(",", userEmails, mailConfig.recipients);
 
         
         String body = "<p>The attached file contains results from DME auto-archive.</p>";
-        body = body + "<p>Base Path: " + syncBaseDir + "</p>";
+        body = body + "<p>Base Path: " + sourceConfig.sourceBaseDir + "</p>";
         body = body + "<p>Below is the summary:</p>";
         
         // Check to see if any files were over the recommended size and flag if it was.
@@ -161,15 +153,15 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         
                                                                                                                                                                                                           	  subject = (failedCount > 0) ? "Failed " : "Completed ";
 
-      if (sendUserEmails) {
+      if (mailConfig.sendUser) {
           helper.setTo(allEmails.split(","));
           //helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir);
       	  helper.setSubject("DME Auto Archival " + subject + "for HiTIF - Run_ID: " + runId
-    				+ " - Base Path:  " + syncBaseDir);
+    				+ " - Base Path:  " + sourceConfig.sourceBaseDir);
         } else {
-          helper.setTo(adminEmails.split(","));
+          helper.setTo(mailConfig.recipients.split(","));
          // helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
-     	  helper.setSubject("DME Auto Archival " + subject + " for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
+     	  helper.setSubject("DME Auto Archival " + subject + " for HiTIF - Run_ID: " + runId + " - Base Path:  " + sourceConfig.sourceBaseDir + " [to: " + allEmails + "]");
         }
   	  body = body.concat("<ul>"
                 				+ "<li>"+ "Total processed: " + processedCount + "</li>"
@@ -193,9 +185,9 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         sender.send(message);
         logger.info("Workflow Run is completed");
         try {
-            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), status, null);
          } catch (IllegalArgumentException ex) {
-            logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+            logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, config.getDocName(), ex.getMessage());
         }
 
       }
@@ -210,18 +202,18 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
    * @param text
    * @return the email address
    */
-  private String extractUserEmailFromPath(String text) {
+  private String extractUserEmailFromPath(String text, DocConfig config) {
     String userEmail = null;
     try {
       String userPath = StringUtils.substringAfter(text, "MeasurementData");
       userPath = StringUtils.substringBefore(userPath, " does not");
       String user = userPath.replace("\\", "/").split("/")[1];
       CollectionNameMapping collectionName =
-          dmeSyncWorkflowService.getService(access).findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(user, "User", doc);
+          dmeSyncWorkflowService.getService(access).findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc(user, "User", config.getDocName());
       MetadataMapping metadataMapping =
           dmeSyncWorkflowService.getService(access)
               .findByMetadataMappingByCollectionTypeAndCollectionNameAndMetaDataKeyAndDoc(
-                  "User", collectionName.getMapValue(), "email", doc);
+                  "User", collectionName.getMapValue(), "email", config.getDocName());
       userEmail = metadataMapping.getMetaDataValue();
     } catch (Exception e) {
       logger.error("User email could not be extracted from message: {}", text);
@@ -235,11 +227,11 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
    * @param runId
    * @return user email addresses
    */
-  private String extractUserEmailsFromRun(String runId) {
+  private String extractUserEmailsFromRun(String runId, DocConfig config) {
     String userEmail = null;
     try {
       List<MetadataInfo> metadataInfo =
-          dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(runId, "email", doc);
+          dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndMetaDataKeyAndDoc(runId, "email", config.getDocName());
       Set<String> set = new HashSet<>();
       for (MetadataInfo user : metadataInfo) {
         set.add(user.getMetaDataValue());

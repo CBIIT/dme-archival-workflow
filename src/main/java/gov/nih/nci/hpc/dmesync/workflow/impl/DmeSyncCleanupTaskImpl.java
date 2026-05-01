@@ -85,7 +85,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
         dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
         updateTarCounterForMultipleTars(object, config);
         dmeSyncMailServiceFactory.getService(config.getDocName()).sendErrorMail("HPCDME Auto Archival Cleanup Error " ,
-        		errorMessage + object.getSourceFilePath()+ ": " + e.getMessage() + "\n\n" + e.getCause().getMessage());
+        		errorMessage + object.getSourceFilePath()+ ": " + e.getMessage() + "\n\n" + e.getCause().getMessage(), config);
       }
     }
 

@@ -134,11 +134,11 @@ public class DocConfigDaoImpl implements DocConfigDao {
             ), docId);
         // 7. DOC_NOTIFICATION_CONFIG
         DocConfig.NotificationConfig notificationConfig = jdbcTemplate.queryForObject(
-            "SELECT * FROM DOC_NOTIFICATION_CONFIG WHERE DOC_ID = ? AND ENABLED = 'Y'",
+            "SELECT * FROM DOC_NOTIFICATION_CONFIG WHERE DOC_ID = ? AND ENABLED = '1'",
             (rs, rowNum) -> new DocConfig.NotificationConfig(
-                rs.getString("NOTIFY_TYPE"),
-                rs.getString("RECIPIENT"),
-                "Y".equals(rs.getString("ENABLED")),
+                rs.getString("RECIPIENTS"),
+                "1".equals(rs.getString("SEND_USER")),
+                "1".equals(rs.getString("ENABLED")),
                 rs.getInt("VERSION")
             ), docId);
         // Compose DocConfig
