@@ -35,7 +35,8 @@ import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-
+import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
+import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 /**
  * DME Sync Tar Task Implementation
  * 
@@ -136,6 +137,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 
 		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
+		final HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails = object.getDataObjectRegistrationRequestDTO();
 		List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
 				: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 		
@@ -162,13 +164,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		    File Folder = new File(object.getOriginalFilePath());
 	        
 	        object.setTarStartTimestamp(new Date());
-			// Construct work dir path
-			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+			// Retrieve the work dir path from database object
 			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
-			Path relativePath = baseDirPath.relativize(sourceDirPath);
-			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
-			Path tarWorkDirPath = Paths.get(tarWorkDir);
+			
+	        Path tarFilepath = Paths.get(object.getSourceFilePath());
+	        String tarFile = tarFilepath.toString();
+	        Path tarWorkDirPath = tarFilepath.getParent();
+	        
 			
 			synchronized (this) {
 			Files.createDirectories(tarWorkDirPath);
@@ -180,7 +182,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			// should be done for files in folders
 			if (processMultipleTars && object.getTarIndexStart() != null && object.getTarIndexEnd() != null) {
 
-				object=createTarForFiles(object, sourceDirPath, tarWorkDir, excludeFolders);
+				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders , hpcDataObjectRegistrationRequestDetails);
 				
 			} else {
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
@@ -192,16 +194,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 							+ ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
 				} else {
 				object.setTarStartTimestamp(new Date());
-				String tarFileName;
-				if (tarNameinExcelFile) {
-					threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
-					String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
-					tarFileName = getAttrValueWithKey(path, "tar_name");
-				} else {
-					tarFileName = object.getOrginalFileName() + ".tar";
-				}
-				String tarFile = tarWorkDir + File.separatorChar + tarFileName;
-				tarFile = Paths.get(tarFile).normalize().toString();
+				// TarFileName is constructed in the Pre Processing task
+				String tarFileName = object.getSourceFileName();
+				// String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 				File directory = new File(object.getOriginalFilePath());
 
 				logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
@@ -213,8 +208,6 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 					throw new Exception("No Read permission to " + object.getOriginalFilePath());
 				}
 				if (compress) {
-					tarFile = tarFile + ".gz";
-					tarFileName = tarFileName + ".gz";
 					if (!dryRun) {
 						TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
 					}
@@ -241,9 +234,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 				object.setFilesize(createdTarFileSize);
 				object.setSourceFileName(tarFileName);
-				object.setSourceFilePath(tarFile);
 				object.setTarEndTimestamp(new Date());
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
 
 			}
 			}
@@ -264,7 +257,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	}
 
 	private StatusInfo createTarForFiles(StatusInfo object, Path sourceDirPath, String tarWorkDir,
-			List<String> excludeFolders) throws Exception {
+			List<String> excludeFolders, HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails) throws Exception {
 		
 		try{
 
@@ -380,6 +373,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		object.setTarEndTimestamp(new Date());
 		object.setTarContentsCount(tarContentsCount);
 		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+		object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
+		
 	}catch(Exception e)
 	{
 		logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);

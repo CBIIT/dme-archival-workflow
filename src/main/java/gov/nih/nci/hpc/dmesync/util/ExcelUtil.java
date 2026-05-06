@@ -23,12 +23,14 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.hssf.usermodel.HSSFRichTextString;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.format.CellDateFormatter;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -63,6 +65,12 @@ public class ExcelUtil {
     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 
     SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+    
+    // Create bold font and style for header
+    Font headerFont = workbook.createFont();
+    headerFont.setBold(true);
+    CellStyle headerCellStyle = workbook.createCellStyle();
+    headerCellStyle.setFont(headerFont);
 
     try (FileOutputStream outputStream = new FileOutputStream(fileName); ) {
 
@@ -99,7 +107,10 @@ public class ExcelUtil {
       for (String key : set) {
         header.createCell(colCount++).setCellValue(key);
       }
-
+      
+      for (Cell cell : header) {
+    	    cell.setCellStyle(headerCellStyle);
+     }
       for (StatusInfo data : statusInfo) {
         colCount = 0;
         Row row = sheet.createRow(rowCount++);
@@ -183,7 +194,7 @@ public class ExcelUtil {
   public static Map<String, Map<String, String>> parseBulkMetadataEntries(
       String metadataFile, String key) throws DmeSyncMappingException {
     if (StringUtils.isEmpty(metadataFile)) return null;
-
+     
     Map<String, Map<String, String>> metadataMap = null;
     Workbook workbook = null;
 

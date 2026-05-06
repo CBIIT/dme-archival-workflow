@@ -133,6 +133,9 @@ The following properties can be set in `application.properties` file:
 * `dmesync.noscan.rerun=[true|false]`
   * If `true`, instead of scanning for files under the base dir, it will reprocess files from the database.
   * Default: `false`
+* `dmesync.retry.prior.run.failures=[true|false]`
+  * If `true`, This will retrieve the failed files from the previous run and add them to the current run. It is mainly used when we are not scanning the entire source path, but only specific months.
+  * Default: `false`  
 * `dmesync.tar=[true|false]`
   * If `true`, it will tar the collection specified by `dmesync.preprocess.depth` from `dmesync.source.base.dir`.
   * Default: `false` 
@@ -269,6 +272,13 @@ The following properties can be set in `application.properties` file:
   * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
 * `spring.main.web-environment=[true|false]`
   * If `true`, enables the web environment.
+* `dmesync.workflow.id=<workflow name>`
+  * This id will be the workflow name for the user.
+* `dmesync.workflow.server.id=<workflow server name>`
+  * This id will be the server name that the workflow is running.
+* `dmesync.dme.server.id=<dme server name>`
+  * This id will be the dme server the workflow is configured.
+
 
 Optionally, override system defaults for concurrent file processing with the following parameters.
 
