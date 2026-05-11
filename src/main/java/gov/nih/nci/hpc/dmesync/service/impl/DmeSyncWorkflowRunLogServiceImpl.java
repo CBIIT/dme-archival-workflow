@@ -43,6 +43,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 	}
 
 	@Override
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId) {
+		return workflowRunInfoDao.findFirstByDocIdOrderByRunStartTimestampDesc(docId);
+	}
+	
+	@Override
 	public void logWorkflowRunStartHeartbeat(Long id) {
 	}
 

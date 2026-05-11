@@ -19,6 +19,7 @@ import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 @Service("local")
 @Transactional
@@ -48,6 +49,7 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
   @Override
   public void recordError(StatusInfo info) {
+	info.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
     statusInfoDao.saveAndFlush(info);
   }
 
@@ -257,5 +259,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   @Override
   public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
 	return statusInfoDao.findStatusInfoByDocAndStatus(doc, status);
+  }
+  
+  @Override
+  public long countByDocAndRunIdAndStatus(String doc, String runId, String status) {
+	  return statusInfoDao.countByDocAndRunIdAndStatus(doc, runId, status);
   }
 }

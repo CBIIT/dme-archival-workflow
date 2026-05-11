@@ -400,6 +400,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		statusInfo.setTarIndexStart(tarStartIndex);
 		statusInfo.setSourceFilePath(object.getOriginalFilePath());
 		statusInfo.setFilesize(0L);
+		statusInfo.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
 		statusInfo.setError(error);
 
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);

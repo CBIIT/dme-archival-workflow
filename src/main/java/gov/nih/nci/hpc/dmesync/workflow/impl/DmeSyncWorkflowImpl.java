@@ -120,6 +120,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 
     try {
       //Clear any previous error in case of a retry
+      statusInfo.setStatus("");
       statusInfo.setError("");
       statusInfo.setStartTimestamp(new Date());
       

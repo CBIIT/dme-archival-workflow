@@ -141,7 +141,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       return;
     }
     
-    runId = "Run_" + timestampFormat.format(new Date());
+    runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
     
     WorkflowRunInfo workflowRunInfo=insertWorkflowRunInfo(config);
 	  logger.info(
@@ -217,6 +217,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       if (paths != null && paths.isEmpty()) {
         logger.info("[Scheduler] No files/folders found for runID: {}", runId);
         MDC.clear();
+        WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
+	  	runInfo.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+	  	dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(runInfo);
         return;
       } else {
         for (HpcPathAttributes pathAttr : paths) {
@@ -296,12 +299,19 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 			DmeSyncApplication.shutdown();
 		}
+      } else {
+    	  WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
+    	  runInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
+    	  dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(runInfo);
       }
     } catch (Exception e) {
       //Send email notification
 	  logger.error("[Scheduler] Failed to access files in directory, {}", sourceConfig.sourceBaseDir, e);
 	  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Error: " + e.getMessage(),
 				e.getMessage() + "\n\n" + e.getCause().getMessage(), config);
+	  WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
+	  runInfo.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+	  dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(runInfo);
     } finally {
       MDC.clear();
       runId = null;
@@ -342,6 +352,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors
 	    	statusInfo.setRunId(runId);
+	    	statusInfo.setStatus("");
 	    	statusInfo.setError("");
 	    	statusInfo.setRetryCount(0L);
 	    	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
@@ -398,6 +409,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
           if(statusInfo != null) {
             //Update the run_id and reset the retry count and errors
             statusInfo.setRunId(runId);
+            statusInfo.setStatus("");
             statusInfo.setError("");
             statusInfo.setRetryCount(0L);
             statusInfo.setEndWorkflow(false);
@@ -527,7 +539,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       StatusInfo statusInfo = null;
 
       //If we need to verify previous upload, check
-      if ("local".equals(upload.verifyPrevUpload)) {
+      if (upload.verifyPrevUpload) {
         // Checks the local db to see if it has been completed
         if (pre.untar) {
           statusInfo =
@@ -565,6 +577,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 					// Send the incomplete objectId to the message queue for processing
 					DmeSyncMessageDto message = new DmeSyncMessageDto();
 					statusInfo.setRunId(runId);
+					statusInfo.setStatus("");
 					statusInfo.setError("");
 					statusInfo.setRetryCount(0L);
 					statusInfo.setEndWorkflow(false);
@@ -673,6 +686,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
+        	statusInfo.setStatus("");
         	statusInfo.setError("");
         	statusInfo.setRetryCount(0L);
         	statusInfo.setEndWorkflow(false);
@@ -897,9 +911,16 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	   
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
-	DocConfig.UploadConfig upload = config.getUploadConfig();
 	
-	if(sourceRule.aws) return;
+	if(sourceRule.aws) continue;
+	
+	//Get workflow run info for this doc
+	WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
+
+	if (runInfo == null || !(WorkflowConstants.RunStatus.RUNNING.toString().equals(runInfo.getStatus())
+			|| WorkflowConstants.RunStatus.CANCELLED.toString().equals(runInfo.getStatus())))
+		continue;
+
     String currentRunId = null;
     if (shutDownFlag) {
       currentRunId = oneTimeRunId;
@@ -924,25 +945,15 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    
       }     
 	 } else {
-      StatusInfo latest = null;
-      if(upload.softlink || upload.collectionSoftlink) {
-    	  latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocOrderByStartTimestampDesc(config.getDocName());
-      } else {
-	      //Add base path also to distinguish multiple docs running the workflow.
-	      latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(config.getDocName(), sourceConfig.sourceBaseDir);
-	  }
-      if(latest != null)
-        currentRunId = latest.getRunId();
+	  currentRunId = runInfo.getRunId();
     }
     
 
 
-    //Check to make sure scheduler is completed, run has occurred and the queue is empty
-    if (runId == null
-        && currentRunId != null
-        && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0
-        && consumer.isAllThreadsCompleted()) {
+    //Check to make sure scheduler is completed, run has occurred and all files have been processed.
+    Long incompleteCount = dmeSyncWorkflowService.getService(access).countByDocAndRunIdAndStatus(config.getDocName(), currentRunId, null);
+    
+    if (incompleteCount == 0) {
     	
 
       //check if the latest export file is generated in log directory
@@ -972,7 +983,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	  
-	if(!sourceRule.aws) return;
+	if(!sourceRule.aws) continue;
 	
 	boolean completedFlag = true;
     String currentRunId = null;
@@ -1035,6 +1046,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	private void sendRequestToJms(StatusInfo statusInfo, DocConfig config) {
 
 		statusInfo.setRunId(runId);
+		statusInfo.setStatus("");
 		statusInfo.setError("");
 		statusInfo.setRetryCount(0L);
 		statusInfo.setEndWorkflow(false);
@@ -1060,7 +1072,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    workflowRunInfo.setDoc(config.getDocName());
 	    workflowRunInfo.setServerId(config.getServerId());
 	    workflowRunInfo.setDmeServerId(config.getDmeServerId());
-		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
+		    workflowRunInfo.setStatus(WorkflowConstants.RunStatus.STARTED.toString());
 	    workflowRunInfo.setThreads(config.getThreads());
 	    workflowRunInfo.setSourcePath(sourceConfig.sourceBaseDir);
 	    workflowRunInfo.setCronExpression(config.getCronExpression());
