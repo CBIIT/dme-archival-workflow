@@ -85,7 +85,19 @@ public class DmeSyncConsumer {
 
     // Increment global count immediately so callers never observe a false "idle" window.
     activeThreads.incrementAndGet();
+
+    // Determine DOC name early (fast in-memory lookup) so per-DOC counter is incremented
+    // atomically alongside the global counter, eliminating any visibility gap between the two.
     String docName = null;
+    if (syncMessage.getDocConfigId() != null) {
+      Optional<DocConfig> configForDocName = configService.getDocConfigById(syncMessage.getDocConfigId());
+      if (configForDocName.isPresent()) {
+        docName = configForDocName.get().getDocName();
+      }
+    }
+    if (docName != null) {
+      activeThreadsByDoc.computeIfAbsent(docName, k -> new AtomicInteger(0)).incrementAndGet();
+    }
 
     try {
       Optional<StatusInfo> statusInfoOpt =
@@ -98,14 +110,16 @@ public class DmeSyncConsumer {
       }
 
       StatusInfo statusInfo = statusInfoOpt.get();
-      docName = statusInfo.getDoc();
-
-      // Increment per-DOC counter now that we know which lane this message belongs to.
-      if (docName != null) {
-        activeThreadsByDoc.computeIfAbsent(docName, k -> new AtomicInteger(0)).incrementAndGet();
+      // Reconcile: if docName wasn't resolved from the config lookup above, derive it from
+      // StatusInfo and increment per-DOC counter now (best-effort for legacy messages).
+      if (docName == null) {
+        docName = statusInfo.getDoc();
+        if (docName != null) {
+          activeThreadsByDoc.computeIfAbsent(docName, k -> new AtomicInteger(0)).incrementAndGet();
+        }
       }
 
-      MDC.put("doc", docName);
+      MDC.put("doc", docName != null ? docName : "");
       MDC.put("run.id", statusInfo.getRunId());
       MDC.put("object.id", statusInfo.getId().toString());
       MDC.put("object.path",

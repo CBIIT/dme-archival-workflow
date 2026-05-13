@@ -51,7 +51,6 @@ class DmeSyncListenerContainerManagerTest {
         mockCf, mockConverter, mockConsumer, configService, new DocQueueNameResolver());
     // Inject default concurrency values (normally bound via @Value).
     org.springframework.test.util.ReflectionTestUtils.setField(manager, "defaultConcurrency", 5);
-    org.springframework.test.util.ReflectionTestUtils.setField(manager, "defaultMaxConcurrency", 5);
   }
 
   // ── helper ─────────────────────────────────────────────────────────────────

@@ -51,9 +51,6 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
   @Value("${spring.jms.listener.concurrency:10}")
   private int defaultConcurrency;
 
-  @Value("${spring.jms.listener.max-concurrency:10}")
-  private int defaultMaxConcurrency;
-
   /** Active listener containers, keyed by the resolved queue name. */
   private final Map<String, DefaultMessageListenerContainer> containers = new ConcurrentHashMap<>();
 
@@ -86,14 +83,13 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
       String queueName = queueNameResolver.resolve(doc);
       expectedQueues.add(queueName);
       int threads = resolveThreads(doc);
-      int maxThreads = Math.max(threads, defaultMaxConcurrency);
 
       if (!containers.containsKey(queueName)) {
-        createContainer(queueName, threads, maxThreads);
+        createContainer(queueName, threads);
       } else {
         // Update concurrency in-place if it changed.
         DefaultMessageListenerContainer existing = containers.get(queueName);
-        String desiredConcurrency = threads + "-" + maxThreads;
+        String desiredConcurrency = String.valueOf(threads);
         if (!desiredConcurrency.equals(existing.getConcurrency())) {
           log.info("[JMS Manager] Updating concurrency for queue '{}' to {}",
               queueName, desiredConcurrency);
@@ -135,9 +131,9 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
 
   // ── private helpers ────────────────────────────────────────────────────────
 
-  private void createContainer(String queueName, int threads, int maxThreads) {
-    log.info("[JMS Manager] Creating listener container for queue '{}' (concurrency {}-{})",
-        queueName, threads, maxThreads);
+  private void createContainer(String queueName, int threads) {
+    log.info("[JMS Manager] Creating listener container for queue '{}' (concurrency {})",
+        queueName, threads);
 
     MessageListenerAdapter adapter = new MessageListenerAdapter(consumer, "processMessage");
     adapter.setMessageConverter(messageConverter);
@@ -146,7 +142,7 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
     container.setConnectionFactory(connectionFactory);
     container.setDestinationName(queueName);
     container.setMessageListener(adapter);
-    container.setConcurrency(threads + "-" + maxThreads);
+    container.setConcurrency(String.valueOf(threads));
     container.setErrorHandler(new ErrorHandler() {
       @Override
       public void handleError(Throwable t) {
