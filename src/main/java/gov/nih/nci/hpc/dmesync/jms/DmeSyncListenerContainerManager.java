@@ -89,11 +89,10 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
       } else {
         // Update concurrency in-place if it changed.
         DefaultMessageListenerContainer existing = containers.get(queueName);
-        String desiredConcurrency = String.valueOf(threads);
-        if (!desiredConcurrency.equals(existing.getConcurrency())) {
+        if (threads != existing.getMaxConcurrentConsumers()) {
           log.info("[JMS Manager] Updating concurrency for queue '{}' to {}",
-              queueName, desiredConcurrency);
-          existing.setConcurrency(desiredConcurrency);
+              queueName, threads);
+          existing.setConcurrency(String.valueOf(threads));
         }
       }
     }
@@ -135,7 +134,8 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
     log.info("[JMS Manager] Creating listener container for queue '{}' (concurrency {})",
         queueName, threads);
 
-    MessageListenerAdapter adapter = new MessageListenerAdapter(consumer, "processMessage");
+    MessageListenerAdapter adapter = new MessageListenerAdapter(consumer);
+    adapter.setDefaultListenerMethod("processMessage");
     adapter.setMessageConverter(messageConverter);
 
     DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
