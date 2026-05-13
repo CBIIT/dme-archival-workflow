@@ -729,6 +729,8 @@ public class DmeSyncScheduler {
 			}
 		}
 		else if(createCollectionSoftlink) {
+			 logger.debug(
+		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
 			statusInfo =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
@@ -761,6 +763,14 @@ public class DmeSyncScheduler {
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
         	}
+        	
+        	if(createCollectionSoftlink) {
+   			 logger.debug(
+   		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
+   			statusInfo =
+   		              dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath( doc,
+   		                   file.getPath() , file.getAbsolutePath());
+   		     }
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
@@ -1000,6 +1010,11 @@ public class DmeSyncScheduler {
 				dmeSyncMailServiceFactory.getService(doc)
 						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+				try {
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		            } catch (IllegalArgumentException e) {
+		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
+		            }
 				DmeSyncApplication.shutdown();
 			}
 	    
