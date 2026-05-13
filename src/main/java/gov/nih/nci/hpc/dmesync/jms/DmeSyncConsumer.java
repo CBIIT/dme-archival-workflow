@@ -1,19 +1,14 @@
 package gov.nih.nci.hpc.dmesync.jms;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.jms.Message;
-import javax.jms.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jms.annotation.JmsListener;
-import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.handler.annotation.Headers;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
@@ -26,7 +21,11 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncWorkflow;
 
 /**
  * DME Sync Consumer (Listener)
- * 
+ *
+ * <p>Processes inbound JMS messages from per-DOC work queues. Listener containers are
+ * registered dynamically by {@link DmeSyncListenerContainerManager}; this class no longer
+ * carries a static {@code @JmsListener} annotation so that each DOC gets its own isolated lane.
+ *
  * @author dinhys
  */
 @Component
@@ -36,60 +35,93 @@ public class DmeSyncConsumer {
 
   @Value("${dmesync.db.access:local}")
   private String access;
-  
+
   @Autowired private DmeSyncWorkflow dmeSyncWorkflow;
 
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
-  
+
   @Autowired private DocConfigService configService;
-  
+
+  /** Global active-thread count (all DOCs combined). */
   private final AtomicInteger activeThreads = new AtomicInteger(0);
 
-  public void threadStarted() {
-	  activeThreads.incrementAndGet();
-  }
+  /** Per-DOC active-thread counts, keyed by DOC name. */
+  private final ConcurrentHashMap<String, AtomicInteger> activeThreadsByDoc = new ConcurrentHashMap<>();
 
-  public void threadCompleted() {
-	  activeThreads.decrementAndGet();
-  }
+  // ── Thread-count accessors ─────────────────────────────────────────────────
 
+  /** Returns {@code true} when no threads are active across all DOC lanes. */
   public boolean isAllThreadsCompleted() {
-      return activeThreads.get() == 0;
+    return activeThreads.get() == 0;
   }
 
-  @JmsListener(destination = "inbound.queue")
-  public String receiveMessage(
-      @Payload DmeSyncMessageDto syncMessage,
-      @Headers MessageHeaders headers,
-      Message message,
-      Session session)
-      throws DmeSyncWorkflowException {
+  /**
+   * Returns {@code true} when no threads are active for the given DOC lane.
+   *
+   * @param docName the DOC name to query; if {@code null} the global count is used
+   */
+  public boolean isAllThreadsCompleted(String docName) {
+    if (docName == null) {
+      return isAllThreadsCompleted();
+    }
+    AtomicInteger counter = activeThreadsByDoc.get(docName);
+    return counter == null || counter.get() == 0;
+  }
 
+  // ── Message processing ─────────────────────────────────────────────────────
+
+  /**
+   * Processes a deserialized {@link DmeSyncMessageDto} received from any per-DOC queue.
+   *
+   * <p>This method is the delegate target for each
+   * {@link org.springframework.jms.listener.adapter.MessageListenerAdapter} created by
+   * {@link DmeSyncListenerContainerManager}.
+   *
+   * @param syncMessage the inbound message DTO
+   * @throws DmeSyncWorkflowException if workflow execution fails
+   */
+  public void processMessage(DmeSyncMessageDto syncMessage) throws DmeSyncWorkflowException {
     log.debug("[JMS Listener] Received message <{}>", syncMessage);
-    threadStarted();
+
+    // Increment global count immediately so callers never observe a false "idle" window.
+    activeThreads.incrementAndGet();
+    String docName = null;
 
     try {
+      Optional<StatusInfo> statusInfoOpt =
+          dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
+      Optional<DocConfig> configOpt = configService.getDocConfigById(syncMessage.getDocConfigId());
 
-      // Get StatusInfo from DB
-      Optional<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoById(syncMessage.getObjectId());
-      Optional<DocConfig> config = configService.getDocConfigById(syncMessage.getDocConfigId());
-      if(!statusInfo.isPresent()) {
+      if (!statusInfoOpt.isPresent()) {
         log.error("[JMS Listener] Received message < {} > it does not exist.", syncMessage);
-        return null;
+        return;
       }
-      MDC.put("doc", statusInfo.get().getDoc());
-      MDC.put("run.id", statusInfo.get().getRunId());
-      MDC.put("object.id", statusInfo.get().getId().toString());
-      MDC.put("object.path", statusInfo.get().getOriginalFilePath() + " - " + statusInfo.get().getSourceFileName());
 
-      // Start the workflow
-      dmeSyncWorkflow.start(statusInfo.get(), config.get());
+      StatusInfo statusInfo = statusInfoOpt.get();
+      docName = statusInfo.getDoc();
+
+      // Increment per-DOC counter now that we know which lane this message belongs to.
+      if (docName != null) {
+        activeThreadsByDoc.computeIfAbsent(docName, k -> new AtomicInteger(0)).incrementAndGet();
+      }
+
+      MDC.put("doc", docName);
+      MDC.put("run.id", statusInfo.getRunId());
+      MDC.put("object.id", statusInfo.getId().toString());
+      MDC.put("object.path",
+          statusInfo.getOriginalFilePath() + " - " + statusInfo.getSourceFileName());
+
+      dmeSyncWorkflow.start(statusInfo, configOpt.get());
 
     } finally {
+      if (docName != null) {
+        AtomicInteger docCounter = activeThreadsByDoc.get(docName);
+        if (docCounter != null) {
+          docCounter.decrementAndGet();
+        }
+      }
       MDC.clear();
-      threadCompleted();
+      activeThreads.decrementAndGet();
     }
-
-    return null;
   }
 }

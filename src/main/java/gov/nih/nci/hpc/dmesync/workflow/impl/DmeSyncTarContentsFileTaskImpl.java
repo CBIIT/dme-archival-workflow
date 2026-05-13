@@ -40,6 +40,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
@@ -66,6 +67,9 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 
 	@Autowired
 	private DmeSyncProducer sender;
+
+	@Autowired
+	private DocQueueNameResolver queueNameResolver;
 
 	@Override
 	public StatusInfo process(StatusInfo object, DocConfig config)
@@ -147,8 +151,8 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			DmeSyncMessageDto message = new DmeSyncMessageDto();
 			message.setObjectId(contentsFileRecord.getId());
 			message.setDocConfigId(config.getId());
-			sender.send(message, "inbound.queue");
-			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+			sender.send(message, queueNameResolver.resolve(config));
+			logger.info("get queue count" + sender.getQueueCount(queueNameResolver.resolve(config)));
 		}
 
 	}

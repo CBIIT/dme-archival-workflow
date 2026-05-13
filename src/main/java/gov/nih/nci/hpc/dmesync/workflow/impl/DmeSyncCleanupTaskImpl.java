@@ -16,6 +16,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncMailServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -30,6 +31,9 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   
   @Autowired
   private DmeSyncProducer sender;
+  
+  @Autowired
+  private DocQueueNameResolver queueNameResolver;
   
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
 
@@ -148,8 +152,8 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 						DmeSyncMessageDto message = new DmeSyncMessageDto();
 						message.setObjectId(recordForContentsfile.getId());
 						message.setDocConfigId(config.getId());
-						sender.send(message, "inbound.queue");
-						logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+						sender.send(message, queueNameResolver.resolve(config));
+						logger.info("get queue count" + sender.getQueueCount(queueNameResolver.resolve(config)));
 					}
 				} else {
 					logger.info(

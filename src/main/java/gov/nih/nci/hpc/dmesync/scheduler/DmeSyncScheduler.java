@@ -49,6 +49,7 @@ import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncConsumer;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
 
@@ -68,6 +69,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
   @Autowired private DmeSyncProducer sender;
   @Autowired private DmeSyncConsumer consumer;
+  @Autowired private DocQueueNameResolver queueNameResolver;
   @Autowired private DmeSyncMailServiceFactory dmeSyncMailServiceFactory;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncDataObjectListQuery dmeSyncDataObjectListQuery;
@@ -362,7 +364,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	        DmeSyncMessageDto message = new DmeSyncMessageDto();
 	        message.setObjectId(statusInfo.getId());
 	        message.setDocConfigId(config.getId());
-	        sender.send(message, "inbound.queue");
+	        sender.send(message, queueNameResolver.resolve(config));
 	      }
       }
 
@@ -420,7 +422,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
             DmeSyncMessageDto message = new DmeSyncMessageDto();
             message.setObjectId(statusInfo.getId());
             message.setDocConfigId(config.getId());
-            sender.send(message, "inbound.queue");
+            sender.send(message, queueNameResolver.resolve(config));
           }
         }
       }
@@ -584,7 +586,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					message.setDocConfigId(config.getId());
-					sender.send(message, "inbound.queue");
+					sender.send(message, queueNameResolver.resolve(config));
 					continue;
 
 				} else {
@@ -700,7 +702,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
             DmeSyncMessageDto message = new DmeSyncMessageDto();
             message.setObjectId(statusInfo.getId());
             message.setDocConfigId(config.getId());
-            sender.send(message, "inbound.queue");
+            sender.send(message, queueNameResolver.resolve(config));
             continue;
           }
         }
@@ -879,7 +881,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       DmeSyncMessageDto message = new DmeSyncMessageDto();
       message.setObjectId(statusInfo.getId());
       message.setDocConfigId(config.getId());
-      sender.send(message, "inbound.queue");
+      sender.send(message, queueNameResolver.resolve(config));
     }
   }
 
@@ -962,11 +964,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       File excel = new File(fileName);
       if (!excel.exists()) {
         //Export and send email for completed run
-        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
+        String docQueueName = queueNameResolver.resolve(config);
+        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
         dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
 
         if (shutDownFlag) {
-          logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount("inbound.queue"), consumer.isAllThreadsCompleted());
+          logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
           logger.info("[Scheduler] Queue is empty. Shutting down the application.");
           DmeSyncApplication.shutdown();
         }
@@ -1006,8 +1009,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     if (runId == null
         && currentRunId != null
         && !currentRunId.isEmpty()
-        && sender.getQueueCount("inbound.queue") == 0
-        && consumer.isAllThreadsCompleted()) {
+        && sender.getQueueCount(queueNameResolver.resolve(config)) == 0
+        && consumer.isAllThreadsCompleted(config.getDocName())) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -1057,7 +1060,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		DmeSyncMessageDto message = new DmeSyncMessageDto();
 		message.setObjectId(statusInfo.getId());
 		message.setDocConfigId(config.getId());
-		sender.send(message, "inbound.queue");
+		sender.send(message, queueNameResolver.resolve(config));
 	}
 	
 	private WorkflowRunInfo insertWorkflowRunInfo(DocConfig config) {
@@ -1386,7 +1389,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 	      DmeSyncMessageDto message = new DmeSyncMessageDto();
 	      message.setObjectId(s.getId());
-	      sender.send(message, "inbound.queue");
+	      message.setDocConfigId(config.getId());
+	      sender.send(message, queueNameResolver.resolve(config));
 
 	      enqueued++;
 	    }
