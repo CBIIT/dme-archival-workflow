@@ -16,6 +16,7 @@ import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.scheduler.DmeSyncScheduler;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
@@ -45,6 +46,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
 	
     ReflectionTestUtils.setField(scheduler, "sender", sender);
     ReflectionTestUtils.setField(scheduler, "dmeSyncWorkflowService", factory);
+    ReflectionTestUtils.setField(scheduler, "queueNameResolver", new DocQueueNameResolver());
 
     ReflectionTestUtils.setField(scheduler, "access", access);
     ReflectionTestUtils.setField(scheduler, "runId", runId);
@@ -293,7 +295,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     ));
 
     verify(workflowSvc, times(1)).deleteMetadataInfoByObjectId(4L);
-    verify(sender, times(1)).send(any(DmeSyncMessageDto.class), eq("inbound.queue"));
+    verify(sender, times(1)).send(any(DmeSyncMessageDto.class), eq("dme.doc1"));
 
     java.nio.file.Files.deleteIfExists(existing);
     java.nio.file.Files.deleteIfExists(baseDir);

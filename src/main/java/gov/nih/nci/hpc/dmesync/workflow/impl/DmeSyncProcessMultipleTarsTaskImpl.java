@@ -30,6 +30,7 @@ import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
@@ -45,6 +46,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	
 	@Autowired
 	private DmeSyncProducer sender;
+
+	@Autowired
+	private DocQueueNameResolver queueNameResolver;
 	
 	@PostConstruct
 	public boolean init() {
@@ -423,8 +427,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		DmeSyncMessageDto message = new DmeSyncMessageDto();
 		message.setObjectId(object.getId());
 		message.setDocConfigId(config.getId());
-		sender.send(message, "inbound.queue");
-		logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+		sender.send(message, queueNameResolver.resolve(config));
+		logger.info("get queue count" + sender.getQueueCount(queueNameResolver.resolve(config)));
 		
 	}
 	
