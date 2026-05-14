@@ -68,10 +68,10 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
     DocConfig.UploadConfig upload = config.getUploadConfig();
     
-    // add a PreProcess task for tars
     if (!sourceRule.aws) {
     	if (preRule.processMultipleTars)  tasks.add(processMultipleTarsTask);
     	if(pre.tar || pre.fileTar || sourceRule.selectiveScan ) {
+    		// add a PreProcess task for tars
     		tasks.add(tarPreProcessTask);
     	}
     }
@@ -79,8 +79,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     tasks.add(metadataTask);
     
     if (!sourceRule.aws) {
-    	if (preRule.processMultipleTars)  tasks.add(processMultipleTarsTask);
-	    if (pre.tar || pre.fileTar || sourceRule.selectiveScan ) {
+    	if (pre.tar || pre.fileTar || sourceRule.selectiveScan ) {
 	    	tasks.add(tarTask);
 	    	if(preRule.tarContentsFile) {
 	    		tasks.add(tarContentsfileTask);
