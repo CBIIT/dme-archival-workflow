@@ -113,7 +113,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   StatusInfo findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(String doc, String baseDir);
 
   /**
-   * findTopStatusInfoByDocAndSourceFilePath
+   * findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath
    * @param doc the doc
    * @param sourceFilePath 
    * @param originalFilePath
