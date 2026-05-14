@@ -31,7 +31,7 @@ public class DmeSyncMessageDto implements Serializable {
   
   @Override
   public String toString() {
-    return "SyncMessage [objectId=" + objectId.toString() + ", configId=" + configId.toString() + "]";
+    return "SyncMessage [objectId=" + String.valueOf(objectId) + ", configId=" + String.valueOf(configId) + "]";
   }
 
 
