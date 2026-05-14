@@ -30,6 +30,7 @@ public class DocConfigServiceImpl implements DocConfigService {
         // TODO: Add validation logic here
         this.enabledDocs = List.copyOf(docs);
         this.docsByName.clear();
+        this.docsById.clear();
         docs.forEach(doc -> this.docsByName.put(doc.getDocName(), doc));
         docs.forEach(doc -> this.docsById.put(doc.getId(), doc));
     }
