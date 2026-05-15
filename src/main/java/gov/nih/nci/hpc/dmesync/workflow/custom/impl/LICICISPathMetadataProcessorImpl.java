@@ -11,10 +11,12 @@ import java.util.Map;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -34,19 +36,15 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.source.base.dir}")
-	private String syncBaseDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object)
+	public String getArchivePath(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		logger.info("[PathMetadataTask] LICI CIS getArchivePath called");
 
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Path");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "Path");
 		
 		removeTrailingSlashFromKeys(metadataMap);
 
@@ -54,7 +52,7 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String fileName = object.getSourceFileName();
 		String archivePath = null;
 		Path fullPath = Paths.get(sourcePath);
-		String metadataFilePathKey = getPathForMetadata(fullPath);
+		String metadataFilePathKey = getPathForMetadata(fullPath).replace("\\", "/");
 		String piCollectionName = getPiCollectionName(fullPath, metadataFilePathKey);
 		String projectcollectionName = getProjectcollectionName(fullPath, metadataFilePathKey);
 		//String periodCollectionName = getPeriodCollectionName(fullPath);
@@ -80,22 +78,22 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 				if (StringUtils.equalsIgnoreCase(subcollectionType, "reads")) {
 
-					archivePath = destinationBaseDir + "/PI_" + piCollectionName 
+					archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName 
 							+ "/Project_" + projectcollectionName + "/JAMSAlpha" + "/" + subcollectionType + "/"
 							+ fileName;
 
 				} else if (StringUtils.equalsIgnoreCase(subcollectionType, "JAMStarballs")) {
 
-					archivePath = destinationBaseDir + "/PI_" + piCollectionName 
+					archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName 
 							+ "/Project_" + projectcollectionName + "/JAMSAlpha" + "/" + subcollectionType + "/"
 							+ fileName;
 				} else {
-					archivePath = destinationBaseDir + "/PI_" + piCollectionName 
+					archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName 
 							+ "/Project_" + projectcollectionName + "/JAMSAlpha" + "/" + fileName;
 
 				}
 			} else {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName 
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName 
 						+ "/Project_" + projectcollectionName + "/JAMSBeta" + "/" + fileName;
 			}
 		}
@@ -115,16 +113,17 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
 			// find the metadataFilePathKey to use as key value for the metadata from file.
 			String sourcePath = object.getOriginalFilePath();
 			Path fullPath = Paths.get(sourcePath);
-			String metadataFilePathKey = getPathForMetadata(fullPath);
+			String metadataFilePathKey = getPathForMetadata(fullPath).replace("\\", "/");
 			String piCollectionName = getPiCollectionName(fullPath, metadataFilePathKey);
 			String projectCollectionName = getProjectcollectionName(fullPath, metadataFilePathKey);
 
@@ -141,7 +140,7 @@ public class LICICISPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// affiliation, email
 			// data_generator, affiliation, email
 
-			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+			String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);

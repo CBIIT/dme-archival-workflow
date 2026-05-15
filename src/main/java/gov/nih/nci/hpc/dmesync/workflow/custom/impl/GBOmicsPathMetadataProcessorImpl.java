@@ -17,7 +17,12 @@ import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.UploadConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -33,21 +38,6 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
  */
 @Service("gb-omics")
 public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProcessor implements DmeSyncPathMetadataProcessor {
-
-	@Value("${dmesync.doc.name}")
-	private String doc;
-	
-	@Value("${dmesync.source.base.dir}")
-	protected String sourceBaseDir;
-
-	@Value("${dmesync.work.base.dir}")
-	private String workDir;
-	  
-	@Value("${dmesync.create.collection.softlink:false}")
-	private boolean createCollectionSoftlink;
-	
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 	
 	@Value("${dmesync.db.access:local}")
 	  protected String access;
@@ -57,18 +47,35 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	// DOC GB OMICS logic for DME path construction and meta data creation
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		UploadConfig upload = config.getUploadConfig();
+		
 		logger.info("[PathMetadataTask] GB OMICS getArchivePath called");
 
-		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() :  object.getSourceFilePath()).toFile().getName();
+		// load the user metadata from the externally placed excel
+		if(StringUtils.isNotEmpty(sourceRule.metadataFile) && !isONT(config) && isDATA(config))
+			metadataMap = loadMetadataFile(sourceRule.metadataFile, "Sample name");
+		else if (StringUtils.isNotEmpty(sourceRule.metadataFile) && isONT(config)) {
+			metadataMap = loadMetadataFile(sourceRule.metadataFile, "FCID");
+			// Loading the metadata using <Flowcell>_<Sample> key for multiplexed ONT flowcells
+			multiplexedMetadataMap = loadMetadataFile(sourceRule.metadataFile, "FCID", "Sample name");
+		}
+		else {
+			// This is project metadata
+			metadataMap = loadMetadataFile(sourceRule.metadataFile, "project_id");
+		}
+		
+		String fileName = Paths.get(upload.collectionSoftlink ? object.getOriginalFilePath() :  object.getSourceFilePath()).toFile().getName();
 		String archivePath = "";
-		if(isDATA() || isONT()) {
+		if(isDATA(config) || isONT(config)) {
 			String sampleId = "";
 			try {
-				sampleId = getSample(object);
-				String flowcellId = getFlowcell(object);
-				String key = isONT() ? flowcellId : sampleId;
+				sampleId = getSample(object, config);
+				String flowcellId = getFlowcell(object, config);
+				String key = isONT(config) ? flowcellId : sampleId;
 				
 				String archiveStatus = getAttrValueWithExactKey(key, "Archive");
 				boolean archiveReady = archiveStatus != null && archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
@@ -76,28 +83,28 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				// Archive column in the master file, that indicates whether a run is ready to be archived in DME.
 				if(archiveReady) {  
 				//If it is ONT, all files other than fastq or bam will be placed under the Flowcell folder.
-				if(isONT() && !isFastqOrBam(object.getOriginalFilePath())){
-					archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
-					+ "/Flowcell_" + getFlowcell(object) 
+				if(isONT(config) && !isFastqOrBam(object.getOriginalFilePath())){
+					archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPICollectionName(object, config) + "/DATA" + "/Year_" + getYear(object, config)
+					+ "/Flowcell_" + getFlowcell(object, config) 
 					+ "/" + fileName;
 				} else {
 					//If it is Illumina or ONT but single sample flowcells, files will be placed under the Sample folder.
-					if (!isONT() || !isMultiplexed(object.getOrginalFileName())) {
-						archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
-						+ "/Flowcell_" + getFlowcell(object) 
+					if (!isONT(config) || !isMultiplexed(object.getOrginalFileName())) {
+						archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPICollectionName(object, config) + "/DATA" + "/Year_" + getYear(object, config)
+						+ "/Flowcell_" + getFlowcell(object, config) 
 						+ (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId + "/" + fileName;
 					} else {
-						sampleId = getMultiplexedSample(object);
+						sampleId = getMultiplexedSample(object, config);
 						// For ONT Multiplexed flow cell, if the sample metadata is found, place it under the Sample folder.
 						// Otherwise, place it under the Flowcell folder.
 						String parentFolderName = Paths.get(object.getOriginalFilePath()).getParent().getFileName().toString();
 						if(sampleId != null) {
-							archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
-								+ "/Flowcell_" + getFlowcell(object) 
+							archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPICollectionName(object, config) + "/DATA" + "/Year_" + getYear(object, config)
+								+ "/Flowcell_" + getFlowcell(object, config) 
 								+ (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId + "/" + parentFolderName + "_" + fileName;
 						} else {
-							archivePath = destinationBaseDir + "/Lab_" + getPICollectionName(object) + "/DATA" + "/Year_" + getYear(object)
-							+ "/Flowcell_" + getFlowcell(object) 
+							archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPICollectionName(object, config) + "/DATA" + "/Year_" + getYear(object, config)
+							+ "/Flowcell_" + getFlowcell(object, config) 
 							+ "/" + parentFolderName + "_" + fileName;
 						}
 					}
@@ -132,11 +139,11 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				}
 			}
 		} else {
-			String projectCollectionName = getProjectCollectionName(object);
-			String piCollectionName = getPICollectionName(object);
+			String projectCollectionName = getProjectCollectionName(object, config);
+			String piCollectionName = getPICollectionName(object, config);
 			piCollectionName = piCollectionName.replace(" ", "_");
-			archivePath = destinationBaseDir + "/Lab_" + piCollectionName + "/Project_" + projectCollectionName
-					+ (createCollectionSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object)
+			archivePath = sourceConfig.destinationBaseDir + "/Lab_" + piCollectionName + "/Project_" + projectCollectionName
+					+ (upload.collectionSoftlink ? "/Source_Data" + "/Flowcell_" + getFlowcellIdForProject(object)
 							: (isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis") + "/"
 									+ fileName);
 			
@@ -151,7 +158,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				return "";
 			}
 			
-			Path collectionLinkFilePath = Paths.get(workDir, "collection_link", getPIFolder(object), projectCollectionName, "collection_link.txt");
+			Path collectionLinkFilePath = Paths.get(sourceConfig.workBaseDir, "collection_link", getPIFolder(object, config), projectCollectionName, "collection_link.txt");
 			if(!Files.exists(collectionLinkFilePath)) {
 				String flowcellPaths = getAttrValueWithExactKey(projectCollectionName, "flowcell_path");
 				if(StringUtils.isNotBlank(flowcellPaths)) {
@@ -189,9 +196,12 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		UploadConfig upload = config.getUploadConfig();
+		
 		logger.info("[PathMetadataTask] GB OMICS getMetaDataJson called");
 
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
@@ -209,9 +219,9 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String piCollectionName;
 		String piCollectionPath;
 
-		if(isDATA() || isONT()) {
-			piCollectionName = getPICollectionName(object);
-			piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
+		if(isDATA(config) || isONT(config)) {
+			piCollectionName = getPICollectionName(object, config);
+			piCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + piCollectionName;
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
@@ -226,14 +236,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesDATA);
 			
 			// Add path metadata entries for "Date" folder
-			String sampleId = getSample(object);
-			String flowcellId = getFlowcell(object);
-			String key = isONT() ? flowcellId : sampleId;
-			String dateCollectionPath = dataCollectionPath + "/Year_" + getYear(object);
+			String sampleId = getSample(object, config);
+			String flowcellId = getFlowcell(object, config);
+			String key = isONT(config) ? flowcellId : sampleId;
+			String dateCollectionPath = dataCollectionPath + "/Year_" + getYear(object, config);
 			HpcBulkMetadataEntry pathEntriesDate = new HpcBulkMetadataEntry();
 			pathEntriesDate.setPath(dateCollectionPath);
 			pathEntriesDate.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Date"));
-			pathEntriesDate.getPathMetadataEntries().add(createPathEntry("year", getYear(object)));
+			pathEntriesDate.getPathMetadataEntries().add(createPathEntry("year", getYear(object, config)));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesDate);
 			
 			// Add path metadata entries for "Flowcell" collection
@@ -257,15 +267,15 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 			// Check whether this is a multiplexed ONT flowcell with sample entry in the master file
 			String multiplexedSampleId = null;
-			if(isONT() && isMultiplexed(object.getOrginalFileName())) {
-				multiplexedSampleId = getMultiplexedSample(object);
+			if(isONT(config) && isMultiplexed(object.getOrginalFileName())) {
+				multiplexedSampleId = getMultiplexedSample(object, config);
 				key = multiplexedSampleId != null ? flowcellId + "_" + multiplexedSampleId : flowcellId;
 				sampleId = multiplexedSampleId != null ? multiplexedSampleId : sampleId;
 			}
 			
 			// Add path metadata entries for "Sample" collection
 			//If it is Illumina or ONT fast or bam with single sample flowcells
-			if (!isONT() || (!isMultiplexed(object.getOrginalFileName()) && isFastqOrBam(object.getOriginalFilePath()))) {
+			if (!isONT(config) || (!isMultiplexed(object.getOrginalFileName()) && isFastqOrBam(object.getOriginalFilePath()))) {
 				String sampleCollectionPath = flowcellCollectionPath + (!sampleId.startsWith("Sample_") ? "/Sample_": "/") + sampleId;
 				HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 				pathEntriesSample.setPath(sampleCollectionPath);
@@ -314,15 +324,15 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			
 		} else {
 			
-			piCollectionName = getPICollectionName(object);
-			piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
+			piCollectionName = getPICollectionName(object, config);
+			piCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + piCollectionName;
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
 			hpcBulkMetadataEntries.getPathsMetadataEntries()
 					.add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName, "gb-omics"));
 			
-			String projectCollectionName = getProjectCollectionName(object);
+			String projectCollectionName = getProjectCollectionName(object, config);
 			
 			// Add path metadata entries for "Project" collection
 			String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
@@ -360,13 +370,13 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 			
 			// Add path metadata entries for "Source_Data" or "Analysis" folder
-			String analysisCollectionPath = projectCollectionPath + (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis");
+			String analysisCollectionPath = projectCollectionPath + (upload.collectionSoftlink || isRawData(object.getOriginalFilePath()) ? "/Source_Data" : "/Analysis");
 			HpcBulkMetadataEntry pathEntriesAnalysis = new HpcBulkMetadataEntry();
 			pathEntriesAnalysis.setPath(analysisCollectionPath);
-			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (createCollectionSoftlink || isRawData(object.getOriginalFilePath()) ? "Source_Data" : "Analysis")));
+			pathEntriesAnalysis.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, (upload.collectionSoftlink || isRawData(object.getOriginalFilePath()) ? "Source_Data" : "Analysis")));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 			
-			if(createCollectionSoftlink) {
+			if(upload.collectionSoftlink) {
 				// Add path metadata entries for "Flowcell_Link" collection
 				String flowcellId = getFlowcellIdForProject(object);
 				dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell_Link"));
@@ -381,7 +391,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
 
 		// Add object metadata
-		String fileName = Paths.get(createCollectionSoftlink ? object.getOriginalFilePath() : object.getSourceFilePath()).toFile().getName();
+		String fileName = Paths.get(upload.collectionSoftlink ? object.getOriginalFilePath() : object.getSourceFilePath()).toFile().getName();
 		String fileType = StringUtils.substringBefore(fileName, ".gz");
 	    fileType = fileType.substring(fileType.lastIndexOf('.') + 1);
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
@@ -395,13 +405,13 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 	
 	@Override
-    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException {
+    public boolean isMetadataAvailable(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		
-		if (isDATA() || isONT()) {
+		if (isDATA(config) || isONT(config)) {
 			return true;
 
 		} else {
-			String projectCollectionName = getProjectCollectionName(object);
+			String projectCollectionName = getProjectCollectionName(object, config);
 			// Check if this project is in the metadata spreadsheet
 			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
 			return projectTitle != null;
@@ -421,34 +431,37 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return null;
 	}
 	
-	private String getPIFolder(StatusInfo object) throws DmeSyncMappingException {
+	private String getPIFolder(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		//For /data/khanlab3/gb_omics/DATA/caplen, it will return caplen.
 		//For /data/khanlab3/gb_omics/projects/caplen, it will return caplen.
+		SourceConfig sourceConfig = config.getSourceConfig();
+		UploadConfig upload = config.getUploadConfig();
 		String piFolder = null;
-		if(isONT()) {
-			String key = getFlowcell(object);
+		if(isONT(config)) {
+			String key = getFlowcell(object, config);
 			piFolder = getAttrValueWithExactKey(key, "PI");
 		}
-		else if(createCollectionSoftlink)
-			piFolder = getCollectionNameFromParent(object.getSourceFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+		else if(upload.collectionSoftlink)
+			piFolder = getCollectionNameFromParent(object.getSourceFilePath(), StringUtils.substringAfterLast(sourceConfig.sourceBaseDir, File.separator));
 		else
-			piFolder = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+			piFolder = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceConfig.sourceBaseDir, File.separator));
 		return piFolder;
 	}
 	
-	private String getPICollectionName(StatusInfo object) throws DmeSyncMappingException {
+	private String getPICollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		//For /data/khanlab3/gb_omics/DATA/caplen, it will get mapped collection name for caplen.
 		//For /data/khanlab3/gb_omics/projects/caplen, it will get mapped collection name for caplen.
-		String piFolder = getPIFolder(object);
+		String piFolder = getPIFolder(object, config);
 		return getCollectionMappingValue(piFolder.toLowerCase(), "DataOwner_Lab", "gb-omics");
 	}
 
-	protected String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+	protected String getProjectCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		UploadConfig upload = config.getUploadConfig();
         String projectId = null;
-        if(createCollectionSoftlink)
-            projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object));
+        if(upload.collectionSoftlink)
+            projectId = getCollectionNameFromParent(object.getSourceFilePath(), getPIFolder(object, config));
         else
-            projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object));
+            projectId = getCollectionNameFromParent(object.getOriginalFilePath(), getPIFolder(object, config));
         
         if(org.apache.commons.lang3.StringUtils.startsWithIgnoreCase(projectId, "ccrgb"))
             projectId = projectId.toUpperCase().replace('_', '-');
@@ -456,19 +469,20 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
         return projectId;
     }
 
-	private String getFlowcell(StatusInfo object) throws DmeSyncMappingException {
+	private String getFlowcell(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		SourceConfig sourceConfig = config.getSourceConfig();
 		String flowcellId = "";
-		if(!isONT()) {
-			flowcellId = getAttrValueWithExactKey(getSample(object), "FCID");
+		if(!isONT(config)) {
+			flowcellId = getAttrValueWithExactKey(getSample(object, config), "FCID");
 		}
 		else {
-			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceBaseDir, File.separator));
+			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceConfig.sourceBaseDir, File.separator));
 		}
 		return flowcellId;
 	}
 	
-	private String getYear(StatusInfo object) throws DmeSyncMappingException {
-		String key = isONT() ? getFlowcell(object) : getSample(object);
+	private String getYear(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		String key = isONT(config) ? getFlowcell(object, config) : getSample(object, config);
 		String runDate = getAttrValueWithExactKey(key, "Run Start Date");
 		String year = "";
 		if(StringUtils.isNotBlank(runDate) && StringUtils.contains(runDate, "/")) {
@@ -514,13 +528,13 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return flowcellId;
 	}
 	
-	private String getSample(StatusInfo object) throws DmeSyncMappingException {
+	private String getSample(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		String sampleId = "";
-		if(!isONT()) {
+		if(!isONT(config)) {
 			String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 			sampleId = getAttrKeyFromKeyInSearchString(fileName);
 		} else {
-			sampleId = getAttrValueWithExactKey(getFlowcell(object), "Sample name");
+			sampleId = getAttrValueWithExactKey(getFlowcell(object, config), "Sample name");
 		}
 		return sampleId;
 	}
@@ -531,8 +545,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	 * @return Sample name, null if not found
 	 * @throws DmeSyncMappingException
 	 */
-	private String getMultiplexedSample(StatusInfo object) throws DmeSyncMappingException {
-		String flowcellId = getFlowcell(object);
+	private String getMultiplexedSample(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		String flowcellId = getFlowcell(object, config);
 		return getAttrValueWithTwoKeys(flowcellId, object.getOrginalFileName(), "Sample name");
 	}
 	
@@ -624,12 +638,14 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	    return key;
     }
 	
-	private boolean isDATA() {
-	    return (StringUtils.contains(sourceBaseDir, "DATA")? true : false);
+	private boolean isDATA(DocConfig config) {
+		SourceConfig sourceConfig = config.getSourceConfig();
+	    return (StringUtils.contains(sourceConfig.sourceBaseDir, "DATA")? true : false);
 	}
 	
-	private boolean isONT() {
-		return (StringUtils.contains(sourceBaseDir, "GB_OMICS_ONT")? true : false);
+	private boolean isONT(DocConfig config) {
+		SourceConfig sourceConfig = config.getSourceConfig();
+		return (StringUtils.contains(sourceConfig.sourceBaseDir, "GB_OMICS_ONT")? true : false);
 	}
 	
 	private boolean isFastqOrBam(String originalFilePath) {
@@ -646,28 +662,5 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				|| originalFileName.equals("bam_pass")
 				|| originalFileName.equals("bam_fail"));
 	}
-	
-	@PostConstruct
-	  private void init() throws IOException {
-		if("gb-omics".equalsIgnoreCase(doc)) {
-		    try {
-		    	// load the user metadata from the externally placed excel
-				if(StringUtils.isNotEmpty(metadataFile) && !isONT() && isDATA())
-					metadataMap = loadMetadataFile(metadataFile, "Sample name");
-				else if (StringUtils.isNotEmpty(metadataFile) && isONT()) {
-					metadataMap = loadMetadataFile(metadataFile, "FCID");
-					// Loading the metadata using <Flowcell>_<Sample> key for multiplexed ONT flowcells
-					multiplexedMetadataMap = loadMetadataFile(metadataFile, "FCID", "Sample name");
-				}
-				else {
-					// This is project metadata
-					metadataMap = loadMetadataFile(metadataFile, "project_id");
-				}
-		    } catch (DmeSyncMappingException e) {
-		        logger.error(
-		            "Failed to initialize metadata  path metadata processor", e);
-		    }
-		}
-	  }
 	
 }

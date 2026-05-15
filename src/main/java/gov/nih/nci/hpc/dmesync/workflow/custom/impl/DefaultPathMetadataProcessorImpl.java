@@ -3,9 +3,12 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -21,28 +24,24 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     implements DmeSyncPathMetadataProcessor {
 
-  @Value("${dmesync.source.base.dir}")
-  protected String sourceBaseDir;
-  
-  @Value("${dmesync.source.aws:false}")
-  private boolean awsFlag;
-
   //DOC Default logic for DME path construction and meta data creation
 
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
     
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] Default getArchivePath called");
 
-    if(awsFlag) {
-    	return destinationBaseDir + '/' + object.getSourceFilePath();
+    if(sourceRule.aws) {
+    	return sourceConfig.destinationBaseDir + '/' + object.getSourceFilePath();
     }
     // For now, all files goes directly to base destination dir, under the folders from source path.
     Path baseDirPath;
     try {
-      baseDirPath = Paths.get(sourceBaseDir).toRealPath();
+      baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
     } catch (IOException e) {
-      throw new DmeSyncMappingException("source.base.dir does not exist: " + sourceBaseDir, e);
+      throw new DmeSyncMappingException("source.base.dir does not exist: " + sourceConfig.sourceBaseDir, e);
     }
     Path sourceDirPath = Paths.get(object.getOriginalFilePath());
     Path relativePath = baseDirPath.relativize(sourceDirPath);
@@ -51,15 +50,15 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
     String archivePath;
     if(!relativePathStr.contains("/")) {
       // File belongs directly under the destination dir
-      archivePath = destinationBaseDir + "/" + object.getSourceFileName();
+      archivePath = sourceConfig.destinationBaseDir + "/" + object.getSourceFileName();
     }
     else if (relativePath.toString().endsWith(object.getSourceFileName())) {
       //Case when the file name is not altered.
-      archivePath = destinationBaseDir + "/" + relativePathStr;
+      archivePath = sourceConfig.destinationBaseDir + "/" + relativePathStr;
     } else {
       //Case when the filename in the destination changes.
       archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/"
               + relativePath.getParent().toString().replace("\\", "/")
               + "/"
@@ -73,7 +72,7 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
     
     logger.info("[PathMetadataTask] Default getMetaDataJson called");

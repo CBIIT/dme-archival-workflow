@@ -8,12 +8,15 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.PreprocessingConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -21,7 +24,6 @@ import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
-import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 /**
  * MoCha DME Path and Meta-data Processor Implementation
@@ -33,18 +35,6 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     implements DmeSyncPathMetadataProcessor {
 
   // Mocha DME path construction and meta data creation
-
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String sourceDir;
-  
-  @Value("${dmesync.tar:false}")
-  private boolean tar;
   
   @Autowired
   private DmeMetadataBuilder dmeMetadataBuilder;
@@ -52,12 +42,14 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   Map<String, Map<String, String>> metadataMap = null;
   
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] Mocha getArchivePath called");
     
     // load the user metadata from the externally placed excel
-    metadataMapWithTwoKeys = dmeMetadataBuilder.getMetadataMapWithTwoKeys(metadataFile, "Run_ID", "Sample");
+    metadataMapWithTwoKeys = dmeMetadataBuilder.getMetadataMapWithTwoKeys(sourceRule.metadataFile, "Run_ID", "Sample");
     
     // Example source path -
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
@@ -65,26 +57,26 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
     String archivePath = null;
     
-    if(isBCL(object)) {
+    if(isBCL(object, config)) {
     	archivePath =
-	        destinationBaseDir
+    		sourceConfig.destinationBaseDir
 	            + "/Lab_"
-	            + getPiCollectionName(object)
+	            + getPiCollectionName(object, config)
 	            + "/Platform_"
-	            + getPlatformCollectionName(object)
+	            + getPlatformCollectionName(object, config)
 	            + "/Run_FC"
 	            + "/Flowcell_"
-	            + getFlowcellId(object)
+	            + getFlowcellId(object, config)
 	            + "/"
 	            + (fileName.equals("Reports")||fileName.equals("Stats") ? "FASTQ_Report/" + fileName : getRunId(object)) + ".tar";
     } else {
-        String platform = getPlatformCollectionName(object);
+        String platform = getPlatformCollectionName(object, config);
         String project = getProjectCollectionName(object);
         if(StringUtils.isBlank(project)) {
 		    archivePath =
-			        destinationBaseDir
+		    		sourceConfig.destinationBaseDir
 			            + "/Lab_"
-			            + getPiCollectionName(object)
+			            + getPiCollectionName(object, config)
 			            + "/Platform_"
 			            + platform
 			            + "/DME_Unassigned_FASTQ"
@@ -94,15 +86,15 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 			            + fileName;
         } else {
 		    archivePath =
-		        destinationBaseDir
+		    	sourceConfig.destinationBaseDir
 		            + "/Lab_"
-		            + getPiCollectionName(object)
+		            + getPiCollectionName(object, config)
 		            + "/Platform_"
 		            + platform
 		            + "/Project_"
 		            + project
 		            + "/"
-		            + getSampleCollectionName(object)
+		            + getSampleCollectionName(object, config)
 		            + "/"
 		            + fileName;
         }
@@ -117,15 +109,17 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	 SourceConfig sourceConfig = config.getSourceConfig();
+	  
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
     String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
     if (fileName.equals("Reports")||fileName.equals("Stats")) {
     	fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
-    } else if(isBCL(object))
+    } else if(isBCL(object, config))
     	fileName = getRunId(object) + ".tar";
     else
     	fileName = Paths.get(object.getSourceFileName()).toFile().getName();
@@ -134,8 +128,8 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Example row: collectionType - PI, collectionName - XXX (derived)
     // key = data_owner, value = Mickey Williams (supplied)
     // key = data_owner_affiliation, value = Molecular Characterization Laboratory, FNLCR (supplied)
-    String piCollectionName = getPiCollectionName(object);
-    String piCollectionPath = destinationBaseDir + "/Lab_" + piCollectionName;
+    String piCollectionName = getPiCollectionName(object, config);
+    String piCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
@@ -146,7 +140,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Add path metadata entries for "Platform" collection
     // Example row: collectionType - Platform, collectionName - HiSeq, NovaSeq
     // platform_name
-    String platformCollectionName = getPlatformCollectionName(object);
+    String platformCollectionName = getPlatformCollectionName(object, config);
     String platformCollectionPath = piCollectionPath + "/Platform_" + platformCollectionName;
     HpcBulkMetadataEntry pathEntriesPlatform = new HpcBulkMetadataEntry();
     pathEntriesPlatform.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Platform"));
@@ -158,7 +152,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         .getPathsMetadataEntries()
         .add(pathEntriesPlatform);
     
-    if(!isBCL(object)) {
+    if(!isBCL(object, config)) {
 		String projectCollectionName = getProjectCollectionName(object);
         if(StringUtils.isBlank(projectCollectionName)) {
         	//DME_Unassigned_FASTQ
@@ -196,7 +190,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     	    // project_poc_affiliation key = POC email
     	    // project_poc_email key = POC email
         	String runId = getRunId(object);
-        	String flowcellId = getFlowcellId(object);
+        	String flowcellId = getFlowcellId(object, config);
     	    String sampleId = getSampleId(object);
 			String projectCollectionPath = platformCollectionPath + "/Project_" + projectCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
@@ -223,7 +217,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		    // sample_name, value = PDA01236 (derived)
 		    // flowcell_lane = Lane
 		    
-		    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object);
+		    String sampleCollectionPath = projectCollectionPath + "/" + getSampleCollectionName(object, config);
 		    sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
 		    HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
 		    pathEntriesSample.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Sample_Flowcell"));
@@ -255,7 +249,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    // Add path metadata entries for "Flowcell" collection
 	    // Example row: collectionType - Flowcell
 	    // flowcell_id
-    	String flowcellId = getFlowcellId(object);
+    	String flowcellId = getFlowcellId(object, config);
 	    String flowcellCollectionPath = runFCCollectionPath + "/Flowcell_" + flowcellId;
 	    HpcBulkMetadataEntry pathEntriesFlowcell = new HpcBulkMetadataEntry();
 	    pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Flowcell"));
@@ -287,7 +281,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Add object metadata
     // key = object_name, value = Sample_RES210195_HKJMGDSX2_R1.fastq.gz (derived)
     // key = file_type, value = fastq, bcl (derived)
-    String fileType = getFileType(object);
+    String fileType = getFileType(object, config);
     dataObjectRegistrationRequestDTO
         .getMetadataEntries()
         .add(createPathEntry("object_name", fileName));
@@ -315,21 +309,22 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     return null;
   }
 
-  private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getPiCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+	SourceConfig sourceConfig = config.getSourceConfig();
     String piCollectionName = null;
     // Example: If originalFilePath is
     // /mnt/mocha_static/NovaSeq/220113_A00424_0160_BHKJNWDSX2/Data/Intensities/BaseCalls/L001
     // then return the mapped PI from /mnt/mocha_static/NovaSeq
-    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab", "mocha");
+    piCollectionName = getCollectionMappingValue(sourceConfig.sourceBaseDir, "PI_Lab", "mocha");
     
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
   }
   
-  private String getPlatformCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getPlatformCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
 	  String platform = null;
-	  if(isBCL(object)) {
+	  if(isBCL(object, config)) {
 		  if (path.contains("NovaSeq") || path.contains("BW_transfers")) {
 			  platform = "NovaSeq";
 		  } else {
@@ -353,10 +348,10 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  return platform;
   }
 
-  private String getFlowcellId(StatusInfo object) throws DmeSyncMappingException {
+  private String getFlowcellId(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 	  String flowcellId = null;
 	  String runId = getRunId(object);
-	  if(isBCL(object)) {
+	  if(isBCL(object, config)) {
 		  //Get flowcell ID from run ID. (190501_D00719_0157_BHYJTMBCX2 will be HYJTMBCX2)
 		  flowcellId = StringUtils.substringAfterLast(runId, "_");
 		  flowcellId = StringUtils.substring(flowcellId, 1);
@@ -393,9 +388,10 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	return flowcellCollectionName;
   }
   
-  private boolean isBCL(StatusInfo object) throws DmeSyncMappingException {
+  private boolean isBCL(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+	  PreprocessingConfig pre = config.getPreprocessingConfig();
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
-	  if (tar) {
+	  if (pre.tar) {
 		  //BCL files are tarred.
 		  return true;
 	  }
@@ -422,7 +418,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	return sampleId;
   }
   
-  private String getSampleCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getSampleCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 	  String runId = getRunId(object);
 	  String sampleId = getSampleId(object);
 	  String mochaId = getAttrValueFromMetadataMap(runId, sampleId, "Mocha_ID");
@@ -438,7 +434,7 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		  }
 		  sequencingDate = outputFormatter.format(date);
 	  }
-	  String flowcellId= getFlowcellId(object);
+	  String flowcellId= getFlowcellId(object, config);
 	return mochaId + "_" + sequencingDate + "_" + flowcellId;
   }
   
@@ -466,9 +462,9 @@ public class MochaPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	    return sampleName;
   }
   
-  private String getFileType(StatusInfo object) throws DmeSyncMappingException {
+  private String getFileType(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-	  if(isBCL(object))
+	  if(isBCL(object, config))
 	    return "tar";
 	  else if (fileName.contains(".fastq"))
 		return "fastq";

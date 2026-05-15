@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -42,15 +43,10 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
   
-  @Value("${hpc.server.url}")
-  private String serverUrl;
 
   @Value("${auth.token}")
   private String authToken;
 
-  @Value("${dmesync.checksum:true}")
-  private boolean checksum;
-  
   @Value("${dmesync.filesystem.upload.file.container.id:}")
   private String fileContainerId;
   
@@ -61,9 +57,11 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	DocConfig.UploadConfig upload = config.getUploadConfig();
+	
 	HpcExceptionDTO errorResponse;
 	ResponseEntity<Object> response;
 	
@@ -72,7 +70,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
     	
       //Call dataObjectRegistration API
       final URI dataObjectUrl =
-          UriComponentsBuilder.fromHttpUrl(serverUrl)
+          UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
               .path("/v2/dataObject".concat(object.getFullDestinationPath()))
               .build().encode()
               .toUri();
@@ -84,7 +82,7 @@ public class DmeSyncFileSystemUploadTaskImpl extends AbstractDmeSyncTask impleme
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
       //Include checksum in DataObjectRegistrationRequestDTO
-      if(checksum)
+      if(upload.checksum)
     	  object.getDataObjectRegistrationRequestDTO().setChecksum(object.getChecksum());
       
       //Set the source path for file system uploads.
