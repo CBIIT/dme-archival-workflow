@@ -117,7 +117,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
       if (CollectionUtils.isNotEmpty(statusInfo)) {
         List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
         Path path = Paths.get(logFile);
-        String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
+        String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString(), config);
 
         MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
 

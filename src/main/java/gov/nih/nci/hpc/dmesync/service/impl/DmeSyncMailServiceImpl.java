@@ -118,7 +118,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 				Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
       
       Path path = Paths.get(logFile);
-      String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString());
+      String excelFile = ExcelUtil.export(runId, statusInfo, metadataInfo, path.getParent().toString(), config);
       
       Path safeDirectory = path.getParent().toAbsolutePath().normalize();
       Path filePath = Paths.get(excelFile).toAbsolutePath().normalize();
