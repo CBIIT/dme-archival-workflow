@@ -18,7 +18,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Value("${dmesync.server.id:}")
+    @Value("${dmesync.workflow.server.id:}")
     private String serverId;
     
     @Override
