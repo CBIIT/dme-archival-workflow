@@ -4,5 +4,7 @@ import java.time.Instant;
 
 public interface WorkflowRunInfoDaoCustom {
 
-	Instant findLastScheduledTime(Long docId);
+	public Instant findLastScheduledTime(Long docId);
+	
+	public void resetWorkflowRunInfo();
 }

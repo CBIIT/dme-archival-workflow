@@ -56,4 +56,11 @@ public interface DmeSyncWorkflowRunLogService {
 	 * @return updated WorkflowRunInfo information
 	 */
 	public WorkflowRunInfo saveWorkflowRunInfo(WorkflowRunInfo WorkflowRunInfo);
+	
+	/**
+	 * Reset workflow Run Info if anything was running before application shutdown
+	 * 
+	 */
+	public void resetWorkflowRunInfo();
+	
 }

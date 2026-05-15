@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,15 +110,21 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   
   @Value("${dmesync.source.aws.region:}")
   private String awsRegion;
-  
-  private String runId;
 
+  @PostConstruct
+  public boolean init() {
+	dmeSyncWorkflowRunLogService.resetWorkflowRunInfo();
+    return true;
+  }
+  
   /**
    * Main scheduler method to crawl the file system and find files to enqueue
    */
   @Override
   public void execute(DocConfig config) {
 	  
+	// RunId shall be an instance variable.
+	String runId;
 	// Example: select tasks based on config
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
@@ -145,7 +153,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     
     runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
     
-    WorkflowRunInfo workflowRunInfo=insertWorkflowRunInfo(config);
+    WorkflowRunInfo workflowRunInfo=insertWorkflowRunInfo(config, runId);
 	  logger.info(
 		        "[Scheduler] Workflow Run Information is inserted {}", workflowRunInfo);
 
@@ -199,7 +207,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       if(upload.softlink) {
     	  paths = queryDataObjectsForSoftlinkCreation(config);
       } else if (sourceRule.noscanRerun) {
-        findFilesToRerun(config);
+        findFilesToRerun(config, runId);
         logger.info(
             "[Scheduler] Completed restaring files at {} for Run ID: {} base directory to reprocess {}",
             dateFormat.format(new Date()),
@@ -252,18 +260,18 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
    // --- Selective Scan Enhancement ---
       if (sourceRule.selectiveScan) {
-       selectiveScanProcessing(folders, files, config);
+       selectiveScanProcessing(folders, files, config, runId);
       }
       
       // If tar is required, need to manipulate the list.
       else if (pre.tar) {
-        processFiles(folders, config);
+        processFiles(folders, config, runId);
       } else if (pre.untar) {
         //If untar is required, need to find the files included in tar.
         for (HpcPathAttributes file : files) {
           //List tar files from each folder
           List<HpcPathAttributes> tarFileList = TarUtil.listTar(file.getAbsolutePath());
-          processFiles(tarFileList, config);
+          processFiles(tarFileList, config, runId);
         }
       } else {
         // Process the list of files
@@ -271,14 +279,14 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     		  for (HpcPathAttributes file : files) {
     	          //List tar files from each folder
     	          List<HpcPathAttributes> collectionLinkList = listCollectionsToLink(file.getAbsolutePath());
-    	          processFiles(collectionLinkList, config);
+    	          processFiles(collectionLinkList, config, runId);
     	        }
     		  
     	  } else
-    		  processFiles(files, config);
+    		  processFiles(files, config, runId);
       }
 	   if (sourceRule.retryPriorRunFailures) {
-			includePriorRunFailuresInCurrentRunWorklist(config);
+			includePriorRunFailuresInCurrentRunWorklist(config, runId);
 		}
       logger.info(
           "[Scheduler] Completed file scan at {} for Run ID: {} base directory to scan {}",
@@ -326,7 +334,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   private void findFilesToMove(DocConfig config) {
   
     DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
-    runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
+    String runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
 
     if (shutDownFlag) {
       //check if the one time run has already occurred
@@ -385,7 +393,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   /**
    * Pickup files to rerun from Database instead of file scan
    */
-  private void findFilesToRerun(DocConfig config) {
+  private void findFilesToRerun(DocConfig config, String runId) {
 
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
@@ -528,7 +536,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	return pathAttributesList;
   }
 
-  private void processFiles(List<HpcPathAttributes> files, DocConfig config) throws Exception {
+  private void processFiles(List<HpcPathAttributes> files, DocConfig config, String runId) throws Exception {
 
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
@@ -633,7 +641,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 					if (tarRecord != null && !StringUtils.equals(tarRecord.getStatus(), WorkflowConstants.COMPLETED)) {
 						// Tar folder is not uploaded - enqueue tar folder row to JMS
-						sendRequestToJms(tarRecord, config);
+						sendRequestToJms(tarRecord, config, runId);
 						continue;
 					}
 					// Tar completed - enqueue all incomplete contents records
@@ -644,7 +652,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 					// Find the included contents file record
 					for (StatusInfo row : tarContentRows) {
 						if (!WorkflowConstants.COMPLETED.equals(row.getStatus())) {
-							sendRequestToJms(row, config);
+							sendRequestToJms(row, config, runId);
 						}
 					}
 					continue;
@@ -775,7 +783,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	              file.getAbsolutePath(),
 	              preRule.tarFileExistExt);
 	            //Insert record in DB as COMPLETED and send an email.
-	            statusInfo = insertRecordDb(file, true, config);
+	            statusInfo = insertRecordDb(file, true, config, runId);
 	            dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("WARNING: HPCDME during registration", message, config);
 	            continue;
 	          }
@@ -875,7 +883,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       }
       // Insert the record in local DB
       logger.info("[Scheduler] Including: {}", file.getAbsolutePath());
-      statusInfo = insertRecordDb(file, false, config);
+      statusInfo = insertRecordDb(file, false, config, runId);
 
       // Send the objectId to the message queue for processing
       DmeSyncMessageDto message = new DmeSyncMessageDto();
@@ -885,7 +893,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     }
   }
 
-  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed, DocConfig config) {
+  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed, DocConfig config, String runId) {
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
 	  
@@ -914,6 +922,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	
+	MDC.put("doc", config.getDocName());
+    
 	if(sourceRule.aws) continue;
 	
 	//Get workflow run info for this doc
@@ -950,7 +960,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	  currentRunId = runInfo.getRunId();
     }
     
-
+    MDC.put("run.id", currentRunId);
+    
 
     //Check to make sure scheduler is completed, run has occurred and all files have been processed.
     Long incompleteCount = dmeSyncWorkflowService.getService(access).countByDocAndRunIdAndStatus(config.getDocName(), currentRunId, null);
@@ -965,11 +976,11 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       if (!excel.exists()) {
         //Export and send email for completed run
         String docQueueName = queueNameResolver.resolve(config);
-        logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
+        logger.info("checking if scheduler is completed with queue {} count {} and active threads completed {} ", docQueueName, sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
         dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
 
         if (shutDownFlag) {
-          logger.info("checking if scheduler is completed with queue count {} and active threads completed {} ", sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
+          logger.info("checking if scheduler is completed with queue {} count {} and active threads completed {} ", docQueueName, sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
           logger.info("[Scheduler] Queue is empty. Shutting down the application.");
           DmeSyncApplication.shutdown();
         }
@@ -986,6 +997,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	  
+	MDC.put("doc", config.getDocName());
+	
 	if(!sourceRule.aws) continue;
 	
 	boolean completedFlag = true;
@@ -1005,12 +1018,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         currentRunId = latest.getRunId();
     }
 
-    //Check to make sure scheduler is completed, run has occurred and the queue is empty
-    if (runId == null
-        && currentRunId != null
-        && !currentRunId.isEmpty()
-        && sender.getQueueCount(queueNameResolver.resolve(config)) == 0
-        && consumer.isAllThreadsCompleted(config.getDocName())) {
+    MDC.put("run.id", currentRunId);
+    
+    //Check to make sure scheduler is completed, run has occurred and all files have been processed.
+    Long incompleteCount = dmeSyncWorkflowService.getService(access).countByDocAndRunIdAndStatus(config.getDocName(), currentRunId, null);
+    
+    if (incompleteCount == 0) {
 
       //check if the latest export file is generated in log directory
       Path path = Paths.get(logFile);
@@ -1046,7 +1059,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
   
-	private void sendRequestToJms(StatusInfo statusInfo, DocConfig config) {
+	private void sendRequestToJms(StatusInfo statusInfo, DocConfig config, String runId) {
 
 		statusInfo.setRunId(runId);
 		statusInfo.setStatus("");
@@ -1063,7 +1076,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		sender.send(message, queueNameResolver.resolve(config));
 	}
 	
-	private WorkflowRunInfo insertWorkflowRunInfo(DocConfig config) {
+	private WorkflowRunInfo insertWorkflowRunInfo(DocConfig config, String runId) {
 	    DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 		    Timestamp now = Timestamp.from(Instant.now());
 
@@ -1114,7 +1127,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	 *   For the remaining folders, scan direct children and archive individual files only.
 	 *   Finally, process any "top-level" files that are not within any already-processed folder.
 	 */
-	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files, DocConfig config)
+	private void selectiveScanProcessing(List<HpcPathAttributes> folders, List<HpcPathAttributes> files, DocConfig config, String runId)
 			throws Exception {
 
 		DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
@@ -1153,7 +1166,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			// 1) Process tar-selected folders.
 			if (!foldersToTar.isEmpty()) {
 				logger.info("[Scheduler][SelectiveScan] Tarring folders count={}", foldersToTar.size());
-				processFiles(foldersToTar, config);
+				processFiles(foldersToTar, config, runId);
 			} else {
 				logger.info("[Scheduler][SelectiveScan] No folders selected for TAR.");
 			}
@@ -1169,7 +1182,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 			if (!individualFiles.isEmpty()) {
 				logger.info("[Scheduler][SelectiveScan] Processing individual files count={}", individualFiles.size());
-				processFiles(individualFiles, config);
+				processFiles(individualFiles, config, runId);
 			}
 
 			// 3) Process files that are not under any processed folder (tarred or
@@ -1190,7 +1203,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 			if (!topLevelFiles.isEmpty()) {
 				logger.info("[Scheduler][SelectiveScan] Processing top-level files count={}", topLevelFiles.size());
-				processFiles(topLevelFiles, config);
+				processFiles(topLevelFiles, config, runId);
 			}
 		} catch (Exception e) {
 			logger.error("[Scheduler][SelectiveScan] Failed");
@@ -1287,7 +1300,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	 *  3) Take only rows under the baseDir and not COMPLETED.
 	 *  4) Reset them to current runId and enqueue to JMS.
 	 */
-	private void includePriorRunFailuresInCurrentRunWorklist(DocConfig config) {
+	private void includePriorRunFailuresInCurrentRunWorklist(DocConfig config, String runId) {
 
 	  DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	  String doc = config.getDocName();
