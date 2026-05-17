@@ -634,8 +634,8 @@ public class DmeSyncScheduler {
 			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
-						.findTopStatusInfoByDocAndSourceFilePath(doc,
-								file.getAbsolutePath());
+						.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc,
+								file.getAbsolutePath() , file.getAbsolutePath());
 				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
@@ -729,6 +729,8 @@ public class DmeSyncScheduler {
 			}
 		}
 		else if(createCollectionSoftlink) {
+			 logger.debug(
+		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
 			statusInfo =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
@@ -753,13 +755,24 @@ public class DmeSyncScheduler {
           }
           //Modified after the last upload, so we need to re-upload
         } else {
-        	statusInfo =
-                    dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
-                        file.getAbsolutePath());
+        	
         	if(createTarContentsFile) {
         		statusInfo =
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
+        	}
+        	
+        	else if(createCollectionSoftlink) {
+   			 logger.debug(
+   		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
+   			statusInfo =
+   		              dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath( doc,
+   		                   file.getPath() , file.getAbsolutePath());
+   		     }
+        	else {
+        		statusInfo =
+                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+                            file.getAbsolutePath());
         	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
@@ -1000,6 +1013,11 @@ public class DmeSyncScheduler {
 				dmeSyncMailServiceFactory.getService(doc)
 						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+				try {
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		            } catch (IllegalArgumentException e) {
+		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
+		            }
 				DmeSyncApplication.shutdown();
 			}
 	    
