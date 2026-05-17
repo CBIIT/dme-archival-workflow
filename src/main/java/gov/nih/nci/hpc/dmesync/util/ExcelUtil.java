@@ -96,6 +96,7 @@ public class ExcelUtil {
       header.createCell(colCount++).setCellValue("DataTransferRate(Bytes/Sec)");
       header.createCell(colCount++).setCellValue("Error");
       header.createCell(colCount++).setCellValue("RetryCount");
+      header.createCell(colCount++).setCellValue("Reattempts");
       header.createCell(colCount++).setCellValue("SourceFileName");
 
       metadataInfo.sort(Comparator.comparing(MetadataInfo::getMetaDataKey));
@@ -157,6 +158,7 @@ public class ExcelUtil {
         }
         row.createCell(colCount++).setCellValue(data.getError());
         row.createCell(colCount++).setCellValue(data.getRetryCount());
+        row.createCell(colCount++).setCellValue(data.getReattempts());
         row.createCell(colCount++).setCellValue(data.getSourceFileName());
         for (String key : set) {
           boolean found = false;
