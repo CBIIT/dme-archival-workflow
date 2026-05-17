@@ -158,7 +158,7 @@ public class ExcelUtil {
         }
         row.createCell(colCount++).setCellValue(data.getError());
         row.createCell(colCount++).setCellValue(data.getRetryCount());
-        row.createCell(colCount++).setCellValue(data.getReattempts());
+        row.createCell(colCount++).setCellValue(data.getReattempts() != null ? data.getReattempts() : 0);
         row.createCell(colCount++).setCellValue(data.getSourceFileName());
         for (String key : set) {
           boolean found = false;
