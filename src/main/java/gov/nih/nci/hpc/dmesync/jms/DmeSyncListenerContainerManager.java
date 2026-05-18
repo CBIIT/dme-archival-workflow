@@ -92,7 +92,7 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
         if (threads != existing.getMaxConcurrentConsumers()) {
           log.info("[JMS Manager] Updating concurrency for queue '{}' to {}",
               queueName, threads);
-          existing.setConcurrency(String.valueOf(threads));
+          existing.setConcurrency(String.valueOf(threads) + "-" + String.valueOf(threads));
         }
       }
     }
@@ -142,7 +142,7 @@ public class DmeSyncListenerContainerManager implements DisposableBean {
     container.setConnectionFactory(connectionFactory);
     container.setDestinationName(queueName);
     container.setMessageListener(adapter);
-    container.setConcurrency(String.valueOf(threads));
+    container.setConcurrency(String.valueOf(threads) + "-" + String.valueOf(threads));
     container.setErrorHandler(new ErrorHandler() {
       @Override
       public void handleError(Throwable t) {
