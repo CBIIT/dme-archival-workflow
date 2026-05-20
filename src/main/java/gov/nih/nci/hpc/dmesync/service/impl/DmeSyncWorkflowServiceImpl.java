@@ -19,6 +19,7 @@ import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowService;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 @Service("local")
 @Transactional
@@ -33,6 +34,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
   @Override
   public void completeWorkflow(StatusInfo statusInfo) {
+    if (!WorkflowConstants.isCompletedStatus(statusInfo.getStatus())
+        && !WorkflowConstants.isIgnoredStatus(statusInfo.getStatus())) {
+      statusInfo.setStatus(WorkflowConstants.COMPLETED);
+    }
     statusInfo.setEndTimestamp(new Date());
     statusInfoDao.saveAndFlush(statusInfo);
     taskInfoDao.deleteByObjectId(statusInfo.getId());
@@ -41,6 +46,9 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   @Override
   public void retryWorkflow(StatusInfo statusInfo, Exception e) {
 	statusInfo.setError(e.getMessage());
+    if (!WorkflowConstants.isIgnoredStatus(statusInfo.getStatus())) {
+      statusInfo.setStatus(WorkflowConstants.FAILED);
+    }
     recordError(statusInfo);
     // Delete the metadata info created for this object ID
     metadataInfoDao.deleteByObjectId(statusInfo.getId());
@@ -48,6 +56,9 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
   @Override
   public void recordError(StatusInfo info) {
+    if (!WorkflowConstants.isIgnoredStatus(info.getStatus())) {
+      info.setStatus(WorkflowConstants.FAILED);
+    }
     statusInfoDao.saveAndFlush(info);
   }
 

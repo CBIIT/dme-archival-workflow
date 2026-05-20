@@ -318,8 +318,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					if (totalFilesInTars != files.length) {
 						object.setError((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple tars requests " + totalFilesInTars));
+						object.setStatus(WorkflowConstants.FAILED);
 						dmeSyncWorkflowService.getService(access).recordError(object);
-						object.setStatus(null);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple created tars " + totalFilesInTars));
 					} 
@@ -327,7 +327,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						// verify if all the tar requests are inserted in status_info table.If not throw the exception
 						object.setError((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));
-						object.setStatus(null);
+						object.setStatus(WorkflowConstants.FAILED);
 						dmeSyncWorkflowService.getService(access).recordError(object);
 						throw new DmeSyncVerificationException((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));
@@ -359,6 +359,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							  // If the contents file is not uploaded and all the tars are uploaded, so enqueing the contents file 
 							logger.info("[{}]Enqueuing the existing contents file upload request {}", super.getTaskName(),
 										tarMappingFile.getName());
+							checkForUploadedContentsFile.setStatus(null);
+							checkForUploadedContentsFile.setError("");
+							checkForUploadedContentsFile.setRetryCount(0L);
+							checkForUploadedContentsFile.setEndWorkflow(false);
 							checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
 							checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 							enqueueRequestToJms(checkForUploadedContentsFile);
@@ -385,8 +389,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								object.getTarContentsCount());
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
-						object.setStatus("COMPLETED");
-						object.setRunId(object.getRunId() + WorkflowConstants.IGNORED_RUN_SUFFIX);
+						object.setStatus(WorkflowConstants.IGNORED);
+						object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 						object.setEndWorkflow(true);
 						object.setSourceFilePath(object.getOriginalFilePath());
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
@@ -444,6 +448,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		statusInfo.setSourceFilePath(object.getOriginalFilePath());
 		statusInfo.setFilesize(0L);
 		statusInfo.setError(error);
+		statusInfo.setStatus(WorkflowConstants.FAILED);
 
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 
@@ -586,8 +591,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		if (coveredFolders != expectedCovered) {
 			object.setError("Grouped site folder coverage mismatch: covered=" + coveredFolders + " expected="
 					+ expectedCovered);
+			object.setStatus(WorkflowConstants.FAILED);
 			dmeSyncWorkflowService.getService(access).recordError(object);
-			object.setStatus(null);
 			throw new DmeSyncVerificationException(object.getError());
 		}
 

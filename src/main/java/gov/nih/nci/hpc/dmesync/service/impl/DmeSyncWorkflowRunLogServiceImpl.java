@@ -12,6 +12,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -63,7 +64,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, doc);
 
-			long totalSize = runIdRows.stream().filter(f -> "COMPLETED".equalsIgnoreCase(f.getStatus()))
+			long totalSize = runIdRows.stream().filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
 					.map(StatusInfo::getFilesize).filter(Objects::nonNull).mapToLong(Long::longValue).sum();
 
 			Long durationMinutes = mins;

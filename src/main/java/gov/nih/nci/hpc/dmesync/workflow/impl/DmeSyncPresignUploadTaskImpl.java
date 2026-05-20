@@ -50,6 +50,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 import gov.nih.nci.hpc.domain.datatransfer.HpcMultipartUpload;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartETag;
@@ -220,10 +221,20 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 		    logger.info("[{}] Checking if the previous uploaded file matches the checksum and size {}", super.getTaskName());
 
 			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
-					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), "COMPLETED");
+					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), WorkflowConstants.COMPLETED);
 			if (uploadedFileInfo != null) {
-				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
-						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+				boolean checksumMatches = StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum());
+				boolean filesizeMatches = object.getFilesize() != null
+						&& object.getFilesize().equals(uploadedFileInfo.getFilesize());
+				if (checksumMatches && filesizeMatches) {
+					object.setStatus(WorkflowConstants.IGNORED);
+					object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
+					object.setEndWorkflow(true);
+					object.setError("No upload needed because the archived file already matches checksum and file size.");
+					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+					return object;
+				}
+				if (!checksumMatches || !filesizeMatches) {
 					 // get file last modified date to MMddyyyy
 		            File newFile = new File(object.getOriginalFilePath());
 		            long lastModifiedMillis = newFile.lastModified();
