@@ -142,7 +142,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         // Check to see if any files were over the recommended size and flag if it was.
         boolean exceedsMaxRecommendedFileSize = false;
         long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-        long processedCount = 0, successCount = 0, failedCount = 0;
+        long processedCount = 0, successCount = 0, failedCount = 0, ignoredCount = 0;
         for (StatusInfo info : statusInfo) {
       	  processedCount ++;
       	  if (info.getFilesize() > maxFileSize) {
@@ -153,8 +153,10 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 		    		 minTarFileCount++;	    	
 	    	  }
 	  	  }
-      	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
+      	  if (WorkflowConstants.isCompletedStatus(info.getStatus()))
       		  successCount++;
+      	  else if (WorkflowConstants.isIgnoredStatus(info.getStatus()))
+      		  ignoredCount++;
       	  else
       		  failedCount++;
         }
@@ -171,9 +173,10 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
          // helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
      	  helper.setSubject("DME Auto Archival " + subject + " for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
         }
-  	  body = body.concat("<ul>"
+   	  body = body.concat("<ul>"
                 				+ "<li>"+ "Total processed: " + processedCount + "</li>"
                 				+ "<li>" + "Success: " + successCount +"</li>"
+                                + "<li>" + "Ignored: " + ignoredCount + "</li>"
                                 + "<li>" + "Failure: " + failedCount + "</li>"  
                                 + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
       		               "</ul>");

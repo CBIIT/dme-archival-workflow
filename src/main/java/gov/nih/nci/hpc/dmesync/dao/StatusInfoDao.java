@@ -40,7 +40,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param originalFilePath the original file path
    * @return the list of StatusInfo objects
    */
-  @Query("select s from StatusInfo s where s.originalFilePath like ?1 and s.status is null")
+  @Query("select s from StatusInfo s where s.originalFilePath like ?1 and (s.status is null or upper(s.status) = 'FAILED')")
   List<StatusInfo> findAllLikeOriginalFilePath(String originalFilePath);
   
   /**
@@ -71,7 +71,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
    * @param sourceFileName the sourceFileName
    * @return the list of StatusInfo objects which matches sourceFileName  and status is null
    */
-  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and s.status is null")
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and (s.status is null or upper(s.status) = 'FAILED')")
   List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath, String sourceFileName);
   
   /**
