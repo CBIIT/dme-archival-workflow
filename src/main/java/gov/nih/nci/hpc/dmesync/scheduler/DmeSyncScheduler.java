@@ -131,7 +131,15 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
-	  
+	
+	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
+	// This is to handle the scenario where the next scheduled run starts before the previous run completes.
+	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
+
+	if (prevRunInfo != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(prevRunInfo.getStatus())
+			|| WorkflowConstants.RunStatus.STARTED.toString().equals(prevRunInfo.getStatus())))
+		return;
+	
 	dmeMetadataBuilder.evictMetadataMap();
 
 	if (upload.moveProcessedFiles) {
@@ -917,6 +925,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Scheduled(cron = "0 0/1 * * * ?")
   public void checkForCompletedRun() {
 	  
+   MDC.clear();
    for (DocConfig config : configService.getEnabledDocs()) {
 	   
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
@@ -992,6 +1001,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Scheduled(cron = "0 0/1 * * * ?")
   public void checkForAWSCompletedRun() {
 	
+   MDC.clear();
    for (DocConfig config : configService.getEnabledDocs()) {
 	   
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
