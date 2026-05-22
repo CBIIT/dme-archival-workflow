@@ -20,8 +20,7 @@ public class WorkflowConstants {
 
 	public static boolean isFailedStatus(String status) {
 		String normalizedStatus = StringUtils.trimToEmpty(status);
-		return FAILED.equalsIgnoreCase(normalizedStatus)
-				|| StringUtils.startsWithIgnoreCase(normalizedStatus, FAILED + ".");
+		return FAILED.equalsIgnoreCase(normalizedStatus);
 	}
 
 	public static boolean isIgnoredStatus(String status) {
@@ -29,7 +28,7 @@ public class WorkflowConstants {
 	}
 
 	public static boolean isRetryableStatus(String status) {
-		return StringUtils.isBlank(status) || isFailedStatus(status);
+		return isFailedStatus(status);
 	}
 
 	public static String getDisplayStatus(String status) {
@@ -39,7 +38,7 @@ public class WorkflowConstants {
 		if (isIgnoredStatus(status)) {
 			return IGNORED;
 		}
-		if (isFailedStatus(status) || StringUtils.isBlank(status)) {
+		if (isFailedStatus(status)) {
 			return FAILED;
 		}
 		return status;

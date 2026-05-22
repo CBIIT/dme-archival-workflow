@@ -780,7 +780,7 @@ public class DmeSyncScheduler {
                             file.getAbsolutePath());
         	}
           
-          if(statusInfo != null && !WorkflowConstants.isIgnoredStatus(statusInfo.getStatus())) {
+          if(statusInfo != null && WorkflowConstants.isRetryableStatus(statusInfo.getStatus())) {
 
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);
