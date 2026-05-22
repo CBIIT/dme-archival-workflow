@@ -669,6 +669,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			}
 		}
 		else if(upload.collectionSoftlink) {
+			 logger.debug(
+		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
 			statusInfo =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
@@ -693,13 +695,24 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
           }
           //Modified after the last upload, so we need to re-upload
         } else {
-        	statusInfo =
-                    dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
-                        file.getAbsolutePath());
+        	
         	if(preRule.tarContentsFile) {
         		statusInfo =
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
+        	}
+        	
+        	else if(upload.collectionSoftlink) {
+   			 logger.debug(
+   		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
+   			statusInfo =
+   		              dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(config.getDocName(),
+   		                   file.getPath() , file.getAbsolutePath());
+   		     }
+        	else {
+        		statusInfo =
+                        dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
+                            file.getAbsolutePath());
         	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
