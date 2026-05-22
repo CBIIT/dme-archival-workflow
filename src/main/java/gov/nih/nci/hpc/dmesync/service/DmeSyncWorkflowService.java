@@ -47,12 +47,12 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status);
 
   /**
-   * findAllStatusInfoLikeOriginalFilePath
+   * findAllFailedStatusInfoLikeOriginalFilePath
    *
    * @param originalFilePath the original file path
-   * @return the list of StatusInfo objects
+   * @return the list of StatusInfo objects which have status failed or null
    */
-  List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(
+  List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(
       String originalFilePath);
   
   /**
@@ -96,14 +96,14 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String sourceFilePath, String status);
   
   /**
-   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
+   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatusFailed
    *
    * @param originalFilePath the original file path
    * @param sourceFileName the source file name
    * @param status the null
    * @return the StatusInfo object
    */
-  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusFailed(
       String originalFilePath, String sourceFileName);
 
   /**

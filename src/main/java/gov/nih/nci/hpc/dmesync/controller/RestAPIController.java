@@ -88,11 +88,11 @@ public class RestAPIController {
 				.findAllStatusInfoByOriginalFilePathAndStatusAndRunId(originalFilePath, status, runId);
 	}
 	
-	@GetMapping(value = "/findAllStatusInfoLikeOriginalFilePath")
-    public List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(
+	@GetMapping(value = "/findAllFailedStatusInfoLikeOriginalFilePath")
+    public List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(
             @RequestParam(required = true) String originalFilePath) {
         return dmeSyncWorkflowService.getService("local")
-                .findAllStatusInfoLikeOriginalFilePath(originalFilePath);
+                .findAllFailedStatusInfoLikeOriginalFilePath(originalFilePath);
     }
 
 	@GetMapping(value = "/findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc")

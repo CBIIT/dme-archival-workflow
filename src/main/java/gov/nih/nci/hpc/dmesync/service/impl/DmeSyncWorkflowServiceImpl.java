@@ -81,8 +81,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(String originalFilePath) {
-    return statusInfoDao.findAllLikeOriginalFilePath(originalFilePath);
+  public List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(String originalFilePath) {
+    return statusInfoDao.findAllFailedLikeOriginalFilePath(originalFilePath);
   }
   
   @Override
@@ -110,9 +110,9 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
+  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusFailed(
       String originalFilePath, String sourceFileName) {
-    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusNull(
+    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusFailed(
         originalFilePath, sourceFileName);
   }
 
