@@ -185,7 +185,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       body = body.concat("<ul>"
                                   +  "<li>"+ "Total processed: " + processedCount + "</li>"
      		                      + "<li>" + "Success: " + successCount +"</li>"
-                                  + "<li>" + "Ignored: " + ignoredCount + "</li>"
+                                  + (ignoredCount > 0 ? "<li>Ignored: " + ignoredCount + "</li>" : "")
                                   + "<li>" + "Failure: " + failedCount + "</li>"  
      		                      + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
      		             "</ul>");

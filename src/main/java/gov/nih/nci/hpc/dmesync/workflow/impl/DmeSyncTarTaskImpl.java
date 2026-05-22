@@ -248,7 +248,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}
 		}else {
 			logger.info("No need to upload file : {}", object.getOriginalFilePath());
-			object.setStatus(WorkflowConstants.IGNORED);
+
+			object.setStatus(WorkflowConstants.FAILED);
 			object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 			object.setEndWorkflow(true);
 			object.setError("No need to upload yet");

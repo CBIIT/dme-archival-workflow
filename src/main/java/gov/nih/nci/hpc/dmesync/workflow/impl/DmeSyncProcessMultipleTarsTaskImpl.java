@@ -230,7 +230,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 											super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
 											recordForUploadedTar.getStatus());
 									List<StatusInfo> duplicateRows = dmeSyncWorkflowService.getService(access)
-											.findByOriginalFilePathAndSourceFileNameAndStatusNull(object.getOriginalFilePath(),
+											.findByOriginalFilePathAndSourceFileNameAndStatusFailed(object.getOriginalFilePath(),
 													tarFileName);
 									if (!duplicateRows.isEmpty()) {
 										List<Long> objectIds = duplicateRows.stream().map(StatusInfo::getId)
@@ -389,7 +389,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 								object.getTarContentsCount());
 						
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
-						object.setStatus(WorkflowConstants.IGNORED);
+						object.setStatus(WorkflowConstants.COMPLETED);
 						object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 						object.setEndWorkflow(true);
 						object.setSourceFilePath(object.getOriginalFilePath());

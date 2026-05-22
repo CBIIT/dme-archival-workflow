@@ -443,7 +443,7 @@ public class DmeSyncScheduler {
     try {
 
       List<StatusInfo> statusInfoList =
-                dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
+                dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
        for(StatusInfo statusInfo : statusInfoList) {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors
@@ -496,7 +496,7 @@ public class DmeSyncScheduler {
           queryPath = syncBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);
 
         List<StatusInfo> statusInfoList =
-            dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(queryPath+'%');
+            dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(queryPath+'%');
 
         for(StatusInfo statusInfo : statusInfoList) {
           if(statusInfo != null) {
@@ -992,7 +992,7 @@ public class DmeSyncScheduler {
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(doc);
     if(completed) {
-      statusInfo.setStatus(WorkflowConstants.IGNORED);
+      statusInfo.setStatus(WorkflowConstants.COMPLETED);
       statusInfo.setError("specified file extension doesn't exist in correct depth");
     }
     statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
