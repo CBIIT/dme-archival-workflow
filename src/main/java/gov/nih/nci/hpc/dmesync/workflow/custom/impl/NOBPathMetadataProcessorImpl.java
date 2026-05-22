@@ -1,7 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -10,12 +9,12 @@ import java.util.Optional;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-
-
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -52,15 +51,15 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			"p8heart_1", "p8heart_2", "790","adult2","adult2_fused", "young1b","young1b_fused", "young2", "p10_cochlea1", "p10_cochlea1_b",
 			"p9p3_cochlea1", "p1117_wtL", "p1117_wtL_round2", "p175_wtR");
 	private final List<String> processedFolders = List.of("deconv", "processed", "sample_fused");
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		logger.info("[PathMetadataTask] POBCCDIgetArchivePath called");
 
 		Path filePath = Paths.get(object.getSourceFilePath());
@@ -76,11 +75,11 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("metadataFileKey {} ", metadataFilePathKey);
 		
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Folder");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "Folder");
 		
 		if (!fileName.endsWith("tar")) {
 			
-			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+			archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
 					+ getExperimentName(metadataFilePathKey)  + "/"+fileName;
@@ -92,7 +91,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		
 		if (!fileName.endsWith("tar")) {
 			
-			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+			archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
 					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/"+fileName;
@@ -103,14 +102,14 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			
 			String wavelengthFolder = getWavelengthFolderName(object.getOriginalFilePath(), deconvFolderName);
 			String waveLengthFolderType = wavelengthFolder != null ? wavelengthFolder + "/" : "";
-			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+			archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
 					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath).replace("_fused", "") + "/Deconv_"
 					+ deconvFolderName + "/" + waveLengthFolderType + fileName;
 		} else {
 
-			archivePath = destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
+			archivePath = sourceConfig.destinationBaseDir + "/Lab_" + getPiCollectionName(metadataFilePathKey) + "/Researcher_"
 					+ getResearchCollectionName(metadataFilePathKey) + "/Project_"
 					+ getProjectCollectionName(metadataFilePathKey) + "/Experiment_"
 					+ getExperimentName(metadataFilePathKey) + "/Sample_" + getSampleName(filePath) + "/RawData/"
@@ -126,9 +125,10 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -151,7 +151,7 @@ public class NOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// data_generator, affiliation, email
 
 			String labCollectionName = getPiCollectionName(metadataFilePathKey);
-			String labCollectionPath = destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
+			String labCollectionPath = sourceConfig.destinationBaseDir + "/Lab_" + labCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 			pathEntriesPI.setPath(labCollectionPath);

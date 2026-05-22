@@ -211,6 +211,13 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFilePath like concat('%', ?2) order by s.uploadStartTimestamp desc ")
   List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
   
-  
+  /**
+   * countByDocAndRunIdAndStatus
+   * @param doc the doc name
+   * @param runId the run id
+   * @param status status of the record
+   * @return the count
+   */
+  long countByDocAndRunIdAndStatus(String doc, String runId, String status);
 
 }

@@ -331,4 +331,13 @@ public interface DmeSyncWorkflowService {
 		String sourceFilePath);
 
    List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
+   
+   /**
+    * countByDocAndRunIdAndStatus
+    * @param doc the doc name
+    * @param runId the run id
+    * @param status status of the record
+    * @return the count
+    */
+   long countByDocAndRunIdAndStatus(String doc, String runId, String status);
 }

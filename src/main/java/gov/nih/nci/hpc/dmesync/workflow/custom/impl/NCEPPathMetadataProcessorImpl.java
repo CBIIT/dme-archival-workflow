@@ -3,9 +3,12 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -24,19 +27,15 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //NCEP Custom logic for DME path construction and meta data creation
 
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] NCEPgetArchivePath called");
 
     // load the user metadata from the externally placed excel
- 	threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+ 	threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "path"));
  	 
     //extract the user name from the source Path
     //Example source path - /mnt/NCEP-CryoEM/active/Data/Archive/20200107_1_Glacios/20200107_1_Glacios.tar
@@ -45,7 +44,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     //Extract the Project and Run value from the Path
 
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_Ognjenovic"
             + "/Project_"
             + getProjectCollectionName(object)
@@ -63,9 +62,10 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
         new HpcDataObjectRegistrationRequestDTO();
 
@@ -78,7 +78,7 @@ public class NCEPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     //key = affiliation, value = NCEP, CRTP, FNL (supplied)
 
     String piCollectionName = "Ognjenovic";
-    String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+    String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);

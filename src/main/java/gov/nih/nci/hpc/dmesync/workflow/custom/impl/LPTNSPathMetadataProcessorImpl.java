@@ -4,10 +4,12 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -26,19 +28,18 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		implements DmeSyncPathMetadataProcessor {
 
 	// LP TNS Custom logic for DME path construction and meta data creation
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 	
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
-
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] LP TNS getArchivePath called");
 
 		// extract the user name from the Path
 		// Example path - /data/EVset_RNAseq/PI_Lab_Jennifer_Jones/Project_EVsetRNAseq1/Experiment_DC24_20210914/Sample_FASTQ/*
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 
-		String archivePath = destinationBaseDir + "/" + getPiCollectionName(object) + "/"
+		String archivePath = sourceConfig.destinationBaseDir + "/" + getPiCollectionName(object) + "/"
 				+ getProjectCollectionName(object) + "/" + getExpCollectionName(object) 
 				+ "/" + getCollectionNameFromParent(object, getExpCollectionName(object)) + "/" + fileName;
 
@@ -51,11 +52,13 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+		threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "path"));
 		String path = "/data/EVset_RNAseq" + StringUtils.substringAfter(object.getOriginalFilePath().replace(File.separatorChar,'/'), "EVset_RNAseq");
 		
 		// Add to HpcBulkMetadataEntries for path attributes
@@ -66,7 +69,7 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		// PI_Jennifer_Jones,
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		String piCollectionName = getPiCollectionName(object);
-		pathEntriesPI.setPath(destinationBaseDir + "/" + piCollectionName);
+		pathEntriesPI.setPath(sourceConfig.destinationBaseDir + "/" + piCollectionName);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
 				.add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName, "lp-tns"));
@@ -74,7 +77,7 @@ public class LPTNSPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 		// Add path metadata entries for "Project_XXX" collection
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		String projectCollectionName = getProjectCollectionName(object);
-		String projectPath = destinationBaseDir + "/" + piCollectionName + "/" + projectCollectionName;
+		String projectPath = sourceConfig.destinationBaseDir + "/" + piCollectionName + "/" + projectCollectionName;
 		pathEntriesProject.setPath(projectPath.replace(" ", "_"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithKey(path, "project_poc")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", getAttrValueWithKey(path, "poc_email")));
