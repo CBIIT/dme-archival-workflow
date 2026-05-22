@@ -572,8 +572,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
-						.findTopStatusInfoByDocAndSourceFilePath(config.getDocName(),
-								file.getAbsolutePath());
+						.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(config.getDocName(),
+								file.getAbsolutePath() , file.getAbsolutePath());
 				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
@@ -961,6 +961,11 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 				dmeSyncMailServiceFactory.getService(config.getDocName())
 						.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody, config);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+				try {
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		            } catch (IllegalArgumentException e) {
+		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", currentRunId, config.getDocName(), e);
+		            }
 				DmeSyncApplication.shutdown();
 			}
 	    

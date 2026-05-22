@@ -117,7 +117,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 		DocConfig.UploadConfig upload = config.getUploadConfig();
 		
 		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-				.findTopStatusInfoByDocAndSourceFilePath(config.getDocName(), tarMappingFile.getAbsolutePath());
+				.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(config.getDocName(), tarMappingFile.getAbsolutePath() , object.getOriginalFilePath());
 
 		StatusInfo contentsFileRecord = null;
 
@@ -133,6 +133,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 				checkForUploadedContentsFile.setError("");
 				checkForUploadedContentsFile.setRetryCount(0L);
 				checkForUploadedContentsFile.setEndWorkflow(false);
+				checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
 				checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 				contentsFileRecord = checkForUploadedContentsFile;
 			}
