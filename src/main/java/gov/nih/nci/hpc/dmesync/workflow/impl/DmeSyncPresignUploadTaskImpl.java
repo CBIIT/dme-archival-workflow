@@ -228,11 +228,8 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 						&& object.getFilesize().equals(uploadedFileInfo.getFilesize());
 				if (checksumMatches && filesizeMatches) {
 					object.setStatus(WorkflowConstants.IGNORED);
-					object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
-					object.setEndWorkflow(true);
-					object.setError("No upload needed because the archived file already matches checksum and file size.");
 					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-					return object;
+					throw new DmeSyncWorkflowException(errorResponse.getMessage());
 				}
 				if (!checksumMatches || !filesizeMatches) {
 					 // get file last modified date to MMddyyyy

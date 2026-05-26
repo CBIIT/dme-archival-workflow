@@ -123,7 +123,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						//This path is not in the master file, so log the path and complete the workflow
 						logger.info("No need to upload file : {}", object.getOriginalFilePath());
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
-						object.setStatus(WorkflowConstants.IGNORED);
+						object.setStatus(WorkflowConstants.FAILED);
 						object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 						object.setEndWorkflow(true);
 						object.setError("No need to upload");
@@ -147,7 +147,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
 			if(projectTitle == null) {
 				logger.info("No need to upload file : {}", object.getOriginalFilePath());
-				object.setStatus(WorkflowConstants.IGNORED);
+				object.setStatus(WorkflowConstants.FAILED);
 				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 				object.setEndWorkflow(true);
 				object.setError("No need to upload yet");

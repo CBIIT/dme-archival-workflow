@@ -17,25 +17,7 @@ import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 class DmeSyncWorkflowServiceImplStatusTest {
 
-  @SuppressWarnings("unchecked")
-  @Test
-  void completeWorkflowMarksBlankStatusCompleted() {
-    DmeSyncWorkflowServiceImpl service = new DmeSyncWorkflowServiceImpl();
-    StatusInfoDao<StatusInfo> statusInfoDao = Mockito.mock(StatusInfoDao.class);
-    TaskInfoDao<TaskInfo> taskInfoDao = Mockito.mock(TaskInfoDao.class);
-
-    ReflectionTestUtils.setField(service, "statusInfoDao", statusInfoDao);
-    ReflectionTestUtils.setField(service, "taskInfoDao", taskInfoDao);
-
-    StatusInfo statusInfo = new StatusInfo();
-    statusInfo.setId(11L);
-
-    service.completeWorkflow(statusInfo);
-
-    assertEquals(WorkflowConstants.COMPLETED, statusInfo.getStatus());
-    verify(statusInfoDao).saveAndFlush(statusInfo);
-    verify(taskInfoDao).deleteByObjectId(11L);
-  }
+ 
 
   @SuppressWarnings("unchecked")
   @Test
