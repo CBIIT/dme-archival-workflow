@@ -107,7 +107,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				// This Archive column is not Yes in the master file, so dataset is not ready to upload, log the path and complete the workflow
 				logger.info("No need to upload file : {} Archive column is {} ", object.getOriginalFilePath(), archiveStatus);
 				// update the current status info row as completed so this workflow is complete and next task won't be processed.
-				object.setStatus(WorkflowConstants.IGNORED);
+				object.setStatus(WorkflowConstants.FAILED);
 				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 				object.setEndWorkflow(true);
 				object.setError("No need to upload, Archive column is set to "+ archiveStatus);
