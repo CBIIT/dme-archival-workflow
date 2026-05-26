@@ -34,10 +34,6 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
   @Override
   public void completeWorkflow(StatusInfo statusInfo) {
-    if (!WorkflowConstants.isCompletedStatus(statusInfo.getStatus())
-        && !WorkflowConstants.isIgnoredStatus(statusInfo.getStatus())) {
-      statusInfo.setStatus(WorkflowConstants.COMPLETED);
-    }
     statusInfo.setEndTimestamp(new Date());
     statusInfoDao.saveAndFlush(statusInfo);
     taskInfoDao.deleteByObjectId(statusInfo.getId());
