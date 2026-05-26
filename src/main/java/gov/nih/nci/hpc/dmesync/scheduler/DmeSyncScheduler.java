@@ -743,8 +743,8 @@ public class DmeSyncScheduler {
 		}
 		else {
           statusInfo =
-              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
-                  file.getAbsolutePath(), "COMPLETED");
+              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatusIn(
+                  file.getAbsolutePath(), WorkflowConstants.getNoReRunStatuses());
         }
         if (statusInfo != null) {
           logger.debug(
@@ -780,7 +780,7 @@ public class DmeSyncScheduler {
                             file.getAbsolutePath());
         	}
           
-          if(statusInfo != null && WorkflowConstants.isRetryableStatus(statusInfo.getStatus())) {
+          if(statusInfo != null ) {
 
         	//Update the run_id and reset the retry count and errors
         	statusInfo.setRunId(runId);

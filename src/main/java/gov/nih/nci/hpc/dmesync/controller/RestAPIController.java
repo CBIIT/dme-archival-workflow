@@ -44,11 +44,11 @@ public class RestAPIController {
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
-	@GetMapping(value = "/findFirstStatusInfoByOriginalFilePathAndStatus")
+	@GetMapping(value = "/findFirstStatusInfoByOriginalFilePathAndStatusIn")
 	public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatus(
-			@RequestParam(required = true) String originalFilePath, @RequestParam(required = true) String status) {
+			@RequestParam(required = true) String originalFilePath, @RequestParam(required = true) List<String> statuses) {
 		return dmeSyncWorkflowService.getService("local")
-				.findFirstStatusInfoByOriginalFilePathAndStatus(originalFilePath, status);
+				.findFirstStatusInfoByOriginalFilePathAndStatusIn(originalFilePath, statuses);
 	}
 
 	@GetMapping(value = "/findAllStatusInfoByOriginalFilePathAndStatus")

@@ -9,12 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Long> {
 
   /**
-   * findFirstByOriginalFilePathAndStatus
+   * findFirstByOriginalFilePathAndStatusIn
    * @param originalFilePath the original file path
-   * @param status the status
+   * @param statuses the statuses ;ist
    * @return the StatusInfo object
    */
-  StatusInfo findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(String originalFilePath, String status);
+  StatusInfo findFirstByOriginalFilePathAndStatusInOrderByStartTimestampDesc(String originalFilePath,  List<String> statuses);
   
   /**
    * findFirstStatusInfoByFullDestinationPathAndStatus

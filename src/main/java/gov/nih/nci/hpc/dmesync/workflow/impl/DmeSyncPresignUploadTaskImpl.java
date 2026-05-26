@@ -227,9 +227,10 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 				boolean filesizeMatches = object.getFilesize() != null
 						&& object.getFilesize().equals(uploadedFileInfo.getFilesize());
 				if (checksumMatches && filesizeMatches) {
+					logger.info("[{}] Setting Status to Ignored because the checksum and file size matches with the file in DME {}",
+							super.getTaskName(), object.getFullDestinationPath());
 					object.setStatus(WorkflowConstants.IGNORED);
 					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
-					throw new DmeSyncWorkflowException(errorResponse.getMessage());
 				}
 				if (!checksumMatches || !filesizeMatches) {
 					 // get file last modified date to MMddyyyy

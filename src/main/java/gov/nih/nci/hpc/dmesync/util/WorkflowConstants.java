@@ -1,5 +1,7 @@
 package gov.nih.nci.hpc.dmesync.util;
 
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 
 public class WorkflowConstants {
@@ -51,5 +53,9 @@ public class WorkflowConstants {
 		return runId + IGNORED_RUN_SUFFIX;
 	}
 	
+	public static List<String> getNoReRunStatuses(){
+	   List<String> statuses = List.of(COMPLETED, IGNORED);
+       return statuses;
+	}
 
 }

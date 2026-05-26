@@ -17,13 +17,13 @@ import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 public interface DmeSyncWorkflowService {
 
   /**
-   * findFirstStatusInfoByOriginalFilePathAndStatus
+   * findFirstStatusInfoByOriginalFilePathAndStatusIn
    *
    * @param originalFilePath the original file path
-   * @param status the status
+   * @param status the statuses list
    * @return the StatusInfo object
    */
-  StatusInfo findFirstStatusInfoByOriginalFilePathAndStatus(String originalFilePath, String status);
+  StatusInfo findFirstStatusInfoByOriginalFilePathAndStatusIn(String originalFilePath, List<String> statuses);
 
   /**
    * findFirstStatusInfoByFullDestinationPathAndStatus
