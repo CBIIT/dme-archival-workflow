@@ -28,6 +28,7 @@ public class StatusInfo {
   private Integer tarIndexStart ;
   private Integer tarIndexEnd ;
   private Long retryCount = 0L;
+  private Long reattempts = 0L;
   private String error;
   private String moveDataObjectOrignalPath;
   private Integer tarContentsCount;
@@ -220,6 +221,14 @@ public class StatusInfo {
   public void setEndWorkflow(Boolean endWorkflow) {
 		this.endWorkflow = endWorkflow;
 	}
+  
+  public Long getReattempts() {
+	    return reattempts;
+	  }
+
+  public void setReattempts(Long reattempts) {
+	    this.reattempts = reattempts;
+	  }
 
 @Transient
   public String getMoveDataObjectOrignalPath() {
