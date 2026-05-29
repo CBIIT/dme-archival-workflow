@@ -47,9 +47,10 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
-    try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
+	  Set<Path> seenRealPaths = new HashSet<>();
+	  try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , seenRealPaths);
       }
     }
   }
@@ -63,9 +64,10 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
-    try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
+	  Set<Path> seenRealPaths = new HashSet<>();
+	  try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , seenRealPaths);
       }
     }
   }
@@ -266,46 +268,95 @@ public class TarUtil {
 	    return new GzipCompressorOutputStream(bufferedOutputStream);
 	  }
 
-  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders, boolean ignoreBrokenLinksInTar)
-      throws Exception {
-    String entry = dir + File.separator + file.getName();
-    Path path = Paths.get(file.getAbsolutePath());
-    if (file.isFile()) {
-      out.putArchiveEntry(new TarArchiveEntry(file, entry));
-      try (FileInputStream in = new FileInputStream(file)) {
-        IOUtils.copy(in, out);
-      }
-      out.closeArchiveEntry();
-    } else if(file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty() && excludeFolders.contains(file.getName())) {
-      logger.info("{} is excluded for tar", file.getName());
-    } else if(file.isDirectory()) {
-      if (!Files.isReadable(Paths.get(file.getAbsolutePath()))) {
-        throw new Exception("No Read permission to " + file.getAbsolutePath());
-      }
-      File[] children = file.listFiles();
-      if (children != null) {
-        for (File child : children) {
-          addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar);
-        }
-      }
-	} else if (!ignoreBrokenLinksInTar && Files.isSymbolicLink(path)) {
-		/* When ignore Broken link is not set, workflow will throw the expection and error is recorded in DB and automated report
-		 */
-		Path target = Files.readSymbolicLink(path);
-		Path resolved = path.getParent().resolve(target).normalize();
-		if (!Files.exists(resolved))
-			throw new Exception(
-					"Broken symbolic link detected: " + resolved + " (target does not exist)");
-		else if (!Files.isReadable(resolved))
-			throw new Exception(
-					"Broken symbolic link detected: " + resolved + " (target is inaccessible)");
-	} else {
-		/* When ignore Broken link is set , workflow ignores the broken links and if exclude contents file is also set then these broken links 
-		 * will be added to excluded contents file and uploaded to DME
-		 */
-      logger.error("{} is not supported", file.getName());
-    }
+  private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders,
+				boolean ignoreBrokenLinksInTar, Set<Path> seenRealPaths) throws Exception {
+
+		String entry = dir + File.separator + file.getName();
+		Path path = file.toPath();
+
+		if (Files.isSymbolicLink(path)) {
+			Path resolvedPath;
+			try {
+				resolvedPath = path.toRealPath();
+			} catch (IOException e) {
+				if (ignoreBrokenLinksInTar) {
+					logger.warn("Skipping broken symbolic link {}", path);
+					return;
+				}
+				throw new Exception("Broken symbolic link detected: " + path, e);
+			}
+
+			if (!Files.exists(resolvedPath) || !Files.isReadable(resolvedPath)) {
+				if (ignoreBrokenLinksInTar) {
+					logger.warn("Skipping unreadable symbolic link target {} -> {}", path, resolvedPath);
+					return;
+				}
+				throw new Exception("Broken symbolic link detected: " + resolvedPath + " (target is inaccessible)");
+			}
+
+			if (seenRealPaths.contains(resolvedPath)) {
+				logger.info("Skipping symbolic link {} because target is already included: {}", path, resolvedPath);
+				return;
+			}
+
+			if (Files.isDirectory(resolvedPath)) {
+				if (excludeFolders != null && !excludeFolders.isEmpty() && excludeFolders.contains(file.getName())) {
+					logger.info("{} is excluded for tar", file.getName());
+					return;
+				}
+
+				if (!Files.isReadable(resolvedPath)) {
+					throw new Exception("No Read permission to " + resolvedPath);
+				}
+
+				seenRealPaths.add(resolvedPath);
+
+				File[] children = resolvedPath.toFile().listFiles();
+				if (children != null) {
+					for (File child : children) {
+						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, seenRealPaths);
+					}
+				}
+				return;
+			}
+
+			seenRealPaths.add(resolvedPath);
+			out.putArchiveEntry(new TarArchiveEntry(resolvedPath.toFile(), entry));
+			try (FileInputStream in = new FileInputStream(resolvedPath.toFile())) {
+				IOUtils.copy(in, out);
+			}
+			out.closeArchiveEntry();
+			return;
+		}
+
+		if (file.isFile()) {
+			Path realPath = path.toRealPath();
+			seenRealPaths.add(realPath);
+
+			out.putArchiveEntry(new TarArchiveEntry(file, entry));
+			try (FileInputStream in = new FileInputStream(file)) {
+				IOUtils.copy(in, out);
+			}
+			out.closeArchiveEntry();
+		} else if (file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty()
+				&& excludeFolders.contains(file.getName())) {
+			logger.info("{} is excluded for tar", file.getName());
+		} else if (file.isDirectory()) {
+			if (!Files.isReadable(path)) {
+				throw new Exception("No Read permission to " + file.getAbsolutePath());
+			}
+			File[] children = file.listFiles();
+			if (children != null) {
+				for (File child : children) {
+					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, seenRealPaths);
+				}
+			}
+		} else {
+			logger.error("{} is not supported", file.getName());
+		}
   }
+  
+  
   
   public static long getDirectorySize(Path dir, List<String> excludeFolders) throws IOException {
 		final long[] size = { 0 };
@@ -501,4 +552,5 @@ public class TarUtil {
       // Check if the sourceDirLeafNode matches the generated regex
       return sourceDirLeafNode.matches(regex);
   }
+  
 }
