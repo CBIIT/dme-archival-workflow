@@ -156,7 +156,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
 
 		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-				.findTopStatusInfoByDocAndSourceFilePath(doc, tarMappingFile.getAbsolutePath());
+				.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc, tarMappingFile.getAbsolutePath() , object.getOriginalFilePath());
 
 		StatusInfo contentsFileRecord = null;
 
@@ -172,6 +172,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 				checkForUploadedContentsFile.setError("");
 				checkForUploadedContentsFile.setRetryCount(0L);
 				checkForUploadedContentsFile.setEndWorkflow(false);
+				checkForUploadedContentsFile.setFilesize(tarMappingFile.length());
 				checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access).saveStatusInfo(checkForUploadedContentsFile);
 				contentsFileRecord = checkForUploadedContentsFile;
 			}

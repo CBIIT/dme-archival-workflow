@@ -35,7 +35,7 @@ public class DefaultPathMetadataProcessorImpl extends AbstractPathMetadataProces
     logger.info("[PathMetadataTask] Default getArchivePath called");
 
     if(awsFlag) {
-    	return destinationBaseDir + '/' + object.getSourceFilePath();
+    	return destinationBaseDir + '/' + object.getSourceFileName();
     }
     // For now, all files goes directly to base destination dir, under the folders from source path.
     Path baseDirPath;
