@@ -222,7 +222,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
 			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
 					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), WorkflowConstants.COMPLETED);
-			if (uploadedFileInfo != null) {
+			if (uploadedFileInfo != null && !StringUtils.isEmpty(uploadedFileInfo.getChecksum())) {
 				boolean checksumMatches = StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum());
 				boolean filesizeMatches = object.getFilesize() != null
 						&& object.getFilesize().equals(uploadedFileInfo.getFilesize());

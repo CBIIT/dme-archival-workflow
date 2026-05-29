@@ -230,8 +230,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 											super.getTaskName(), tarFileName, recordForUploadedTar.getId(),
 											recordForUploadedTar.getStatus());
 									List<StatusInfo> duplicateRows = dmeSyncWorkflowService.getService(access)
-											.findByOriginalFilePathAndSourceFileNameAndStatusFailed(object.getOriginalFilePath(),
-													tarFileName);
+											.findByOriginalFilePathAndSourceFileNameAndStatus(object.getOriginalFilePath(),
+													tarFileName , WorkflowConstants.FAILED);
 									if (!duplicateRows.isEmpty()) {
 										List<Long> objectIds = duplicateRows.stream().map(StatusInfo::getId)
 												.collect(Collectors.toList());

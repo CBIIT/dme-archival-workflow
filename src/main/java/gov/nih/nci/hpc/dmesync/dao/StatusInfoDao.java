@@ -11,7 +11,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   /**
    * findFirstByOriginalFilePathAndStatusIn
    * @param originalFilePath the original file path
-   * @param statuses the statuses ;ist
+   * @param statuses the statuses
    * @return the StatusInfo object
    */
   StatusInfo findFirstByOriginalFilePathAndStatusInOrderByStartTimestampDesc(String originalFilePath,  List<String> statuses);
@@ -66,14 +66,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
   
   /**
-   * findByOriginalFilePathAndSourceFileNameAndStatusFailed
+   * findByOriginalFilePathAndSourceFileNameAndStatus
    * 
    * @param originalFilePath the original file path
    * @param sourceFileName the sourceFileName
+   * @param status the status
    * @return the list of StatusInfo objects which matches sourceFileName  and status is null
    */
-  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and upper(s.status) = 'FAILED'")
-  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusFailed(String originalFilePath, String sourceFileName);
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and upper(s.status) =?3")
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(String originalFilePath, String sourceFileName ,String status);
   
   /**
    * findByRunId

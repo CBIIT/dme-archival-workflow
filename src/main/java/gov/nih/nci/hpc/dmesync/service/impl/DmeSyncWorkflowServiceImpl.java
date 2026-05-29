@@ -106,10 +106,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusFailed(
-      String originalFilePath, String sourceFileName) {
-    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusFailed(
-        originalFilePath, sourceFileName);
+  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(
+      String originalFilePath, String sourceFileName , String status) {
+    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatus(
+        originalFilePath, sourceFileName , status);
   }
 
   

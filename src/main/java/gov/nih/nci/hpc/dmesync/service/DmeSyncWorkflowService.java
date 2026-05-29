@@ -96,15 +96,15 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String sourceFilePath, String status);
   
   /**
-   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatusFailed
+   * findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus
    *
    * @param originalFilePath the original file path
    * @param sourceFileName the source file name
-   * @param status the null
+   * @param status
    * @return the StatusInfo object
    */
-  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusFailed(
-      String originalFilePath, String sourceFileName);
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(
+      String originalFilePath, String sourceFileName , String status);
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
