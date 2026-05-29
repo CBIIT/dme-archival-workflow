@@ -70,7 +70,7 @@ class DmeSyncListenerContainerManagerTest {
         false, false, false, false, false,
         false, false, false, false, false, false, false, null, 1);
     DocConfig.NotificationConfig notif = new DocConfig.NotificationConfig(null, false, false, 1);
-    return new DocConfig(id, docName, "srv1", "wf1", "dme1", "http://dme",
+    return new DocConfig(id, docName, "srv1", docName, "dme1", "http://dme",
         threads, true, "0 0 * * * ?", 1, Instant.now(), Instant.now(),
         src, rule, pre, preRule, upload, notif);
   }

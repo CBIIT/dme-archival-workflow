@@ -294,7 +294,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     ));
 
     verify(workflowSvc, times(1)).deleteMetadataInfoByObjectId(4L);
-    verify(sender, times(1)).send(any(DmeSyncMessageDto.class), eq("dme.doc1"));
+    verify(sender, times(1)).send(any(DmeSyncMessageDto.class), eq("dme.default"));
 
     java.nio.file.Files.deleteIfExists(existing);
     java.nio.file.Files.deleteIfExists(baseDir);

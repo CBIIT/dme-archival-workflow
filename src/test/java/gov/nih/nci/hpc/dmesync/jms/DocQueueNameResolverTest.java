@@ -80,7 +80,7 @@ class DocQueueNameResolverTest {
   @Test
   void configWithDocName_resolvesCorrectly() {
     DocConfig config = new DocConfig(
-        1L, "My Lab", null, null, null, null, null,
+        1L, "My Lab", null, "My Lab", null, null, null,
         true, null, 0, null, null,
         null, null, null, null, null, null);
     assertEquals("dme.my_lab", resolver.resolve(config));
