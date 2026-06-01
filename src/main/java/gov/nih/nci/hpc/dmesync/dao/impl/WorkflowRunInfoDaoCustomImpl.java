@@ -19,7 +19,7 @@ public class WorkflowRunInfoDaoCustomImpl implements WorkflowRunInfoDaoCustom {
 
     @Override
     public Instant findLastScheduledTime(Long docId) {
-        String sql = "SELECT RUN_START_TIMESTAMP FROM WORKFLOW_RUN_INFO WHERE WORKFLOW_ID = (SELECT WORKFLOW_ID FROM DOC_CONFIG WHERE ID = ?) ORDER BY RUN_START_TIMESTAMP DESC FETCH FIRST 1 ROWS ONLY";
+        String sql = "SELECT RUN_START_TIMESTAMP FROM WORKFLOW_RUN_INFO WHERE DOC_ID = ? and STATUS <> 'CANCELLED' ORDER BY RUN_START_TIMESTAMP DESC FETCH FIRST 1 ROWS ONLY";
         return jdbcTemplate.query(sql, rs -> rs.next() ? rs.getTimestamp(1).toInstant() : null, docId);
     }
     
