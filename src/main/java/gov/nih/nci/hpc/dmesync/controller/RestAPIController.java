@@ -34,13 +34,13 @@ public class RestAPIController {
 
 	@PostMapping(value = "/retryWorkflow")
 	public ResponseEntity<?> retryWorkflow(@RequestBody StatusInfo statusInfo, @RequestBody Exception e) {
-		dmeSyncWorkflowService.getService("local").retryWorkflow(statusInfo, e);
+		dmeSyncWorkflowService.getService("local").retryWorkflow(statusInfo, true, e);
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
 	@PostMapping(value = "/recordError")
 	public ResponseEntity<?> recordError(@RequestBody StatusInfo statusInfo) {
-		dmeSyncWorkflowService.getService("local").recordError(statusInfo);
+		dmeSyncWorkflowService.getService("local").recordError(statusInfo , true);
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 

@@ -250,14 +250,16 @@ public interface DmeSyncWorkflowService {
    * @param statusInfo the StatusInfo object
    * @param e the exception to be recorded
    */
-  public void retryWorkflow(StatusInfo statusInfo, Exception e);
+  public void retryWorkflow(StatusInfo statusInfo, boolean setStatus, Exception e);
 
   /**
    * Saves the error
    *
    * @param statusInfo the StatusInfo object
    */
-  public void recordError(StatusInfo statusInfo);
+  public void recordError(StatusInfo statusInfo , boolean setStatus);
+  
+  
 
   /**
    * findStatusInfoById

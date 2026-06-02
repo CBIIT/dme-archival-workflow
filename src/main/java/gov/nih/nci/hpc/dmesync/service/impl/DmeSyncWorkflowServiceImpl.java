@@ -40,23 +40,23 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public void retryWorkflow(StatusInfo statusInfo, Exception e) {
+  public void retryWorkflow(StatusInfo statusInfo, boolean setStatus, Exception e) {
 	statusInfo.setError(e.getMessage());
-    if (!WorkflowConstants.isIgnoredStatus(statusInfo.getStatus())) {
-      statusInfo.setStatus(WorkflowConstants.FAILED);
-    }
-    recordError(statusInfo);
+    recordError(statusInfo , setStatus);
     // Delete the metadata info created for this object ID
     metadataInfoDao.deleteByObjectId(statusInfo.getId());
   }
 
   @Override
-  public void recordError(StatusInfo info) {
-    if (!WorkflowConstants.isIgnoredStatus(info.getStatus())) {
-      info.setStatus(WorkflowConstants.FAILED);
-    }
+  public void recordError(StatusInfo info , boolean setStatus) {
+	if (setStatus) {
+			if (!WorkflowConstants.isIgnoredStatus(info.getStatus())) {
+				info.setStatus(WorkflowConstants.FAILED);
+			}
+		}
     statusInfoDao.saveAndFlush(info);
   }
+	
 
   @Override
   public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatusIn(

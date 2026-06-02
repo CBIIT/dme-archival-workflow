@@ -33,7 +33,7 @@ class DmeSyncWorkflowServiceImplStatusTest {
     statusInfo.setId(21L);
     statusInfo.setStatus(WorkflowConstants.IGNORED);
 
-    service.retryWorkflow(statusInfo, new RuntimeException("ignored"));
+    service.retryWorkflow(statusInfo, true, new RuntimeException("ignored"));
 
     assertEquals(WorkflowConstants.IGNORED, statusInfo.getStatus());
     verify(statusInfoDao).saveAndFlush(statusInfo);
@@ -51,7 +51,7 @@ class DmeSyncWorkflowServiceImplStatusTest {
     StatusInfo statusInfo = new StatusInfo();
     statusInfo.setStatus(WorkflowConstants.COMPLETED);
 
-    service.recordError(statusInfo);
+    service.recordError(statusInfo, true);
 
     assertEquals(WorkflowConstants.FAILED, statusInfo.getStatus());
     verify(statusInfoDao).saveAndFlush(statusInfo);

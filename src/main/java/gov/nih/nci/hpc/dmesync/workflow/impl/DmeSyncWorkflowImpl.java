@@ -38,6 +38,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 
   private List<DmeSyncTask> tasks;
 
+  boolean setStatus = false;
   @Autowired private DmeSyncUploadTaskImpl syncUploadTask;
   @Autowired private DmeSyncPresignUploadTaskImpl presignUploadTask;
   @Autowired private DmeSyncFileSystemUploadTaskImpl fileSystemUploadTask;
@@ -111,6 +112,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   
   @Value("${dmesync.selective.scan:false}")
   private boolean selectiveScan;
+  
+  @Value("${dmesync.activemq.maximum.retires}")
+  private int maximumRetries;
   
   @PostConstruct
   public boolean init() {
@@ -198,24 +202,34 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       
       // In case of mapping or verification exception on async, retry will not help.
       statusInfo.setError(e.getMessage());
-      dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+      dmeSyncWorkflowService.getService(access).recordError(statusInfo , setStatus);
       
     } catch (DmeSyncStorageException e) {
         
         // In case of space issue while tarring, retry will not help.
         statusInfo.setError(e.getMessage());
-        dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+        dmeSyncWorkflowService.getService(access).recordError(statusInfo , setStatus);
         
       }catch (DmeSyncWorkflowException e) {
       
+      if(statusInfo.getRetryCount() == maximumRetries) {
+		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
+		 setStatus = true;
+		  
+	  }
       statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
-      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, setStatus, e);
       
       throw e;
       
     } catch (Exception e) {
       
-      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+       if(statusInfo.getRetryCount() == maximumRetries) {
+   		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
+   		 setStatus = true;
+   		  
+   	   }
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, setStatus ,e );
     }
   }
 

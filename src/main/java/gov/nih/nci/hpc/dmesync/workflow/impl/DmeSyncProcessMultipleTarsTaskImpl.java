@@ -318,8 +318,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					if (totalFilesInTars != files.length) {
 						object.setError((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple tars requests " + totalFilesInTars));
-						object.setStatus(WorkflowConstants.FAILED);
-						dmeSyncWorkflowService.getService(access).recordError(object);
+						dmeSyncWorkflowService.getService(access).recordError(object , true);
 						throw new DmeSyncVerificationException((" Files in original folder " + files.length
 								+ " doesn't match the files in multiple created tars " + totalFilesInTars));
 					} 
@@ -327,9 +326,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 						// verify if all the tar requests are inserted in status_info table.If not throw the exception
 						object.setError((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));
-						object.setStatus(WorkflowConstants.FAILED);
-						dmeSyncWorkflowService.getService(access).recordError(object);
-						throw new DmeSyncVerificationException((" Expected tar creation Requests " + expectedTarRequests
+						dmeSyncWorkflowService.getService(access).recordError(object , true);
+						throw new DmeSyncWorkflowException((" Expected tar creation Requests " + expectedTarRequests
 								+ " doesn't match the creation requests in DB " + totalTarsRequests));
 						
 						
@@ -591,8 +589,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		if (coveredFolders != expectedCovered) {
 			object.setError("Grouped site folder coverage mismatch: covered=" + coveredFolders + " expected="
 					+ expectedCovered);
-			object.setStatus(WorkflowConstants.FAILED);
-			dmeSyncWorkflowService.getService(access).recordError(object);
+			dmeSyncWorkflowService.getService(access).recordError(object , true);
 			throw new DmeSyncVerificationException(object.getError());
 		}
 
