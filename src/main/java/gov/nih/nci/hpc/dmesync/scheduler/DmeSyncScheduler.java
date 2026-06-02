@@ -447,10 +447,7 @@ public class DmeSyncScheduler {
        for(StatusInfo statusInfo : statusInfoList) {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors
-	    	statusInfo.setRunId(runId);
-	    	statusInfo.setStatus(null);
-	    	statusInfo.setError("");
-	    	statusInfo.setRetryCount(0L);
+	    	prepareForReattempt(statusInfo);
 	    	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 	    	// Delete the metadata info created for this object ID
 	    	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -501,11 +498,7 @@ public class DmeSyncScheduler {
         for(StatusInfo statusInfo : statusInfoList) {
           if(statusInfo != null) {
             //Update the run_id and reset the retry count and errors
-            statusInfo.setRunId(runId);
-            statusInfo.setStatus(null);
-            statusInfo.setError("");
-            statusInfo.setRetryCount(0L);
-            statusInfo.setEndWorkflow(false);
+        	 prepareForReattempt(statusInfo);
             statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
             // Delete the metadata info created for this object ID
             dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -661,11 +654,7 @@ public class DmeSyncScheduler {
 					dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(statusInfo.getId());
 					// Send the incomplete objectId to the message queue for processing
 					DmeSyncMessageDto message = new DmeSyncMessageDto();
-					statusInfo.setRunId(runId);
-					statusInfo.setStatus(null);
-					statusInfo.setError("");
-					statusInfo.setRetryCount(0L);
-					statusInfo.setEndWorkflow(false);
+					prepareForReattempt(statusInfo);
 					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					sender.send(message, "inbound.queue");
@@ -783,11 +772,7 @@ public class DmeSyncScheduler {
           if(statusInfo != null ) {
 
         	//Update the run_id and reset the retry count and errors
-        	statusInfo.setRunId(runId);
-        	statusInfo.setStatus(null);
-        	statusInfo.setError("");
-        	statusInfo.setRetryCount(0L);
-        	statusInfo.setEndWorkflow(false);
+        	prepareForReattempt(statusInfo);
         	if(!file.getIsDirectory()) {
         	statusInfo.setFilesize(file.getSize());
         	}
@@ -1131,13 +1116,19 @@ public class DmeSyncScheduler {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
   
+  // This metho is to prepare the status info for reattempt the upload of the failes file
+  private void prepareForReattempt(StatusInfo statusInfo) {
+	    statusInfo.setRunId(runId);
+	    statusInfo.setError("");
+	    statusInfo.setStatus(null);
+	    statusInfo.setEndWorkflow(false);
+	    statusInfo.setRetryCount(0L);
+	    statusInfo.setReattempts(statusInfo.getReattempts() == null ? 1L : statusInfo.getReattempts() + 1);
+  }
+  
 	private void sendRequestToJms(StatusInfo statusInfo) {
 
-		statusInfo.setRunId(runId);
-		statusInfo.setStatus(null);
-		statusInfo.setError("");
-		statusInfo.setRetryCount(0L);
-		statusInfo.setEndWorkflow(false);
+		prepareForReattempt(statusInfo);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		// Delete the metadata info created for this object ID
 		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -1458,11 +1449,7 @@ public class DmeSyncScheduler {
 	    int enqueued = 0;
 	    for (StatusInfo s : toRetry) {
 
-	      s.setRunId(runId);
-	      s.setStatus(null);
-	      s.setError("");
-	      s.setRetryCount(0L);
-	      s.setEndWorkflow(false);
+	      prepareForReattempt(s);
 
 	      s = dmeSyncWorkflowService.getService(access).saveStatusInfo(s);
 
