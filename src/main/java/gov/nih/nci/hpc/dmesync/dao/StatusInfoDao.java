@@ -212,12 +212,12 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findByOriginalFilePathAndSourceFilePathEndingWith(String originalFilePath, String sourceFilePath);
   
   /**
-   * countByDocAndRunIdAndStatus
+   * Returns the number of StatusInfo records that match the given DOC, run ID, and status.
    * @param doc the doc name
    * @param runId the run id
    * @param status status of the record
    * @return the count
    */
-  long countByDocAndRunIdAndStatus(String doc, String runId, String status);
+  public long countByDocAndRunIdAndStatus(String doc, String runId, String status);
 
 }
