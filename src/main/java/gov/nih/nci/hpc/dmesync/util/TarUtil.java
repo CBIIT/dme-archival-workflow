@@ -47,10 +47,10 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
-	  Set<Path> seenRealPaths = new HashSet<>();
+	  Set<Path> realPathsIncludedInTar = new HashSet<>();
 	  try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , seenRealPaths);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
       }
     }
   }
@@ -269,7 +269,7 @@ public class TarUtil {
 	  }
 
   private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders,
-				boolean ignoreBrokenLinksInTar, Set<Path> seenRealPaths) throws Exception {
+				boolean ignoreBrokenLinksInTar, Set<Path> realPathsIncludedInTar) throws Exception {
 
 		String entry = dir + File.separator + file.getName();
 		Path path = file.toPath();
@@ -294,7 +294,7 @@ public class TarUtil {
 				throw new Exception("Broken symbolic link detected: " + resolvedPath + " (target is inaccessible)");
 			}
 
-			if (seenRealPaths.contains(resolvedPath)) {
+			if (realPathsIncludedInTar.contains(resolvedPath)) {
 				logger.info("Skipping symbolic link {} because target is already included: {}", path, resolvedPath);
 				return;
 			}
@@ -309,18 +309,18 @@ public class TarUtil {
 					throw new Exception("No Read permission to " + resolvedPath);
 				}
 
-				seenRealPaths.add(resolvedPath);
+				realPathsIncludedInTar.add(resolvedPath);
 
 				File[] children = resolvedPath.toFile().listFiles();
 				if (children != null) {
 					for (File child : children) {
-						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, seenRealPaths);
+						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
 					}
 				}
 				return;
 			}
 
-			seenRealPaths.add(resolvedPath);
+			realPathsIncludedInTar.add(resolvedPath);
 			out.putArchiveEntry(new TarArchiveEntry(resolvedPath.toFile(), entry));
 			try (FileInputStream in = new FileInputStream(resolvedPath.toFile())) {
 				IOUtils.copy(in, out);
@@ -331,7 +331,7 @@ public class TarUtil {
 
 		if (file.isFile()) {
 			Path realPath = path.toRealPath();
-			seenRealPaths.add(realPath);
+			realPathsIncludedInTar.add(realPath);
 
 			out.putArchiveEntry(new TarArchiveEntry(file, entry));
 			try (FileInputStream in = new FileInputStream(file)) {
@@ -348,7 +348,7 @@ public class TarUtil {
 			File[] children = file.listFiles();
 			if (children != null) {
 				for (File child : children) {
-					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, seenRealPaths);
+					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
 				}
 			}
 		} else {
