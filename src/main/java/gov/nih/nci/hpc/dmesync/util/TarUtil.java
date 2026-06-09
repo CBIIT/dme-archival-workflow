@@ -64,10 +64,10 @@ public class TarUtil {
  * @throws Exception 
    */
   public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
-	  Set<Path> seenRealPaths = new HashSet<>();
+	  Set<Path> realPathsIncludedInTar = new HashSet<>();
 	  try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , seenRealPaths);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
       }
     }
   }
