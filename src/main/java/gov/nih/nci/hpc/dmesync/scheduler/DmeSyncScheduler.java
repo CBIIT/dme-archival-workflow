@@ -612,7 +612,7 @@ public class DmeSyncScheduler {
     for (HpcPathAttributes file : files) {
 
       StatusInfo statusInfo = null;
-      Path fileFullPath= file.getAbsolutePath()!=null ? Paths.get(file.getAbsolutePath()):null;
+		Path fileFullPath = file.getAbsolutePath() != null ? Paths.get(file.getAbsolutePath()) : null;
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
         // Checks the local db to see if it has been completed

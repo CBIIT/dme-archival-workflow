@@ -18,7 +18,7 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   
   /**
    * findFirstBySourceFilePathAndStatus
-   * @param sourceFilePath the original file path
+   * @param sourceFilePath the source file path
    * @param status the status
    * @return the StatusInfo object
    */
