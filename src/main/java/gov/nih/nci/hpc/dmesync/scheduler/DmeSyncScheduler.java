@@ -612,7 +612,7 @@ public class DmeSyncScheduler {
     for (HpcPathAttributes file : files) {
 
       StatusInfo statusInfo = null;
-
+      Path fileFullPath= file.getAbsolutePath()!=null ? Paths.get(file.getAbsolutePath()):null;
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
         // Checks the local db to see if it has been completed
@@ -726,6 +726,17 @@ public class DmeSyncScheduler {
 			statusInfo =
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
+		}
+		else if (fileFullPath!=null && Files.isSymbolicLink(fileFullPath)) {
+			Path sourceFilePath = Files.readSymbolicLink(fileFullPath);
+			if (!sourceFilePath.isAbsolute()) {
+				sourceFilePath = fileFullPath.getParent().resolve(sourceFilePath).normalize();
+			}
+			sourceFilePath = sourceFilePath.toAbsolutePath();
+			logger.debug("[Scheduler] Checking for symbolic link Completed status: Original filepath : {} , SourceFilePath: {}",
+					fileFullPath, sourceFilePath);
+			statusInfo = dmeSyncWorkflowService.getService(access)
+					.findFirstStatusInfoBySourceFilePathAndStatus(sourceFilePath.toString(), "COMPLETED");
 		}
 		else {
           statusInfo =

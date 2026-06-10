@@ -326,6 +326,16 @@ public interface DmeSyncWorkflowService {
    * @param List of object Ids.
    */
    void deleteStatusInfoByIds(List<Long> ids);
+   
+   
+   /**
+    * findFirstStatusInfoBySourceFilePathAndStatus
+    *
+    * @param sourceFilePath the source file path
+    * @param status the status
+    * @return the StatusInfo object
+    */
+   StatusInfo findFirstStatusInfoBySourceFilePathAndStatus(String originalFilePath, String status);
 
    StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(String originalFilePath,
 		String sourceFilePath);
