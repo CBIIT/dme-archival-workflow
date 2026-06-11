@@ -244,7 +244,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
 				}
 			} else {
-				String msg = messageService.get("MISMATCH_STATUS");
+				String msg = messageService.get("MISMATCH_STATUS_MSG");
 				logger.error("[{}] {}", super.getTaskName(), msg);
 			    throw new DmeSyncVerificationException(msg);
 			}
