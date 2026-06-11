@@ -244,8 +244,9 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 
 				}
 			} else {
+				// This scenario should happen when DME archive indicates the file is already archived, but no matching Completed database record was found for the file. 
 				String msg = messageService.get("MISMATCH_STATUS_MSG");
-				logger.error("[{}] {}", super.getTaskName(), msg);
+				logger.error("[{}] DME archive indicates the upload is already archived, but no matching Completed database record was found {}", super.getTaskName(), msg);
 			    throw new DmeSyncVerificationException(msg);
 			}
 		}
