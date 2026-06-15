@@ -51,6 +51,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 import gov.nih.nci.hpc.domain.datatransfer.HpcMultipartUpload;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartETag;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartURL;
@@ -71,6 +72,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private DmeSyncDeleteDataObject dmeSyncDeleteDataObject;
+  @Autowired private MessageService messageService;
 
   @Value("${hpc.server.url}")
   private String serverUrl;
@@ -241,6 +243,14 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 					return object;
 
 				}
+			} else {
+				/* This scenario should happen when DME archive indicates the file is already archived, but no matching Completed database record was found for the file. 
+				 * Manual verification of file is needed when this error happens.
+				 */
+				String msg = messageService.get("MISMATCH_STATUS_MSG");
+				logger.error("[{}] DME archive indicates the upload is already archived, but no matching Completed database record was found ; "
+						+ " Manual verification of file is needed when this error happens {}", super.getTaskName(), msg);
+			    throw new DmeSyncVerificationException(msg);
 			}
 		}
 	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
