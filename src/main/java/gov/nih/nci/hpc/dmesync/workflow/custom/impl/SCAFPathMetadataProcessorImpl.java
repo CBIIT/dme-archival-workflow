@@ -492,9 +492,15 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	private String getProjectReportDate(StatusInfo object) throws DmeSyncMappingException {
+	private String getProjectReportDate(String metadataFileKey, StatusInfo object) throws DmeSyncMappingException {
 		String reportDate= medatadaMapFromReport!=null?medatadaMapFromReport.get(REPORT_DATE):null;
 		if(reportDate == null) {
+			
+			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/dd/yy");		        
+		    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+			String reportDateFromspreadhseet = getAttrValueWithKey(metadataFileKey, "report_date");
+			 
+			if(reportDateFromspreadhseet==null) {
 			
 			threadLocalMap.set(loadMetadataFile(projectReportFile, "CS_Number"));
 			 String projectId = Arrays.stream(getProjectPathName(object).split("_"))
@@ -502,11 +508,14 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
                      .orElse("");
 			  String dateExcel= getAttrValueWithKey(projectId, "Date_of_Project_Delivery");
 			  if(dateExcel!=null) {
-			  DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/dd/yy");		        
-		      DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");		        
+			  		        
 		      LocalDate dateParsed = LocalDate.parse(dateExcel, inputFormatter);
 		      reportDate= dateParsed.format(outputFormatter);
 			  }
+			}else {		        
+			      LocalDate dateParsed = LocalDate.parse(reportDateFromspreadhseet, inputFormatter);
+			      reportDate= dateParsed.format(outputFormatter);
+			}
 		}
 		logger.info("project Report Date",reportDate);
 		return reportDate;
