@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -220,5 +221,21 @@ public class HpcLocalDirectoryListQuery {
 	    return (rp.getFileName().toString().equals("")) ? 0 : rp.getNameCount();
 	 }
 	 
+	 public boolean matchesAnyPattern(Path path, List<PathMatcher> matchers, Path baseDirPath) {
+		  if (matchers == null || matchers.isEmpty()) {
+		    return false;
+		  }
+
+		  Path rel = baseDirPath.relativize(path);
+		  String relUnix = rel.toString().replace('\\', '/');
+		  Path relPath = Paths.get(relUnix);
+
+		  for (PathMatcher matcher : matchers) {
+		    if (matcher.matches(relPath)) {
+		      return true;
+		    }
+		  }
+		  return false;
+		}
 	
 }

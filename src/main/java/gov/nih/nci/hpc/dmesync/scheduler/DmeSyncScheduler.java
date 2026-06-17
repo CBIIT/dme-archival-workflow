@@ -1201,7 +1201,10 @@ public class DmeSyncScheduler {
 		logger.info("[Scheduler] Selective Scan mode Started. tarIncludePattern='{}'", tarIncludePattern);
 
 		try {
+			
+			HpcLocalDirectoryListQuery impl = new HpcLocalDirectoryListQuery();
 
+			
 			// Selected folders that will be processed as folder objects (tar workflow).
 			List<HpcPathAttributes> foldersToTar = new ArrayList<>();
 
@@ -1212,6 +1215,8 @@ public class DmeSyncScheduler {
 			// 2025/movies/CS-fam*
 			// 2025/**/CS-fam*
 			final List<PathMatcher> tarPatternsMatcher = buildPathMatchers(tarIncludePattern);
+
+			final List<PathMatcher> excludeMatchers = buildPathMatchers(excludePattern);
 
 			// Base directory used to compute relative paths.
 			final Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -1243,7 +1248,8 @@ public class DmeSyncScheduler {
 			}).toList();
 
 			// For remaining folders, enqueue child files .
-			List<HpcPathAttributes> individualFiles = collectFilesFromFolders(foldersToScanIndividually);
+			List<HpcPathAttributes> individualFiles = collectFilesFromFolders(foldersToScanIndividually , excludeMatchers , baseDirPath
+					, impl);
 
 			if (!individualFiles.isEmpty()) {
 				logger.info("[Scheduler][SelectiveScan] Processing individual files count={}", individualFiles.size());
@@ -1318,7 +1324,8 @@ public class DmeSyncScheduler {
 		return false;
 	}
 
-	private List<HpcPathAttributes> collectFilesFromFolders(List<HpcPathAttributes> folders) {
+	private List<HpcPathAttributes> collectFilesFromFolders(List<HpcPathAttributes> folders , List<PathMatcher> excludeMatchers,
+			Path baseDirPath , HpcLocalDirectoryListQuery impl) {
 		List<HpcPathAttributes> files = new ArrayList<>();
 		for (HpcPathAttributes folder : folders) {
 			File[] child = new File(folder.getAbsolutePath()).listFiles();
@@ -1327,6 +1334,11 @@ public class DmeSyncScheduler {
 			for (File f : child) {
 				if (!f.isFile())
 					continue;
+				Path filePath = f.toPath().normalize().toAbsolutePath();
+			      if (impl.matchesAnyPattern(filePath, excludeMatchers, baseDirPath)) {
+			        logger.info("[Scheduler][SelectiveScan] Excluding file by pattern: {}", filePath);
+			        continue;
+			      }
 				HpcPathAttributes a = new HpcPathAttributes();
 				a.setName(f.getName());
 				a.setPath(f.getPath());
