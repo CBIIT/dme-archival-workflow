@@ -205,7 +205,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
 		
 		pathEntriesProject.getPathMetadataEntries()
-		.add(createPathEntry("project_start_date", getProjectReportDate(object)));
+		.add(createPathEntry("project_start_date", getProjectReportDate(metadataFileKey,object)));
 		projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
