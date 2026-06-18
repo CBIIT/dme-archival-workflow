@@ -84,7 +84,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
-				|| StringUtils.contains(object.getOriginalFilePath(), "summary_metrics.xlsx")) {
+				|| object.getOriginalFilePath().toLowerCase().matches(".*metrics.*\\.xlsx$")) {
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 			constructFinalReportPath(object);
