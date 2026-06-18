@@ -499,8 +499,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("M/d/yy");		        
 		    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 			String reportDateFromspreadhseet = getAttrValueWithKey(metadataFileKey, "report_date");
+			if(reportDateFromspreadhseet != null) {
 			LocalDate dateParsed = LocalDate.parse(reportDateFromspreadhseet, inputFormatter);
 			reportDate= dateParsed.format(outputFormatter);
+			}
 			
 		}
 		logger.info("project Report Date",reportDate);
