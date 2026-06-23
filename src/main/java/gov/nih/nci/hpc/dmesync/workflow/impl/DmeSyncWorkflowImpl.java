@@ -202,13 +202,13 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       
       // In case of mapping or verification exception on async, retry will not help.
       statusInfo.setError(e.getMessage());
-      dmeSyncWorkflowService.getService(access).recordError(statusInfo , setStatus);
+      dmeSyncWorkflowService.getService(access).recordError(statusInfo , true);
       
     } catch (DmeSyncStorageException e) {
         
         // In case of space issue while tarring, retry will not help.
         statusInfo.setError(e.getMessage());
-        dmeSyncWorkflowService.getService(access).recordError(statusInfo , setStatus);
+        dmeSyncWorkflowService.getService(access).recordError(statusInfo , true);
         
       }catch (DmeSyncWorkflowException e) {
       
