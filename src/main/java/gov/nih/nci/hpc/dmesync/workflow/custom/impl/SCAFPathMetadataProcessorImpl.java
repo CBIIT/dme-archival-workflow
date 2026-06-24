@@ -562,11 +562,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private Map<String, String> extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
-		FileInputStream fis = new FileInputStream(new File(filePath));
 
 		// Map to store extracted fields and their values
 		Map<String, String> medatadaMapFromReport = new HashMap<>();
-		try (XWPFDocument document = new XWPFDocument(fis)) {
+		try (FileInputStream fis = new FileInputStream(new File(filePath));
+		         XWPFDocument document = new XWPFDocument(fis)) {
 			List<XWPFParagraph> paragraphs = document.getParagraphs();
 
 			// Define the keys to extract
@@ -701,6 +701,15 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 									.filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
 											|| file.getFileName().toString().endsWith("Report.docx"))
 									.map(Path::toString).findFirst().orElse(null);
+							
+							try (java.util.stream.Stream<Path> files = Files.list(otherDataFolderPath)) {
+				                finalReportPath = files
+				                        .filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
+				                                     || file.getFileName().toString().endsWith("Report.docx"))
+				                        .map(Path::toString)
+				                        .findFirst()
+				                        .orElse(null);
+				            }
 							logger.info("Retrieving the data from the FinalReport file = {}", finalReportPath);
 							if (finalReportPath==null) {
 								logger.info("Couldn't find the FinalReport file for the project: {}",
