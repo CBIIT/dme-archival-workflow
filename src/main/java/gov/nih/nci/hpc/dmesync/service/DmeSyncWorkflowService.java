@@ -17,13 +17,13 @@ import gov.nih.nci.hpc.dmesync.domain.TaskInfo;
 public interface DmeSyncWorkflowService {
 
   /**
-   * findFirstStatusInfoByOriginalFilePathAndStatus
+   * findFirstStatusInfoByOriginalFilePathAndStatusIn
    *
    * @param originalFilePath the original file path
-   * @param status the status
+   * @param status the statuses list
    * @return the StatusInfo object
    */
-  StatusInfo findFirstStatusInfoByOriginalFilePathAndStatus(String originalFilePath, String status);
+  StatusInfo findFirstStatusInfoByOriginalFilePathAndStatusIn(String originalFilePath, List<String> statuses);
 
   /**
    * findFirstStatusInfoByFullDestinationPathAndStatus
@@ -47,12 +47,12 @@ public interface DmeSyncWorkflowService {
       String originalFilePath, String status);
 
   /**
-   * findAllStatusInfoLikeOriginalFilePath
+   * findAllFailedStatusInfoLikeOriginalFilePath
    *
    * @param originalFilePath the original file path
-   * @return the list of StatusInfo objects
+   * @return the list of StatusInfo objects which have status failed or null
    */
-  List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(
+  List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(
       String originalFilePath);
   
   /**
@@ -100,11 +100,11 @@ public interface DmeSyncWorkflowService {
    *
    * @param originalFilePath the original file path
    * @param sourceFileName the source file name
-   * @param status the null
+   * @param status
    * @return the StatusInfo object
    */
-  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
-      String originalFilePath, String sourceFileName);
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(
+      String originalFilePath, String sourceFileName , String status);
 
   /**
    * findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc
@@ -250,14 +250,16 @@ public interface DmeSyncWorkflowService {
    * @param statusInfo the StatusInfo object
    * @param e the exception to be recorded
    */
-  public void retryWorkflow(StatusInfo statusInfo, Exception e);
+  public void retryWorkflow(StatusInfo statusInfo, boolean setStatus, Exception e);
 
   /**
    * Saves the error
    *
    * @param statusInfo the StatusInfo object
    */
-  public void recordError(StatusInfo statusInfo);
+  public void recordError(StatusInfo statusInfo , boolean setStatus);
+  
+  
 
   /**
    * findStatusInfoById

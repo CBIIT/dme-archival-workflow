@@ -121,7 +121,7 @@ public class ExcelUtil {
         row.createCell(colCount++).setCellValue(data.getFullDestinationPath());
         row.createCell(colCount++).setCellValue(data.getFilesize());
         row.createCell(colCount++).setCellValue(humanReadableByteCount(data.getFilesize().doubleValue(), true));
-        row.createCell(colCount++).setCellValue(data.getStatus());
+        row.createCell(colCount++).setCellValue(WorkflowConstants.getDisplayStatus(data.getStatus()));
         if (data.getTarContentsCount() != null) {
 			row.createCell(colCount++).setCellValue(data.getTarContentsCount());
 		} else {
@@ -135,7 +135,7 @@ public class ExcelUtil {
           row.createCell(colCount++).setCellValue("");
         }
         row.createCell(colCount++).setCellValue(sdf.format(data.getStartTimestamp()));
-        if ("COMPLETED".equalsIgnoreCase(data.getStatus())
+        if (WorkflowConstants.isCompletedStatus(data.getStatus())
             && data.getUploadStartTimestamp() != null) {
           if (data.getEndTimestamp() == null) data.setEndTimestamp(new Date());
           row.createCell(colCount++).setCellValue(sdf.format(data.getEndTimestamp()));
