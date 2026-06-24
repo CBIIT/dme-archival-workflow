@@ -75,14 +75,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.source.base.dir}")
 	private String sourceDir;
 
-	// Instance variable to hold the extracted fields
-	private Map<String, String> medatadaMapFromReport;
-
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
-
+		Map<String, String> reportMetadata = resolveReportMetadata(object);
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
 				|| object.getOriginalFilePath().toLowerCase().matches(".*metrics.*\\.xlsx$")) {
 
@@ -96,12 +93,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String archivePath = null;
 			String sampleCollectionType = getSampleCollectionType(object);
 			if (StringUtils.isBlank(sampleCollectionType)) {
-				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path , reportMetadata) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
 
 			} else {
 
-				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
+				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path , reportMetadata) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/"
 						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType);
 
@@ -125,6 +122,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		Map<String, String> reportMetadata = resolveReportMetadata(object);
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		String sampleCollectionType = getSampleCollectionType(object);
@@ -132,7 +130,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "PI_XXX" collection
 		String metadataFileKey = getProjectPathName(object);
-		String piCollectionName = getPiCollectionName(object, metadataFileKey);
+		String piCollectionName = getPiCollectionName(object, metadataFileKey , reportMetadata);
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
@@ -169,7 +167,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		
 
 		pathEntriesProject.getPathMetadataEntries()
-				.add(createPathEntry("project_poc", getProjectPOC(object, metadataFileKey)));
+				.add(createPathEntry("project_poc", getProjectPOC(object, metadataFileKey , reportMetadata)));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation",
 				getAttrValueWithKey(metadataFileKey, "project_poc_affiliation")));
 		pathEntriesProject.getPathMetadataEntries()
@@ -205,7 +203,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					.add(createPathEntry("Collaborators", getAttrValueWithKey(metadataFileKey, "Collaborators")));
 		
 		pathEntriesProject.getPathMetadataEntries()
-		.add(createPathEntry("project_start_date", getProjectReportDate(metadataFileKey,object)));
+		.add(createPathEntry("project_start_date", getProjectReportDate(metadataFileKey,object , reportMetadata)));
 		projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -320,11 +318,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	private String getPiCollectionName(StatusInfo object, String path) throws DmeSyncMappingException {
+	private String getPiCollectionName(StatusInfo object, String path , Map<String, String> reportMetadata) throws DmeSyncMappingException {
 		String piCollectionName = null;
 		piCollectionName = getAttrValueWithKey(path, "data_owner_full_name");
 		if (piCollectionName == null) {
-			piCollectionName = medatadaMapFromReport!=null?medatadaMapFromReport.get(PI):null;
+			piCollectionName = reportMetadata!=null?reportMetadata.get(PI):null;
 		}
 
 		logger.info("Lab Collection Name: {}", piCollectionName);
@@ -343,11 +341,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return projectName;
 	}
 
-	private String getProjectPOC(StatusInfo object, String metadataFileKey) throws DmeSyncMappingException {
+	private String getProjectPOC(StatusInfo object, String metadataFileKey, Map<String, String> reportMetadata) throws DmeSyncMappingException {
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Shaffer
-		String poc = medatadaMapFromReport!=null?medatadaMapFromReport.get(POC):null;
+		String poc = reportMetadata!=null?reportMetadata.get(POC):null;
 		if (poc != null) {
 			String[] pocs = poc.trim().split("\\s*,\\s*");
 			if (pocs.length > 1) {
@@ -492,7 +490,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	private String getProjectReportDate(String metadataFileKey, StatusInfo object) throws DmeSyncMappingException {
+	private String getProjectReportDate(String metadataFileKey, StatusInfo object , Map<String, String> medatadaMapFromReport) throws DmeSyncMappingException {
 		String reportDate= medatadaMapFromReport!=null?medatadaMapFromReport.get(REPORT_DATE):null;
 		if(reportDate == null) {
 			
@@ -536,11 +534,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 	}
 
-	private void extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
+	private Map<String, String> extractMetadataFromFinalReport(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
 
 		// Map to store extracted fields and their values
-		medatadaMapFromReport = new HashMap<>();
+		Map<String, String> medatadaMapFromReport = new HashMap<>();
 		try (XWPFDocument document = new XWPFDocument(fis)) {
 			List<XWPFParagraph> paragraphs = document.getParagraphs();
 
@@ -571,6 +569,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("Error while retrieving metadata from the FinalReport file{}", filePath);
 			//throw new DmeSyncMappingException("Error while retrieving metadata in the FinalReport file " + filePath);
 		}
+	    return medatadaMapFromReport;
 	}
 
 	private Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
@@ -628,6 +627,14 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		throw new DmeSyncMappingException("Error while retrieving Platform name from the final report");
 	}
 
+	private Map<String, String> resolveReportMetadata(StatusInfo object) throws IOException, DmeSyncMappingException {
+	    constructFinalReportPath(object);
+	    if (finalReportPath != null) {
+	        return extractMetadataFromFinalReport(finalReportPath);
+	    }
+	    return new HashMap<>();
+	}
+	
 	private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		// Combine the parent folder path with the 'other_data' folder and the file name
