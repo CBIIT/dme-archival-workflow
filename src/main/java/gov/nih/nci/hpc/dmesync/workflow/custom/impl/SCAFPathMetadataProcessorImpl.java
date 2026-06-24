@@ -385,7 +385,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
 			sampleCollectionType = FASTQ;
 			logger.info("sampleCollectionType : {}", sampleCollectionType);
-		} else if ((StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "00_FullCellrangerOutputs"))) {
+		} else if ((StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "00_FullCellrangerOutput"))) {
 			sampleCollectionType = PRIMARY_ANALYSIS_OUTPUT_NAME;
 			logger.info("sampleCollectionType : {}", sampleCollectionType);
 
@@ -427,6 +427,33 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 	}
 
+	/*private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
+
+	    String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+
+	    // Keep original extension handling broad (.tar or .tar.gz safety)
+	    String sampleName = fileName.replaceFirst("\\.tar(\\.gz)?$", "");
+
+	    // Normalize:
+	    // SCAF2858_22929   -> SCAF2858_22929
+	    // SCAF2858b_22929  -> SCAF2858_22929
+	    // SCAF2858t_22929  -> SCAF2858_22929
+	    // SCAF2858BT_22929 -> SCAF2858_22929
+	    java.util.regex.Pattern p = java.util.regex.Pattern.compile("^(SCAF\\d+)[A-Za-z]*(_.+)$",
+	            java.util.regex.Pattern.CASE_INSENSITIVE);
+	    java.util.regex.Matcher m = p.matcher(sampleName);
+
+	    if (m.matches()) {
+	        String normalized = (m.group(1) + m.group(2)).toUpperCase();
+	        logger.info("Derived normalized SCAF number: {} from sampleName: {}", normalized, sampleName);
+	        return normalized;
+	    }
+
+	    logger.info("Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: {}", object.getSourceFilePath());
+	    throw new DmeSyncMappingException(
+	            "Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: "
+	                    + object.getSourceFilePath());
+	} */
 	private String getFlowcellId(StatusInfo object) throws DmeSyncMappingException {
 		String flowcellId = null;
 		// Example: If originalFilePath is
