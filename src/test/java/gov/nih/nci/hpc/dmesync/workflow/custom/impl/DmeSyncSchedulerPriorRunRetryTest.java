@@ -79,7 +79,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     DmeSyncScheduler scheduler = newSchedulerWithContext(
         sender, factory, workflowSvc, "local", "DOC1", baseDir.toString(), "Run_20260325010101");
 
-    when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
+    when(workflowSvc.findAllFailedStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of());
 
     ReflectionTestUtils.invokeMethod(scheduler, "includePriorRunFailuresInCurrentRunWorklist");
@@ -104,7 +104,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     baseRow.setRunId("Run_20260225010101");
     baseRow.setStartTimestamp(new Date(1));
 
-    when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
+    when(workflowSvc.findAllFailedStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of(baseRow));
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of());
@@ -138,7 +138,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     completed.setOriginalFilePath(java.nio.file.Files.createDirectory(baseDir.resolve("done")).toString());
     completed.setStatus("COMPLETED");
 
-    when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
+    when(workflowSvc.findAllFailedStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of(baseRow));
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(completed));
@@ -178,7 +178,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     failedOutside.setOriginalFilePath(java.nio.file.Files.createDirectory(otherDir.resolve("retry")).toString());
     failedOutside.setStatus("FAILED");
 
-    when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
+    when(workflowSvc.findAllFailedStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of(baseRow));
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(failedOutside));
@@ -217,7 +217,7 @@ class DmeSyncSchedulerPriorRunRetryTest {
     failedMissing.setOriginalFilePath(missing.toString());
     failedMissing.setStatus("FAILED");
 
-    when(workflowSvc.findAllStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
+    when(workflowSvc.findAllFailedStatusInfoLikeOriginalFilePath(baseDir.toString() + "%"))
         .thenReturn(List.of(baseRow));
     when(workflowSvc.findStatusInfoByRunIdAndDoc("Run_20260225010101", "DOC1"))
         .thenReturn(List.of(failedMissing));

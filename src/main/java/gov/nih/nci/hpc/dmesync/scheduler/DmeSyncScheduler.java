@@ -443,8 +443,8 @@ public class DmeSyncScheduler {
     try {
 
       List<StatusInfo> statusInfoList =
-                dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
-      for(StatusInfo statusInfo : statusInfoList) {
+                dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(syncBaseDir + '%');
+       for(StatusInfo statusInfo : statusInfoList) {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors
 	    	prepareForReattempt(statusInfo);
@@ -493,7 +493,7 @@ public class DmeSyncScheduler {
           queryPath = syncBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);
 
         List<StatusInfo> statusInfoList =
-            dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(queryPath+'%');
+            dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(queryPath+'%');
 
         for(StatusInfo statusInfo : statusInfoList) {
           if(statusInfo != null) {
@@ -612,7 +612,7 @@ public class DmeSyncScheduler {
     for (HpcPathAttributes file : files) {
 
       StatusInfo statusInfo = null;
-
+		Path fileFullPath = file.getAbsolutePath() != null ? Paths.get(file.getAbsolutePath()) : null;
       //If we need to verify previous upload, check
       if ("local".equals(verifyPrevUpload)) {
         // Checks the local db to see if it has been completed
@@ -631,7 +631,9 @@ public class DmeSyncScheduler {
 				statusInfo = dmeSyncWorkflowService.getService(access)
 						.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc,
 								file.getAbsolutePath() , file.getAbsolutePath());
-				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
+				
+				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream()
+						.filter(c -> WorkflowConstants.isRetryableStatus(c.getStatus()))
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
 					// use the same status Info rows with new Run Id for reupload
@@ -639,6 +641,7 @@ public class DmeSyncScheduler {
 						if (object != null) {
 							// Update the run_id and reset the retry count and errors
 							object.setRunId(runId);
+							object.setStatus(null);
 							object.setError("");
 							object.setRetryCount(0L);
 							object.setEndWorkflow(false);
@@ -727,10 +730,21 @@ public class DmeSyncScheduler {
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
 		}
+		else if (fileFullPath!=null && Files.isSymbolicLink(fileFullPath)) {
+			Path sourceFilePath = Files.readSymbolicLink(fileFullPath);
+			if (!sourceFilePath.isAbsolute()) {
+				sourceFilePath = fileFullPath.getParent().resolve(sourceFilePath).normalize();
+			}
+			sourceFilePath = sourceFilePath.toAbsolutePath();
+			logger.debug("[Scheduler] Checking for symbolic link Completed status: Original filepath : {} , SourceFilePath: {}",
+					fileFullPath, sourceFilePath);
+			statusInfo = dmeSyncWorkflowService.getService(access)
+					.findFirstStatusInfoBySourceFilePathAndStatus(sourceFilePath.toString(), "COMPLETED");
+		}
 		else {
           statusInfo =
-              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
-                  file.getAbsolutePath(), "COMPLETED");
+              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatusIn(
+                  file.getAbsolutePath(), WorkflowConstants.getNoReRunStatuses());
         }
         if (statusInfo != null) {
           logger.debug(
@@ -753,7 +767,6 @@ public class DmeSyncScheduler {
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(
                             file.getAbsolutePath(),WorkflowConstants.tarContentsFileEndswith);
         	}
-        	
         	else if(createCollectionSoftlink) {
    			 logger.debug(
    		              "[Scheduler] Original filepath : {} , SourceFilePath: {}",  file.getAbsolutePath() , file.getPath());
@@ -766,7 +779,9 @@ public class DmeSyncScheduler {
                         dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathOrderByStartTimestampDesc(
                             file.getAbsolutePath());
         	}
-          if(statusInfo != null) {
+          
+          if(statusInfo != null ) {
+
         	//Update the run_id and reset the retry count and errors
         	prepareForReattempt(statusInfo);
         	if(!file.getIsDirectory()) {
@@ -973,7 +988,7 @@ public class DmeSyncScheduler {
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(doc);
     if(completed) {
-      statusInfo.setStatus("COMPLETED");
+      statusInfo.setStatus(WorkflowConstants.COMPLETED);
       statusInfo.setError("specified file extension doesn't exist in correct depth");
     }
     statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
@@ -1116,6 +1131,7 @@ public class DmeSyncScheduler {
   private void prepareForReattempt(StatusInfo statusInfo) {
 	    statusInfo.setRunId(runId);
 	    statusInfo.setError("");
+	    statusInfo.setStatus(null);
 	    statusInfo.setEndWorkflow(false);
 	    statusInfo.setRetryCount(0L);
 	    statusInfo.setReattempts(statusInfo.getReattempts() == null ? 1L : statusInfo.getReattempts() + 1);
@@ -1378,7 +1394,11 @@ public class DmeSyncScheduler {
 	        dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(doc, syncBaseDir + "%");
 
 	    String previousRunId = baseRows.stream()
-	        .filter(s -> s != null && StringUtils.isNotBlank(s.getRunId()) && !StringUtils.equals(s.getRunId(), runId))
+	        .filter(s -> s != null
+	        		&& StringUtils.isNotBlank(s.getRunId())
+	        		&& !StringUtils.equals(s.getRunId(), runId)
+	        		&& !WorkflowConstants.isIgnoredStatus(s.getStatus())
+	        		&& !StringUtils.endsWith(s.getRunId(), WorkflowConstants.IGNORED_RUN_SUFFIX))
 	        .sorted((a, b) -> {
 	          Date ad = a.getStartTimestamp();
 	          Date bd = b.getStartTimestamp();
@@ -1410,7 +1430,7 @@ public class DmeSyncScheduler {
 
 	    List<StatusInfo> toRetry = prevRunRows.stream()
 	        .filter(s -> s != null)
-	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
+	        .filter(s -> WorkflowConstants.isRetryableStatus(s.getStatus()))
 	        .filter(s -> {
 	            String originalFilePath = s.getOriginalFilePath();
 	            if (StringUtils.isBlank(originalFilePath)) return false;

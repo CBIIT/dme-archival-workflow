@@ -50,7 +50,9 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 import gov.nih.nci.hpc.domain.datatransfer.HpcMultipartUpload;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartETag;
 import gov.nih.nci.hpc.domain.datatransfer.HpcUploadPartURL;
@@ -71,6 +73,7 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
   @Autowired private RestTemplateFactory restTemplateFactory;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private DmeSyncDeleteDataObject dmeSyncDeleteDataObject;
+  @Autowired private MessageService messageService;
 
   @Value("${hpc.server.url}")
   private String serverUrl;
@@ -220,10 +223,18 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 		    logger.info("[{}] Checking if the previous uploaded file matches the checksum and size {}", super.getTaskName());
 
 			StatusInfo uploadedFileInfo = dmeSyncWorkflowService.getService(access)
-					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), "COMPLETED");
-			if (uploadedFileInfo != null) {
-				if (!StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum())
-						&& object.getFilesize() != uploadedFileInfo.getFilesize()) {
+					.findFirstStatusInfoByFullDestinationPathAndStatus(object.getFullDestinationPath(), WorkflowConstants.COMPLETED);
+			if (uploadedFileInfo != null && !StringUtils.isEmpty(uploadedFileInfo.getChecksum())) {
+				boolean checksumMatches = StringUtils.equalsIgnoreCase(object.getChecksum(), uploadedFileInfo.getChecksum());
+				boolean filesizeMatches = object.getFilesize() != null
+						&& object.getFilesize().equals(uploadedFileInfo.getFilesize());
+				if (checksumMatches && filesizeMatches) {
+					logger.info("[{}] Setting Status to Ignored because the checksum and file size matches with the file in DME {}",
+							super.getTaskName(), object.getFullDestinationPath());
+					object.setStatus(WorkflowConstants.IGNORED);
+					dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+				}
+				if (!checksumMatches || !filesizeMatches) {
 					 // get file last modified date to MMddyyyy
 		            File newFile = new File(object.getOriginalFilePath());
 		            long lastModifiedMillis = newFile.lastModified();
@@ -241,6 +252,14 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
 					return object;
 
 				}
+			} else {
+				/* This scenario should happen when DME archive indicates the file is already archived, but no matching Completed database record was found for the file. 
+				 * Manual verification of file is needed when this error happens.
+				 */
+				String msg = messageService.get("MISMATCH_STATUS_MSG");
+				logger.error("[{}] DME archive indicates the upload is already archived, but no matching Completed database record was found ; "
+						+ " Manual verification of file is needed when this error happens {}", super.getTaskName(), msg);
+			    throw new DmeSyncVerificationException(msg);
 			}
 		}
 	    logger.error("[{}] {}", super.getTaskName(), errorResponse.getStackTrace());
