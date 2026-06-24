@@ -599,7 +599,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    return medatadaMapFromReport;
 	}
 
-	private Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
+	/*private Map<String, String> extractTableData(String filePath) throws IOException, DmeSyncMappingException {
 		FileInputStream fis = new FileInputStream(new File(filePath));
 		try (XWPFDocument document = new XWPFDocument(fis)) {
 			// Initialize a map to store key-value pairs
@@ -629,7 +629,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			return data;
 		}
-	}
+	}*/
 
 	private boolean isTableSampleDataTable(XWPFTable table) throws DmeSyncMappingException {
 		boolean chemistryFound = false;
@@ -697,10 +697,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 						try {
 
 							// List files in the 'other_data' folder and filter by the pattern
-							finalReportPath = Files.list(otherDataFolderPath)
-									.filter(file -> file.getFileName().toString().endsWith("FinalReport.docx")
-											|| file.getFileName().toString().endsWith("Report.docx"))
-									.map(Path::toString).findFirst().orElse(null);
+							
 							
 							try (java.util.stream.Stream<Path> files = Files.list(otherDataFolderPath)) {
 				                finalReportPath = files
