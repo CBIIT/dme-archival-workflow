@@ -67,8 +67,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.project.report.date.file:}")
 	private String projectReportFile;
 
-	private String finalReportPath;
-
 	@Value("${dmesync.doc.name}")
 	private String doc;
 
@@ -85,9 +83,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 			
-			if(finalReportPath!=null)
-			extractMetadataFromFinalReport(finalReportPath.toString());
-			String path = getProjectPathName(object);
+			
+		    String path = getProjectPathName(object);
 
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
@@ -654,15 +651,15 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		throw new DmeSyncMappingException("Error while retrieving Platform name from the final report");
 	}
 
-	private Map<String, String> resolveReportMetadata(StatusInfo object) throws IOException, DmeSyncMappingException {
+	/*private Map<String, String> resolveReportMetadata(StatusInfo object) throws IOException, DmeSyncMappingException {
 	    constructFinalReportPath(object);
 	    if (finalReportPath != null) {
 	        return extractMetadataFromFinalReport(finalReportPath);
 	    }
 	    return new HashMap<>();
-	}
+	}*/
 	
-	private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException, IOException {
+	/*private void constructFinalReportPath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		// Combine the parent folder path with the 'other_data' folder and the file name
 		finalReportPath = null;
@@ -737,6 +734,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			//		"Couldn't find the FinalReport file for the project in other* folder"  );
 
 		}
-	}
+	}*/
 
 }
