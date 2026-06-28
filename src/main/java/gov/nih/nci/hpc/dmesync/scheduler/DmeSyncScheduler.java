@@ -633,7 +633,7 @@ public class DmeSyncScheduler {
 								file.getAbsolutePath() , file.getAbsolutePath());
 				
 				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream()
-						.filter(c -> WorkflowConstants.isRetryableStatus(c.getStatus()))
+						.filter(c -> !WorkflowConstants.isCompletedStatus(c.getStatus()))
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
 					// use the same status Info rows with new Run Id for reupload

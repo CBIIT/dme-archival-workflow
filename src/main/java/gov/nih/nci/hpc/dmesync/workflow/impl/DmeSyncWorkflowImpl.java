@@ -38,7 +38,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 
   private List<DmeSyncTask> tasks;
 
-  boolean setStatus = false;
+  
   @Autowired private DmeSyncUploadTaskImpl syncUploadTask;
   @Autowired private DmeSyncPresignUploadTaskImpl presignUploadTask;
   @Autowired private DmeSyncFileSystemUploadTaskImpl fileSystemUploadTask;
@@ -211,8 +211,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
         dmeSyncWorkflowService.getService(access).recordError(statusInfo , true);
         
       }catch (DmeSyncWorkflowException e) {
-      
-      if(statusInfo.getRetryCount() == maximumRetries) {
+    	  boolean setStatus = false;
+      if(statusInfo.getRetryCount() >= maximumRetries) {
 		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
 		 setStatus = true;
 		  
@@ -223,8 +223,8 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       throw e;
       
     } catch (Exception e) {
-      
-       if(statusInfo.getRetryCount() == maximumRetries) {
+    	boolean setStatus = false;
+       if(statusInfo.getRetryCount() >= maximumRetries) {
    		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
    		 setStatus = true;
    		  
