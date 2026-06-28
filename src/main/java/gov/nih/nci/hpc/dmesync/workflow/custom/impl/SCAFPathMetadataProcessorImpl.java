@@ -85,7 +85,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			
 			
 		    String path = getProjectPathName(object);
-
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
 			String sampleCollectionType = getSampleCollectionType(object);
@@ -97,7 +96,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path ) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/" + getSCAFNumber(object) + "/"
-						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType);
+						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType , path);
 
 			}
 			// replace spaces with underscore
@@ -281,12 +280,16 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			logger.info("sample key to get the platform name {} ", samplekey);
 
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType)));
-
+					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType , metadataFileKey)));
+			String platformNameFromSpreadsheet= getAttrValueWithKey(metadataFileKey, "platform_name");
 			threadLocalMap.set(loadCsvMetadataFile(sampleFile, "SCAF_Number"));
-
+			if(platformNameFromSpreadsheet == null) {            
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
 					.add(createPathEntry("platform_name", getAttrValueWithKey(samplekey, "Platform")));
+			}else {
+				dataObjectRegistrationRequestDTO.getMetadataEntries()
+				.add(createPathEntry("platform_name", platformNameFromSpreadsheet));
+			}
 			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "analyte_type")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
 						.add(createPathEntry("analyte_type", getAttrValueWithKey(metadataFileKey, "analyte_type")));
@@ -390,7 +393,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	}
 
-	private String getTarFileName(StatusInfo object, String sampleCollectionType) throws DmeSyncMappingException {
+	private String getTarFileName(StatusInfo object, String sampleCollectionType , String metadataKey) throws DmeSyncMappingException {
 		String tarFileName = null;
 		String scafNumber = getSCAFNumber(object);
 
@@ -399,7 +402,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					+ getFileType(object);
 		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleCollectionType))
 			// TODO: Add Chemistry function
-			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object) + "." + getFileType(object);
+			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object , metadataKey) + "." + getFileType(object);
 		logger.info("tarFileName: {}", tarFileName);
 		return tarFileName;
 	}
@@ -476,8 +479,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return chemistry;
 	}
 
-	private String getChemistryforPAO(StatusInfo object) throws DmeSyncMappingException {
+	private String getChemistryforPAO(StatusInfo object , String metadataFileKey ) throws DmeSyncMappingException {
 		Path path = Paths.get(object.getOriginalFilePath());
+		
+		String  chemistryFromspreadhseet = getAttrValueWithKey(metadataFileKey, "chemistry");
+		if(chemistryFromspreadhseet ==null) {
 		String chemistry = path.getParent().getFileName().toString();
 		if (chemistry != null && !chemistry.startsWith("00_FullCellrangerOutputs")) {
 			String[] chemistryKeywords = chemistry.trim().split("_");
@@ -511,6 +517,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 							+ object.getOriginalFilePath());
 		}
 		return null;
+		} else {
+			return chemistryFromspreadhseet;
+		}
 	}
 
 	private String getProjectReportDate(String metadataFileKey, StatusInfo object ) throws DmeSyncMappingException {
