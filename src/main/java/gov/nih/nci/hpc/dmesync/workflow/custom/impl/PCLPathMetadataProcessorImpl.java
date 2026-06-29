@@ -289,11 +289,14 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	
 	private String replaceCharacters(String collectionName) {
+		
+		if (collectionName != null) {
 		// replace spaces with underscore
 		collectionName = collectionName.replace(" ", "_");
 		// remove single quotes
 		collectionName = collectionName.replace("'", "_");
 		collectionName = collectionName.replace("-", "_");
+		}
 		return collectionName;
 	}
 
