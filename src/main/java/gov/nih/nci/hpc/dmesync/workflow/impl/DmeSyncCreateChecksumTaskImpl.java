@@ -42,7 +42,7 @@ public class DmeSyncCreateChecksumTaskImpl extends AbstractDmeSyncTask implement
 
     } catch (IOException e) {
       logger.error("[{}] Error while creating checksum ", super.getTaskName(), e);
-      throw new DmeSyncWorkflowException("Error while creating checksum", e);
+      throw new DmeSyncWorkflowException("Error while creating checksum: "+ e.getMessage(), e);
     }
     
     return object;

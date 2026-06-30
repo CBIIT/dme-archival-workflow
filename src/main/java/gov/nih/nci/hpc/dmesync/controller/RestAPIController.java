@@ -34,21 +34,21 @@ public class RestAPIController {
 
 	@PostMapping(value = "/retryWorkflow")
 	public ResponseEntity<?> retryWorkflow(@RequestBody StatusInfo statusInfo, @RequestBody Exception e) {
-		dmeSyncWorkflowService.getService("local").retryWorkflow(statusInfo, e);
+		dmeSyncWorkflowService.getService("local").retryWorkflow(statusInfo, true, e);
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
 	@PostMapping(value = "/recordError")
 	public ResponseEntity<?> recordError(@RequestBody StatusInfo statusInfo) {
-		dmeSyncWorkflowService.getService("local").recordError(statusInfo);
+		dmeSyncWorkflowService.getService("local").recordError(statusInfo , true);
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
-	@GetMapping(value = "/findFirstStatusInfoByOriginalFilePathAndStatus")
+	@GetMapping(value = "/findFirstStatusInfoByOriginalFilePathAndStatusIn")
 	public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatus(
-			@RequestParam(required = true) String originalFilePath, @RequestParam(required = true) String status) {
+			@RequestParam(required = true) String originalFilePath, @RequestParam(required = true) List<String> statuses) {
 		return dmeSyncWorkflowService.getService("local")
-				.findFirstStatusInfoByOriginalFilePathAndStatus(originalFilePath, status);
+				.findFirstStatusInfoByOriginalFilePathAndStatusIn(originalFilePath, statuses);
 	}
 
 	@GetMapping(value = "/findAllStatusInfoByOriginalFilePathAndStatus")
@@ -88,11 +88,11 @@ public class RestAPIController {
 				.findAllStatusInfoByOriginalFilePathAndStatusAndRunId(originalFilePath, status, runId);
 	}
 	
-	@GetMapping(value = "/findAllStatusInfoLikeOriginalFilePath")
-    public List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(
+	@GetMapping(value = "/findAllFailedStatusInfoLikeOriginalFilePath")
+    public List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(
             @RequestParam(required = true) String originalFilePath) {
         return dmeSyncWorkflowService.getService("local")
-                .findAllStatusInfoLikeOriginalFilePath(originalFilePath);
+                .findAllFailedStatusInfoLikeOriginalFilePath(originalFilePath);
     }
 
 	@GetMapping(value = "/findCollectionNameMappingByMapKeyAndCollectionTypeAndDoc")

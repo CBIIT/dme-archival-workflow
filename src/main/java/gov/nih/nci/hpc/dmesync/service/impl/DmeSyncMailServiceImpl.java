@@ -156,7 +156,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
       // Check to see if any files were over the recommended size and flag if it was.
       boolean exceedsMaxRecommendedFileSize = false;
       long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-      long processedCount = 0, successCount = 0, failedCount = 0;
+      long processedCount = 0, successCount = 0, failedCount = 0, ignoredCount = 0;
       for (StatusInfo info : statusInfo) {
     	  processedCount ++;
     	 
@@ -173,19 +173,22 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 	    	  }
     	  }   	 
    		      	  
-    	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
-    	  {	  successCount++; }
-    	  else {
-    		  failedCount++;
-    	  }
+     	  if (WorkflowConstants.isCompletedStatus(info.getStatus())) {
+     		  successCount++;
+     	  } else if (WorkflowConstants.isIgnoredStatus(info.getStatus())) {
+     		  ignoredCount++;
+     	  } else {
+     		  failedCount++;
+     	  }
       }
        
       body = body.concat("<ul>"
                                   +  "<li>"+ "Total processed: " + processedCount + "</li>"
-    		                      + "<li>" + "Success: " + successCount +"</li>"
+     		                      + "<li>" + "Success: " + successCount +"</li>"
+                                  + (ignoredCount > 0 ? "<li>Ignored: " + ignoredCount + "</li>" : "")
                                   + "<li>" + "Failure: " + failedCount + "</li>"  
-    		                      + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
-    		             "</ul>");
+     		                      + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
+     		             "</ul>");
      
         
       body = body.concat("<p><b><i> A Failure count of zero does not guarantee the accuracy of the metadata or the file size."
@@ -220,9 +223,9 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
 					folder.setExpectedTars(expectedTars );
 					folder.setCreatedTars(allUploads.size());
-					folder.setUploadedTars(allUploads.stream().filter(tar -> ("COMPLETED".equals(tar.getStatus()))) 
+					folder.setUploadedTars(allUploads.stream().filter(tar -> WorkflowConstants.isCompletedStatus(tar.getStatus())) 
 							.count());
-					folder.setFailedTars(allUploads.stream().filter(tar -> (tar.getStatus() == null ))
+					folder.setFailedTars(allUploads.stream().filter(tar -> WorkflowConstants.isRetryableStatus(tar.getStatus()))
 							.count());
 					folders.add(folder);
 				}
@@ -328,18 +331,18 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
 
 					if (includedFileRecord != null 
-							&&  WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())
-							&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())
-							&&  WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
-						tarRecord.setStatus("COMPLETED");
+							&&  WorkflowConstants.isCompletedStatus(tarRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
+						tarRecord.setStatus(WorkflowConstants.COMPLETED);
 						// tarRecord.setError(""); // No error
 					} else {
-						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
-							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+						if (WorkflowConstants.isCompletedStatus(tarRecord.getStatus())) {
+							if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
 								tarRecord.setStatus(
 										"FAILED.Excluded contents file not uploaded, only TAR file and Included contents file got uploaded.");
 								tarRecord.setError(excludedFileRecord.getError());
-							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+							} else if (WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
 								tarRecord.setStatus(
 										"FAILED.Included contents file not uploaded, only TAR file and Excluded contents file got uploaded.");
 								tarRecord.setError(includedFileRecord!=null? includedFileRecord.getError(): "Contents file has not been created, check if folder is empty.");
@@ -351,14 +354,15 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 
 							}
 						} else {
-							if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())
-									&&  WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+							
+							if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())
+									&& WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
 								tarRecord.setStatus("FAILED.Tar file not uploaded, only contents files got uploaded.");
-							} else if ( WorkflowConstants.COMPLETED.equals(excludedFileRecord.getStatus())) {
+							} else if (WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
 								tarRecord.setStatus(
 										"FAILED.Tar file and Included contents file not uploaded, only Excluded contents file got uploaded.");
 							} else if (includedFileRecord != null
-									&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+									&& WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
 								tarRecord.setStatus(
 										"FAILED.Tar file and Excluded  contents file not uploaded, only Included contents file got uploaded.");
 							} else {
@@ -368,15 +372,15 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					}
 				} else {
 					// If excluded contents file is not set, just handle included contents file
-					if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())
-							&&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
-						tarRecord.setStatus("COMPLETED");
+					if (includedFileRecord != null &&  WorkflowConstants.isCompletedStatus(tarRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
+						tarRecord.setStatus(WorkflowConstants.COMPLETED);
 						// tarRecord.setError(""); // No error
 					} else {
-						if ( WorkflowConstants.COMPLETED.equals(tarRecord.getStatus())) {
+						if (WorkflowConstants.isCompletedStatus(tarRecord.getStatus())) {
 							tarRecord.setStatus("FAILED.Contents file not uploaded, only TAR file uploaded.");
 							tarRecord.setError(includedFileRecord!=null ? includedFileRecord.getError(): "Contents file has not been created, check if folder is empty.");
-						} else if (includedFileRecord != null &&  WorkflowConstants.COMPLETED.equals(includedFileRecord.getStatus())) {
+						} else if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
 							tarRecord.setStatus("FAILED.TAR file not uploaded, only contents file uploaded.");
 						} else {
 							tarRecord.setStatus("FAILED.TAR file and contents file not uploaded.");
