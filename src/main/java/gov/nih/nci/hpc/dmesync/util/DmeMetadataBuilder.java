@@ -55,16 +55,16 @@ public class DmeMetadataBuilder {
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
 	}
 	
-	@Cacheable(value = "metadata", key = "'dmeMetadata'", sync = true)
-	public Map<String, Map<String, String>> getMetadataMap(String metadataFile, String key1, String key2)
+	@Cacheable(value = "metadata", key = "'dmeMetadataTwoKeys'", sync = true)
+	public Map<String, Map<String, String>> getMetadataMapWithTwoKeys(String metadataFile, String key1, String key2)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 		logger.info("Parsing the Metadata Spreadsheet and creating Metadata Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
 	}
 
-	@CachePut(value = "metadata", key = "'dmeMetadata'")
-	public Map<String, Map<String, String>> updateMetadataMap(String metadataFile, String key1, String key2)
+	@CachePut(value = "metadata", key = "'dmeMetadataTwoKeys'")
+	public Map<String, Map<String, String>> updateMetadataMapWithTwoKeys(String metadataFile, String key1, String key2)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 		logger.info("Updating the Metadata Spreadsheet and creating Metadata Map");

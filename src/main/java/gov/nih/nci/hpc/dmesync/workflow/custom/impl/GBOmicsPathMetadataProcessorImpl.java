@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -106,7 +107,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				// This Archive column is not Yes in the master file, so dataset is not ready to upload, log the path and complete the workflow
 				logger.info("No need to upload file : {} Archive column is {} ", object.getOriginalFilePath(), archiveStatus);
 				// update the current status info row as completed so this workflow is complete and next task won't be processed.
-				object.setRunId(object.getRunId() + "_IGNORED");
+				object.setStatus(WorkflowConstants.FAILED);
+				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 				object.setEndWorkflow(true);
 				object.setError("No need to upload, Archive column is set to "+ archiveStatus);
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
@@ -121,7 +123,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 						//This path is not in the master file, so log the path and complete the workflow
 						logger.info("No need to upload file : {}", object.getOriginalFilePath());
 						// update the current status info row as completed so this workflow is completed and next task won't be processed.
-						object.setRunId(object.getRunId() + "_IGNORED");
+						object.setStatus(WorkflowConstants.FAILED);
+						object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 						object.setEndWorkflow(true);
 						object.setError("No need to upload");
 						object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
@@ -144,7 +147,8 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			String projectTitle = getAttrValueWithExactKey(projectCollectionName, "project_title");
 			if(projectTitle == null) {
 				logger.info("No need to upload file : {}", object.getOriginalFilePath());
-				object.setRunId(object.getRunId() + "_IGNORED");
+				object.setStatus(WorkflowConstants.FAILED);
+				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 				object.setEndWorkflow(true);
 				object.setError("No need to upload yet");
 				object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);

@@ -26,12 +26,15 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
+import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
 @Service("hitifMailService")
 public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
+  @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -139,7 +142,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         // Check to see if any files were over the recommended size and flag if it was.
         boolean exceedsMaxRecommendedFileSize = false;
         long maxFileSize = Long.parseLong(maxRecommendedFileSize);
-        long processedCount = 0, successCount = 0, failedCount = 0;
+        long processedCount = 0, successCount = 0, failedCount = 0, ignoredCount = 0;
         for (StatusInfo info : statusInfo) {
       	  processedCount ++;
       	  if (info.getFilesize() > maxFileSize) {
@@ -150,8 +153,10 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
 		    		 minTarFileCount++;	    	
 	    	  }
 	  	  }
-      	  if (StringUtils.equals(info.getStatus(), "COMPLETED"))
+      	  if (WorkflowConstants.isCompletedStatus(info.getStatus()))
       		  successCount++;
+      	  else if (WorkflowConstants.isIgnoredStatus(info.getStatus()))
+      		  ignoredCount++;
       	  else
       		  failedCount++;
         }
@@ -168,9 +173,10 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
          // helper.setSubject("DME Auto Archival Result for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
      	  helper.setSubject("DME Auto Archival " + subject + " for HiTIF - Run_ID: " + runId + " - Base Path:  " + syncBaseDir + " [to: " + allEmails + "]");
         }
-  	  body = body.concat("<ul>"
+   	  body = body.concat("<ul>"
                 				+ "<li>"+ "Total processed: " + processedCount + "</li>"
                 				+ "<li>" + "Success: " + successCount +"</li>"
+                				+ (ignoredCount > 0 ? "<li>Ignored: " + ignoredCount + "</li>" : "")
                                 + "<li>" + "Failure: " + failedCount + "</li>"  
                                 + "<li>" + "Tar files with sizes smaller than " + ExcelUtil.humanReadableByteCount(Long.valueOf(minTarFile), true) + ": " + minTarFileCount +
       		               "</ul>");
@@ -182,10 +188,19 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         if(exceedsMaxRecommendedFileSize)
           body = body.concat("<p><b><i>There was a file that exceeds the recommended file size of " + ExcelUtil.humanReadableByteCount(maxFileSize, true) + ".</p></b></i>");
         helper.setText(body, true);
-        
+  	    
+        String status= (failedCount > 0) ? WorkflowConstants.RunStatus.FAILED.toString() : WorkflowConstants.RunStatus.SUCCEEDED.toString();
+
         FileSystemResource file = new FileSystemResource(excelFile);
         helper.addAttachment(file.getFilename(), file);
         sender.send(message);
+        logger.info("Workflow Run is completed");
+        try {
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, status, null);
+         } catch (IllegalArgumentException ex) {
+            logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
+        }
+
       }
     } catch (MessagingException e) {
       throw new MailParseException(e);
