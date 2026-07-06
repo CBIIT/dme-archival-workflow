@@ -98,7 +98,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.build_run_id }}
           name: dme-archival-workflow-artifacts
-          path: ./artifacts
+          path: artifacts
 
       - name: List downloaded artifacts
         shell: bash
