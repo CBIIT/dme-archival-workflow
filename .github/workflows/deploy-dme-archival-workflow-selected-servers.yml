@@ -14,8 +14,8 @@ on:
         default: prod
         options:
           - prod
-      build_run_id:
-        description: "Build workflow run ID that produced dme-archival-workflow-artifacts"
+      build_run_number:
+        description: "Build workflow run number that produced dme-archival-workflow-artifacts"
         required: true
         type: string
       fsdmel_wflow05p_ncifcrf_gov:
@@ -92,11 +92,10 @@ jobs:
       SSH_KEY: ${{ secrets.SSH_KEY }}
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.build_run_id }}
+          workflow: build-dme-archival-workflow.yml
+          run_number: ${{ inputs.build_run_number }}
           name: dme-archival-workflow-artifacts
           path: artifacts
 
