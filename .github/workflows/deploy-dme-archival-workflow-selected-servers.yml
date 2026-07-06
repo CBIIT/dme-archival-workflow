@@ -155,7 +155,14 @@ jobs:
           ssh_key_file="$HOME/.ssh/id_rsa"
           printf '%s\n' "$SSH_KEY" > "$ssh_key_file"
           chmod 600 "$ssh_key_file"
-          ssh-keyscan -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
+          #debug
+          echo "Validating private key format..."
+          ssh-keygen -y -f "$ssh_key_file" > /dev/null
+          echo "Scanning host key for ${{ matrix.host }}..."
+          ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
+          echo "Testing SSH connection..."
+          ssh -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "${SSH_USER}@${{ matrix.host }}" "echo SSH connection OK"
+          #ssh-keyscan -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
           echo "SSH_KEY_FILE=${ssh_key_file}" >> "$GITHUB_ENV"
 
       - name: Stop service, back up old jar, and remove current symlink
