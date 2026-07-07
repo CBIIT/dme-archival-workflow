@@ -24,14 +24,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
+import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -93,6 +96,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
 	private int batchFolderDelimiterLevel;
 	
+	@Autowired 
+	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
+	
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
@@ -102,7 +108,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Override
 	public StatusInfo process(StatusInfo object)
-			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException {
+			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException, DmeSyncMappingException {
 
 		/**
 		 * This task is only applicable for some folders in Dataset so below
@@ -112,8 +118,11 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-		if (TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
-
+		
+		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
+		if (metadataTask.isMetadataAvailable(object)) {
+		  if (TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
+			  
 			try {
 
 				Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -164,8 +173,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
 					if (multipleTarBatchFoldersEnabled) {
+							object = processGroupedFolderTarsRequests(object, files, tarWorkDir, notesWriter);
 						
-						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter );
 					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + filesPerTar - 1) / filesPerTar;
@@ -401,7 +410,16 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 				throw new DmeSyncStorageException("Error occurred during batch tarring. " + e.getMessage(), e);
 			}
-		}return object;
+		} 
+	}else {
+		logger.info("No need to upload folder : {}", object.getOriginalFilePath());
+		object.setStatus(WorkflowConstants.FAILED);
+		object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
+		object.setEndWorkflow(true);
+		object.setError("No need to upload yet");
+		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+	   } 
+		return object;
 
 	}
 
@@ -478,6 +496,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), batchFolderDelimiter,
 				batchFolderDelimiterLevel);
+		
+		
 
 		// Only directories (site folders)
 		List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
