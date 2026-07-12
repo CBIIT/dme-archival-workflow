@@ -373,7 +373,11 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
    
    public boolean isArchiveReady(String key) {
 	   String archiveStatus = getAttrValueWithExactKeyFromMetadataMap(key, "Archive");
-		return  archiveStatus != null && archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
+		
+	   if (StringUtils.isBlank(archiveStatus)) {
+ 		   return true;
+ 	   }
+ 	   return archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
    }
   
 

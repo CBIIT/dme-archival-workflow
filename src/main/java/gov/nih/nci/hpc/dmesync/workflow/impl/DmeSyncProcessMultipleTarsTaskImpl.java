@@ -120,9 +120,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				: null;
 		
 		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
-		if (metadataTask.isMetadataAvailable(object)) {
+		
 		  if (TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
-			  
+			  if (metadataTask.isMetadataAvailable(object)) { 
 			try {
 
 				Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
@@ -411,7 +411,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				throw new DmeSyncStorageException("Error occurred during batch tarring. " + e.getMessage(), e);
 			}
 		} 
-	}else {
+	else {
 		logger.info("No need to upload folder : {}", object.getOriginalFilePath());
 		object.setStatus(WorkflowConstants.FAILED);
 		object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
@@ -419,6 +419,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		object.setError("No need to upload yet");
 		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 	   } 
+	}
 		return object;
 
 	}
