@@ -183,15 +183,17 @@ public class ExcelUtil {
           }
         }
         if (highlightFailure) {
-        	  for (int i = 0; i < colCount; i++) {
-        	    Cell cell = row.getCell(i);
-        	    if (cell == null) {
-        	      cell = row.createCell(i);
-        	    }
-        	    cell.setCellStyle(failedRowStyle);
-        	  }
+            int totalColumns = Math.max(header.getLastCellNum(), 50); 
+            for (int i = 0; i < totalColumns; i++) {
+              Cell cell = row.getCell(i);
+              if (cell == null) {
+                cell = row.createCell(i);
+                cell.setCellValue("");
+              }
+              cell.setCellStyle(failedRowStyle);
+            }
+          }
         }
-      }
       
 
       workbook.write(outputStream);
