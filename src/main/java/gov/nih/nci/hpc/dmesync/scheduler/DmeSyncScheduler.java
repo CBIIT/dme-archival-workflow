@@ -745,15 +745,12 @@ public class DmeSyncScheduler {
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
 		}
 		else if (fileFullPath!=null && Files.isSymbolicLink(fileFullPath)) {
-			Path sourceFilePath = Files.readSymbolicLink(fileFullPath);
-			if (!sourceFilePath.isAbsolute()) {
-				sourceFilePath = fileFullPath.getParent().resolve(sourceFilePath).normalize();
-			}
-			sourceFilePath = sourceFilePath.toAbsolutePath();
-			logger.debug("[Scheduler] Checking for symbolic link Completed status: Original filepath : {} , SourceFilePath: {}",
+			
+			String sourceFilePath = PathUtil.resolveSourceFilePath(fileFullPath.toString());
+			logger.debug("[Scheduler] Checking for symbolic link rerun: Original filepath : {} , SourceFilePath: {}",
 					fileFullPath, sourceFilePath);
 			statusInfo = dmeSyncWorkflowService.getService(access)
-					.findFirstStatusInfoBySourceFilePathAndStatusIn(sourceFilePath.toString(), WorkflowConstants.getNoReRunStatuses());
+					.findFirstStatusInfoBySourceFilePathAndStatusIn(sourceFilePath, WorkflowConstants.getNoReRunStatuses());
 			// Adding this below condition when status info is null because the old symlink records have 
 			  // both sourcefilepath,  originalfilepath as symbolic links
 			if(statusInfo == null) {
@@ -997,7 +994,7 @@ public class DmeSyncScheduler {
     }
   }
 
-  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed) throws IOException {
+  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed){
     StatusInfo statusInfo = new StatusInfo();
     statusInfo.setRunId(runId);
     statusInfo.setOrginalFileName(file.getName());

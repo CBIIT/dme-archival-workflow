@@ -31,7 +31,7 @@ public class PathUtil {
 	 *         otherwise the original path
 	 * @throws IOException if an I/O error occurs while reading the symbolic link
 	 */
-	public static String resolveSourceFilePath(String absolutePath) throws IOException {
+	public static String resolveSourceFilePath(String absolutePath)  {
 
 		if (absolutePath == null) {
 			return null;
@@ -51,8 +51,8 @@ public class PathUtil {
 
 			return targetPath.toAbsolutePath().toString();
 		} catch (IOException e) {
-			logger.error("Error resolving source file path for {}: {}", absolutePath, e.getMessage());
-			throw e;
+			logger.error("Error resolving source file path for {}: {}", absolutePath, e);
+			return null;
 		}
 	}
 
