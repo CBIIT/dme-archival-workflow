@@ -40,8 +40,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		logger.info("[PathMetadataTask] LCBG SDS getArchivePath called");
 
 		
-		// load the user metadata from the externally placed excel
-	    metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "Folder");
+		
 				
 		// extract the user name from the Path
 		// Example path - /Cappell-Section/Adrijana/AC053_AXXAi_Gem_CDK2_sibTRCP/Raw/*
@@ -182,11 +181,14 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException {
+    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
 		
+		 // load the user metadata from the externally placed excel
+	        metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
 		   // Check if this project is in the metadata spreadsheet
 			String experimentName = getExpCollectionName(object);
-			return experimentName != null;
+			String path = getPath(object);
+			return experimentName != null && isArchiveReady(path);
 	}
 	
 	private String getCollectionNameFromParent(StatusInfo object, String parentName) {
