@@ -337,7 +337,7 @@ public interface DmeSyncWorkflowService {
     * @param status the status
     * @return the StatusInfo object
     */
-   StatusInfo findFirstStatusInfoBySourceFilePathAndStatus(String sourceFilePath, String status);
+   StatusInfo findFirstStatusInfoBySourceFilePathAndStatusIn(String sourceFilePath, List<String> status);
 
    StatusInfo findFirstStatusInfoByOriginalFilePathAndSourceFilePathNotEndsWith(String originalFilePath,
 		String sourceFilePath);

@@ -35,6 +35,7 @@ import org.springframework.util.CollectionUtils;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.util.HpcLocalDirectoryListQuery;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
+import gov.nih.nci.hpc.dmesync.util.PathUtil;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.impl.DmeSyncAWSScanDirectory;
@@ -752,7 +753,13 @@ public class DmeSyncScheduler {
 			logger.debug("[Scheduler] Checking for symbolic link Completed status: Original filepath : {} , SourceFilePath: {}",
 					fileFullPath, sourceFilePath);
 			statusInfo = dmeSyncWorkflowService.getService(access)
-					.findFirstStatusInfoBySourceFilePathAndStatus(sourceFilePath.toString(), "COMPLETED");
+					.findFirstStatusInfoBySourceFilePathAndStatusIn(sourceFilePath.toString(), WorkflowConstants.getNoReRunStatuses());
+			// Adding this below condition when status info is null because the old symlink records have 
+			  // both sourcefilepath,  originalfilepath as symbolic links
+			if(statusInfo == null) {
+				statusInfo = dmeSyncWorkflowService.getService(access)
+						.findFirstStatusInfoByOriginalFilePathAndStatusIn(fileFullPath.toString(),WorkflowConstants.getNoReRunStatuses());
+			}
 		}
 		else {
           statusInfo =
@@ -990,13 +997,13 @@ public class DmeSyncScheduler {
     }
   }
 
-  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed) {
+  private StatusInfo insertRecordDb(HpcPathAttributes file, boolean completed) throws IOException {
     StatusInfo statusInfo = new StatusInfo();
     statusInfo.setRunId(runId);
     statusInfo.setOrginalFileName(file.getName());
     statusInfo.setOriginalFilePath(file.getAbsolutePath());
     statusInfo.setSourceFileName(untar ? file.getTarEntry() : file.getName());
-    statusInfo.setSourceFilePath(createCollectionSoftlink ? file.getPath() : file.getAbsolutePath());
+    statusInfo.setSourceFilePath(createCollectionSoftlink ? file.getPath() : PathUtil.resolveSourceFilePath(file.getAbsolutePath()));
     statusInfo.setFilesize(file.getSize());
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(doc);
