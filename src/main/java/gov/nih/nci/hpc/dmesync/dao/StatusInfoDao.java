@@ -9,12 +9,20 @@ import org.springframework.data.jpa.repository.Query;
 public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Long> {
 
   /**
-   * findFirstByOriginalFilePathAndStatus
+   * findFirstByOriginalFilePathAndStatusIn
    * @param originalFilePath the original file path
+   * @param statuses the statuses
+   * @return the StatusInfo object
+   */
+  StatusInfo findFirstByOriginalFilePathAndStatusInOrderByStartTimestampDesc(String originalFilePath,  List<String> statuses);
+  
+  /**
+   * findFirstBySourceFilePathAndStatus
+   * @param sourceFilePath the source file path
    * @param status the status
    * @return the StatusInfo object
    */
-  StatusInfo findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(String originalFilePath, String status);
+  StatusInfo findFirstBySourceFilePathAndStatusOrderByStartTimestampDesc(String sourceFilePath, String status);
   
   /**
    * findFirstStatusInfoByFullDestinationPathAndStatus
@@ -35,13 +43,14 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByOriginalFilePathAndStatus(String originalFilePath, String status);
 
   /**
-   * findAllLikeOriginalFilePath
+   * findAllLikeOriginalFilePath with status failed
    * 
    * @param originalFilePath the original file path
    * @return the list of StatusInfo objects
    */
-  @Query("select s from StatusInfo s where s.originalFilePath like ?1 and s.status is null")
-  List<StatusInfo> findAllLikeOriginalFilePath(String originalFilePath);
+  @Query("select s from StatusInfo s where s.originalFilePath like ?1 and  upper(s.status) = 'FAILED'")
+  List<StatusInfo> findAllFailedLikeOriginalFilePath(String originalFilePath);
+
   
   /**
    * findAllLikeOriginalFilePath
@@ -65,14 +74,15 @@ public interface StatusInfoDao<T extends StatusInfo> extends JpaRepository<T, Lo
   List<StatusInfo> findAllByDocAndRunIdAndLikeOriginalFilePath(String Doc,String runId,String originalFilePath);
   
   /**
-   * findByOriginalFilePathAndSourceFileNameAndStatusNull
+   * findByOriginalFilePathAndSourceFileNameAndStatus
    * 
    * @param originalFilePath the original file path
    * @param sourceFileName the sourceFileName
+   * @param status the status
    * @return the list of StatusInfo objects which matches sourceFileName  and status is null
    */
-  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and s.status is null")
-  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(String originalFilePath, String sourceFileName);
+  @Query("select s from StatusInfo s where s.originalFilePath=?1 and s.sourceFileName=?2 and upper(s.status) =?3")
+  List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(String originalFilePath, String sourceFileName ,String status);
   
   /**
    * findByRunId

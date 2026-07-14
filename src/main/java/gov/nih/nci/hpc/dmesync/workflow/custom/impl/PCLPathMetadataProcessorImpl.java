@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,6 +112,15 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "PI_Lab"));
 		String dataOwnerFullName=getAttrValueFromMetadataMap(folderName, "data_owner");
+		
+		if(dataOwnerFullName == null) {
+			String msg = messageService.get("VALIDATION_002",
+					folderName,
+			        Locale.getDefault()
+			    );
+			logger.error(msg);
+			throw new DmeSyncMappingException(msg);
+		}
 		String[] dataOwnerFullNameParts = dataOwnerFullName.split(" ");
 		String formattedPIName=null;
         if (dataOwnerFullNameParts.length == 2) {
@@ -274,11 +284,14 @@ public class PCLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	
 	private String replaceCharacters(String collectionName) {
+		
+		if (collectionName != null) {
 		// replace spaces with underscore
 		collectionName = collectionName.replace(" ", "_");
 		// remove single quotes
 		collectionName = collectionName.replace("'", "_");
 		collectionName = collectionName.replace("-", "_");
+		}
 		return collectionName;
 	}
 

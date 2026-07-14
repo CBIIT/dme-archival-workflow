@@ -234,6 +234,19 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       List<HpcPathAttributes> files = new ArrayList<>();
       if (paths != null && paths.isEmpty()) {
         logger.info("[Scheduler] No files/folders found for runID: {}", runId);
+
+        String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(sourceRule.sourceBaseDirFolders)?" in "+sourceRule.sourceBaseDirFolders+" folders":"")+ ".";
+        dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir,
+  			  emailBody, config);
+        try {
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+          } catch (IllegalArgumentException e) {
+            logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, config.getDocName(), e);
+          }
+		if (shutDownFlag) {
+			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+			DmeSyncApplication.shutdown();
+		}
         MDC.clear();
         WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
 	  	runInfo.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
@@ -365,14 +378,11 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     try {
 
       List<StatusInfo> statusInfoList =
-                dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(sourceConfig.sourceBaseDir + '%');
+                dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(sourceConfig.sourceBaseDir + '%');
       for(StatusInfo statusInfo : statusInfoList) {
 	      if(statusInfo != null) {
 	    	//Update the run_id and reset the retry count and errors
-	    	statusInfo.setRunId(runId);
-	    	statusInfo.setStatus("");
-	    	statusInfo.setError("");
-	    	statusInfo.setRetryCount(0L);
+	    	prepareForReattempt(statusInfo, config, runId);
 	    	statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 	    	// Delete the metadata info created for this object ID
 	    	dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -421,16 +431,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
           queryPath = sourceConfig.sourceBaseDir + File.separatorChar + syncBaseDirFolderList.get(i);
 
         List<StatusInfo> statusInfoList =
-            dmeSyncWorkflowService.getService(access).findAllStatusInfoLikeOriginalFilePath(queryPath+'%');
+            dmeSyncWorkflowService.getService(access).findAllFailedStatusInfoLikeOriginalFilePath(queryPath+'%');
 
         for(StatusInfo statusInfo : statusInfoList) {
           if(statusInfo != null) {
             //Update the run_id and reset the retry count and errors
-            statusInfo.setRunId(runId);
-            statusInfo.setStatus("");
-            statusInfo.setError("");
-            statusInfo.setRetryCount(0L);
-            statusInfo.setEndWorkflow(false);
+        	 prepareForReattempt(statusInfo, config, runId);
             statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
             // Delete the metadata info created for this object ID
             dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -555,7 +561,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     for (HpcPathAttributes file : files) {
 
       StatusInfo statusInfo = null;
-
+		Path fileFullPath = file.getAbsolutePath() != null ? Paths.get(file.getAbsolutePath()) : null;
       //If we need to verify previous upload, check
       if (upload.verifyPrevUpload) {
         // Checks the local db to see if it has been completed
@@ -567,14 +573,16 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 				   TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , file.getName() )) {
 			logger.info("checking if all the Multiple Tars got uploaded {}",file.getAbsolutePath());
 			List<StatusInfo> mulitpleTarRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(config.getDocName(),file.getAbsolutePath() + '%');
+					.findAllByDocAndLikeOriginalFilePath(config.getDocName(),file.getAbsolutePath());
 			
 			if (!mulitpleTarRequests.isEmpty()) {
 				// Retrieve the original Tar object where multiple tars are created mainly for rerun 
 				statusInfo = dmeSyncWorkflowService.getService(access)
 						.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(config.getDocName(),
 								file.getAbsolutePath() , file.getAbsolutePath());
-				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream().filter(c -> c.getStatus() == null)
+				
+				List<StatusInfo> statusInfoNotCompletedList = mulitpleTarRequests.stream()
+						.filter(c -> !WorkflowConstants.isCompletedStatus(c.getStatus()))
 						.collect(Collectors.toList());
 				if (!statusInfoNotCompletedList.isEmpty() || ((statusInfo!=null && statusInfo.getTarContentsCount()>0))) {
 					// use the same status Info rows with new Run Id for reupload
@@ -582,6 +590,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 						if (object != null) {
 							// Update the run_id and reset the retry count and errors
 							object.setRunId(runId);
+							object.setStatus(null);
 							object.setError("");
 							object.setRetryCount(0L);
 							object.setEndWorkflow(false);
@@ -594,11 +603,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 					dmeSyncWorkflowService.getService(access).deleteTaskInfoByObjectId(statusInfo.getId());
 					// Send the incomplete objectId to the message queue for processing
 					DmeSyncMessageDto message = new DmeSyncMessageDto();
-					statusInfo.setRunId(runId);
-					statusInfo.setStatus("");
-					statusInfo.setError("");
-					statusInfo.setRetryCount(0L);
-					statusInfo.setEndWorkflow(false);
+					prepareForReattempt(statusInfo, config, runId);
 					statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 					message.setObjectId(statusInfo.getId());
 					message.setDocConfigId(config.getId());
@@ -622,7 +627,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
 
 			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), file.getAbsolutePath() + '%');
+					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), file.getAbsolutePath());
 
 			if (tarFolderRequests.isEmpty()) {
 				// No records for the path folder in database; running this folder for first time
@@ -675,10 +680,21 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndSourceFilePathAndStatus(
 		                  file.getAbsolutePath(), file.getPath(), "COMPLETED");
 		}
+		else if (fileFullPath!=null && Files.isSymbolicLink(fileFullPath)) {
+			Path sourceFilePath = Files.readSymbolicLink(fileFullPath);
+			if (!sourceFilePath.isAbsolute()) {
+				sourceFilePath = fileFullPath.getParent().resolve(sourceFilePath).normalize();
+			}
+			sourceFilePath = sourceFilePath.toAbsolutePath();
+			logger.debug("[Scheduler] Checking for symbolic link Completed status: Original filepath : {} , SourceFilePath: {}",
+					fileFullPath, sourceFilePath);
+			statusInfo = dmeSyncWorkflowService.getService(access)
+					.findFirstStatusInfoBySourceFilePathAndStatus(sourceFilePath.toString(), "COMPLETED");
+		}
 		else {
           statusInfo =
-              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatus(
-                  file.getAbsolutePath(), "COMPLETED");
+              dmeSyncWorkflowService.getService(access).findFirstStatusInfoByOriginalFilePathAndStatusIn(
+                  file.getAbsolutePath(), WorkflowConstants.getNoReRunStatuses());
         }
         if (statusInfo != null) {
           logger.debug(
@@ -716,11 +732,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         	}
           if(statusInfo != null) {
         	//Update the run_id and reset the retry count and errors
-        	statusInfo.setRunId(runId);
-        	statusInfo.setStatus("");
-        	statusInfo.setError("");
-        	statusInfo.setRetryCount(0L);
-        	statusInfo.setEndWorkflow(false);
+        	prepareForReattempt(statusInfo, config, runId);
         	if(!file.getIsDirectory()) {
         	statusInfo.setFilesize(file.getSize());
         	}
@@ -928,7 +940,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     statusInfo.setStartTimestamp(new Date());
     statusInfo.setDoc(config.getDocName());
     if(completed) {
-      statusInfo.setStatus("COMPLETED");
+      statusInfo.setStatus(WorkflowConstants.COMPLETED);
       statusInfo.setError("specified file extension doesn't exist in correct depth");
     }
     statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
@@ -1086,14 +1098,21 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   private int daysBetween(Date d1, Date d2) {
     return (int) ((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
   }
-  
+
+  // This metho is to prepare the status info for reattempt the upload of the failes file
+  private void prepareForReattempt(StatusInfo statusInfo, DocConfig config, String runId) {
+	    statusInfo.setRunId(runId);
+	    statusInfo.setStatus("");
+	    statusInfo.setError("");
+	    statusInfo.setStatus(null);
+	    statusInfo.setEndWorkflow(false);
+	    statusInfo.setRetryCount(0L);
+	    statusInfo.setReattempts(statusInfo.getReattempts() == null ? 1L : statusInfo.getReattempts() + 1);
+  }
+   
 	private void sendRequestToJms(StatusInfo statusInfo, DocConfig config, String runId) {
 
-		statusInfo.setRunId(runId);
-		statusInfo.setStatus("");
-		statusInfo.setError("");
-		statusInfo.setRetryCount(0L);
-		statusInfo.setEndWorkflow(false);
+		prepareForReattempt(statusInfo, config, runId);
 		statusInfo = dmeSyncWorkflowService.getService(access).saveStatusInfo(statusInfo);
 		// Delete the metadata info created for this object ID
 		dmeSyncWorkflowService.getService(access).deleteMetadataInfoByObjectId(statusInfo.getId());
@@ -1356,7 +1375,11 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	        dmeSyncWorkflowService.getService(access).findAllByDocAndLikeOriginalFilePath(doc, syncBaseDir + "%");
 
 	    String previousRunId = baseRows.stream()
-	        .filter(s -> s != null && StringUtils.isNotBlank(s.getRunId()) && !StringUtils.equals(s.getRunId(), runId))
+	        .filter(s -> s != null
+	        		&& StringUtils.isNotBlank(s.getRunId())
+	        		&& !StringUtils.equals(s.getRunId(), runId)
+	        		&& !WorkflowConstants.isIgnoredStatus(s.getStatus())
+	        		&& !StringUtils.endsWith(s.getRunId(), WorkflowConstants.IGNORED_RUN_SUFFIX))
 	        .sorted((a, b) -> {
 	          Date ad = a.getStartTimestamp();
 	          Date bd = b.getStartTimestamp();
@@ -1388,7 +1411,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
 	    List<StatusInfo> toRetry = prevRunRows.stream()
 	        .filter(s -> s != null)
-	        .filter(s -> !WorkflowConstants.COMPLETED.equalsIgnoreCase(StringUtils.defaultString(s.getStatus())))
+	        .filter(s -> WorkflowConstants.isRetryableStatus(s.getStatus()))
 	        .filter(s -> {
 	            String originalFilePath = s.getOriginalFilePath();
 	            if (StringUtils.isBlank(originalFilePath)) return false;
@@ -1418,10 +1441,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    int enqueued = 0;
 	    for (StatusInfo s : toRetry) {
 
-	      s.setRunId(runId);
-	      s.setError("");
-	      s.setRetryCount(0L);
-	      s.setEndWorkflow(false);
+	      prepareForReattempt(s, config, runId);
 
 	      s = dmeSyncWorkflowService.getService(access).saveStatusInfo(s);
 

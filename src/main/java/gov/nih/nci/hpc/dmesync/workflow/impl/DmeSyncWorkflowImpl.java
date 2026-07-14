@@ -58,6 +58,9 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
   @Value("${dmesync.db.access:local}")
   private String access;
 
+  @Value("${dmesync.activemq.maximum.retires}")
+  private int maximumRetries;
+  
   public void start(StatusInfo statusInfo, DocConfig config) throws DmeSyncWorkflowException {
   
     logger.info("[Workflow] Starting for DOC {} (version {})", config.getDocName(), config.getVersion());
@@ -119,7 +122,6 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
 
     try {
       //Clear any previous error in case of a retry
-      statusInfo.setStatus("");
       statusInfo.setError("");
       statusInfo.setStartTimestamp(new Date());
       
@@ -143,24 +145,34 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
       
       // In case of mapping or verification exception on async, retry will not help.
       statusInfo.setError(e.getMessage());
-      dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+      dmeSyncWorkflowService.getService(access).recordError(statusInfo , true);
       
     } catch (DmeSyncStorageException e) {
         
         // In case of space issue while tarring, retry will not help.
         statusInfo.setError(e.getMessage());
-        dmeSyncWorkflowService.getService(access).recordError(statusInfo);
+        dmeSyncWorkflowService.getService(access).recordError(statusInfo , true);
         
       }catch (DmeSyncWorkflowException e) {
+    	  boolean setStatus = false;
+      if(statusInfo.getRetryCount() >= maximumRetries) {
+		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
+		 setStatus = true;
       
+	  }
       statusInfo.setRetryCount(statusInfo.getRetryCount() + 1);
-      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, setStatus, e);
       
       throw e;
       
     } catch (Exception e) {
+    	boolean setStatus = false;
+       if(statusInfo.getRetryCount() >= maximumRetries) {
+   		 logger.error("[Workflow] Maximum retries exceeded for StatusInfo ID: " + statusInfo.getId(), e);
+   		 setStatus = true;
       
-      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, e);
+       }
+      dmeSyncWorkflowService.getService(access).retryWorkflow(statusInfo, setStatus ,e );
     }
    } // not dry run
   }

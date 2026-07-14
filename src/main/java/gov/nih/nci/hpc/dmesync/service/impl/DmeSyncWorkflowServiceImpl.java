@@ -40,23 +40,34 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
 
   @Override
-  public void retryWorkflow(StatusInfo statusInfo, Exception e) {
+  public void retryWorkflow(StatusInfo statusInfo, boolean setStatus, Exception e) {
 	statusInfo.setError(e.getMessage());
-    recordError(statusInfo);
+    recordError(statusInfo , setStatus);
     // Delete the metadata info created for this object ID
     metadataInfoDao.deleteByObjectId(statusInfo.getId());
   }
 
   @Override
-  public void recordError(StatusInfo info) {
-	info.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+  public void recordError(StatusInfo info , boolean setStatus) {
+	if (setStatus) {
+			if (!WorkflowConstants.isIgnoredStatus(info.getStatus())) {
+				info.setStatus(WorkflowConstants.FAILED);
+			}
+		}
     statusInfoDao.saveAndFlush(info);
   }
 
+
   @Override
-  public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatus(
-      String originalFilePath, String status) {
-    return statusInfoDao.findFirstByOriginalFilePathAndStatusOrderByStartTimestampDesc(originalFilePath, status);
+  public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatusIn(
+      String originalFilePath, List<String> statuses) {
+    return statusInfoDao.findFirstByOriginalFilePathAndStatusInOrderByStartTimestampDesc(originalFilePath, statuses);
+  }
+  
+  @Override
+  public StatusInfo findFirstStatusInfoBySourceFilePathAndStatus(
+      String sourceFilePath, String status) {
+    return statusInfoDao.findFirstBySourceFilePathAndStatusOrderByStartTimestampDesc(sourceFilePath, status);
   }
   
   @Override
@@ -72,8 +83,8 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public List<StatusInfo> findAllStatusInfoLikeOriginalFilePath(String originalFilePath) {
-    return statusInfoDao.findAllLikeOriginalFilePath(originalFilePath);
+  public List<StatusInfo> findAllFailedStatusInfoLikeOriginalFilePath(String originalFilePath) {
+    return statusInfoDao.findAllFailedLikeOriginalFilePath(originalFilePath);
   }
   
   @Override
@@ -101,10 +112,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   }
   
   @Override
-  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatusNull(
-      String originalFilePath, String sourceFileName) {
-    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatusNull(
-        originalFilePath, sourceFileName);
+  public List<StatusInfo> findByOriginalFilePathAndSourceFileNameAndStatus(
+      String originalFilePath, String sourceFileName , String status) {
+    return statusInfoDao.findByOriginalFilePathAndSourceFileNameAndStatus(
+        originalFilePath, sourceFileName , status);
   }
 
   
