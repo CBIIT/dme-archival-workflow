@@ -395,7 +395,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getTarFileName(StatusInfo object, String sampleCollectionType , String metadataKey) throws DmeSyncMappingException {
 		String tarFileName = null;
-		String scafNumber = getSCAFNumber(object);
+		String scafNumber = getSCAFNumberforFileName(object);
 
 		if (StringUtils.equals(FASTQ, sampleCollectionType)) {
 			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
@@ -407,7 +407,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return tarFileName;
 	}
 
-	/*private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
+	private String getSCAFNumberforFileName(StatusInfo object) throws DmeSyncMappingException {
 
 		// filename without the extension is the SCAF Number
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
@@ -424,7 +424,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 					"Invalid folder structure:The name of fastq file or cellranger output (sample name) file doesn't start with SCAF: "
 							+ object.getSourceFilePath());
 		}
-	}*/
+	}
 
 	private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
 
