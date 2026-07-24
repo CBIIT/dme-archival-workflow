@@ -432,6 +432,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	    String sampleName = fileName.replaceFirst("\\.tar(\\.gz)?$", "");
 
+	    
+	    sampleName = sampleName.replaceFirst("_(GEX|ATAC|FPC|VDJ|RNA|ADT|BCR|TCR)$", "");
+
 	    // Normalize:
 	    // SCAF2858_22929   -> SCAF2858_22929
 	    // SCAF2858b_22929  -> SCAF2858_22929
