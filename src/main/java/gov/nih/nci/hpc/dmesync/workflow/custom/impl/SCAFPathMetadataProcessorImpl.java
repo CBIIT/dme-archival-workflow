@@ -362,7 +362,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Example: If originalFilePath is
 		/// mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/02_PrimaryAnalysisOutput
 		// then return CS029391_Staudt_Shaffer
-		String projectpathName = getCollectionNameFromParent(object, "scaf-ccr-a-data");
+		String projectpathName = getCollectionNameFromParent(object, getCollectionNameFromParent(object, "mnt"));
 
 		if (projectpathName != null) {
 			String[] projectKeywords = projectpathName.trim().split("_");
