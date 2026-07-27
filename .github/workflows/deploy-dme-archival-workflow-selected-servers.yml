@@ -151,7 +151,9 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ~/.ssh
+          #mkdir -p ~/.ssh
+          mkdir -p "$HOME/.ssh"
+          pwd
           ssh_key_file="$HOME/.ssh/id_rsa"
           printf '%s\n' "$SSH_KEY" > "$ssh_key_file"
           chmod 400 "$ssh_key_file"
