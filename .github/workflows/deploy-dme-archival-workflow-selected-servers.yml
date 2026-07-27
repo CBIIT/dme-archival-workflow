@@ -156,14 +156,16 @@ jobs:
           printf '%s\n' "$SSH_KEY" > "$ssh_key_file"
           chmod 600 "$ssh_key_file"
           #debug
-          echo "Validating private key format..."
-          ssh-keygen -y -f "$ssh_key_file" > /dev/null
+          #echo "Validating private key format..."
+          #ssh-keygen -y -f "$ssh_key_file" > /dev/null
 
-          echo "Public key fingerprint from GitHub secret private key:"
-          ssh-keygen -y -f "$ssh_key_file" | ssh-keygen -lf -
+          #echo "Public key fingerprint from GitHub secret private key:"
+          #ssh-keygen -y -f "$ssh_key_file" | ssh-keygen -lf -
 
           echo "Scanning host key for ${{ matrix.host }}..."
+          rm -f ~/.ssh/known_hosts
           ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
+          sleep 2
           echo "Testing SSH connection..."
           ssh -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "${SSH_USER}@${{ matrix.host }}" "echo SSH connection OK"
           #ssh-keyscan -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
