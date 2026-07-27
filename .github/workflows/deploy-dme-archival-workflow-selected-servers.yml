@@ -86,7 +86,7 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
       APP_NAME: dme-sync
-      SERVICE_NAME: archival-workflow
+      SERVICE_NAME: archival-workflow.service
       DEPLOY_DIR: /opt/hpcdm_workflows/deployments
       SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
       RUNNER_SSH_USER: githubuser
