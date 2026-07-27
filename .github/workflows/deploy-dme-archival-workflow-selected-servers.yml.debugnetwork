@@ -141,6 +141,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          target_host="${{ matrix.host }}"
+          echo "Target host: ${target_host}"
+
           if [ -z "$SSH_USER" ]; then
             echo "DEPLOY_SSH_USER secret is required." >&2
             exit 1
@@ -159,13 +162,23 @@ jobs:
           echo "Validating private key format..."
           ssh-keygen -y -f "$ssh_key_file" > /dev/null
 
-          echo "Public key fingerprint from GitHub secret private key:"
-          ssh-keygen -y -f "$ssh_key_file" | ssh-keygen -lf -
+          getent hosts "$target_host" || echo "DNS lookup failed for ${target_host}"
+          if timeout 15 bash -c ">/dev/tcp/${target_host}/22"; then
+            echo "Port 22 is reachable."
+          else
+            echo "Port 22 is NOT reachable."
+          fi
 
           echo "Scanning host key for ${{ matrix.host }}..."
-          ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
-          echo "Testing SSH connection..."
-          ssh -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "${SSH_USER}@${{ matrix.host }}" "echo SSH connection OK"
+          if ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts; then
+            echo "ssh-keyscan succeeded."
+          else
+            echo "failed"
+          fi
+
+          ssh -vvv -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=no "${SSH_USER}@${target_host}" "echo SSH connection OK"
+          #echo "Testing SSH connection..."
+          #ssh -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "${SSH_USER}@${{ matrix.host }}" "echo SSH connection OK"
           #ssh-keyscan -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
           echo "SSH_KEY_FILE=${ssh_key_file}" >> "$GITHUB_ENV"
 

@@ -158,10 +158,6 @@ jobs:
           #debug
           echo "Validating private key format..."
           ssh-keygen -y -f "$ssh_key_file" > /dev/null
-
-          echo "Public key fingerprint from GitHub secret private key:"
-          ssh-keygen -y -f "$ssh_key_file" | ssh-keygen -lf -
-
           echo "Scanning host key for ${{ matrix.host }}..."
           ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
           echo "Testing SSH connection..."
