@@ -29,7 +29,7 @@ on:
         type: boolean
         default: false
 
-run-name: "Deploy DME Archival Workflow from build #${{ inputs.build_run_number }} to ${{ inputs.environment }}"
+run-name: "Deploy DME Archival Workflow from build ${{ inputs.build_run_id }} to ${{ inputs.environment }}"
 
 jobs:
   prepare:
@@ -89,7 +89,7 @@ jobs:
       SERVICE_NAME: archival-workflow
       DEPLOY_DIR: /opt/hpcdm_workflows/deployments
       SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
-      RUNNER_SSH_USER: githubuser
+      SSH_KEY: ${{ secrets.SSH_KEY }}
     steps:
       - name: Download build artifact
         uses: dawidd6/action-download-artifact@v6
@@ -141,38 +141,47 @@ jobs:
         run: |
           set -euo pipefail
 
-          target_host="${{ matrix.host }}"
-
-          if [ -z "${SSH_USER:-}" ]; then
+          if [ -z "$SSH_USER" ]; then
             echo "DEPLOY_SSH_USER secret is required." >&2
             exit 1
           fi
 
-          echo "Target host: ${target_host}"
-          echo "Remote deploy user: ${SSH_USER}"
-          echo "Runner SSH user: ${RUNNER_SSH_USER}"
+          sudo su - githubuser -c "ssh -o StrictHostKeyChecking=no "${SSH_USER}@${{ matrix.host }}" 
 
-          sudo -iu "$RUNNER_SSH_USER" bash -lc 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+          #if [ -z "$SSH_KEY" ]; then
+            #echo "SSH_KEY secret is required." >&2
+            #exit 1
+          #fi
 
-          echo "Scanning host key for ${target_host}..."
-          sudo -iu "$RUNNER_SSH_USER" bash -lc "ssh-keyscan -T 15 -H '$target_host' >> ~/.ssh/known_hosts"
+          #mkdir -p ~/.ssh
+          #mkdir -p "$HOME/.ssh"
+          #pwd
+          #ssh_key_file="$HOME/.ssh/id_rsa"
+          #printf '%s\n' "$SSH_KEY" > "$ssh_key_file"
+          #chmod 400 "$ssh_key_file"
+          #debug
+          #echo "Validating private key format..."
+          #ssh-keygen -y -f "$ssh_key_file" > /dev/null
 
-          echo "Testing SSH connection as ${RUNNER_SSH_USER}..."
-          sudo -iu "$RUNNER_SSH_USER" ssh \
-            -o IdentitiesOnly=yes \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            "${SSH_USER}@${target_host}" \
-            "echo SSH connection OK"
+          #echo "Public key fingerprint from GitHub secret private key:"
+          #ssh-keygen -y -f "$ssh_key_file" | ssh-keygen -lf -
+
+          #echo "Scanning host key for ${{ matrix.host }}..."
+          #rm -f ~/.ssh/known_hosts
+          #ssh-keyscan -v -T 15 -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
+          #sleep 2
+          #echo "Testing SSH connection..."
+          #ssh -i "$ssh_key_file" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "${SSH_USER}@${{ matrix.host }}" "echo SSH connection OK"
+          #ssh-keyscan -H "${{ matrix.host }}" >> ~/.ssh/known_hosts
+          #echo "SSH_KEY_FILE=${ssh_key_file}" >> "$GITHUB_ENV"
 
       - name: Stop service, back up old jar, and remove current symlink
         shell: bash
         run: |
           set -euo pipefail
 
-          target_host="${{ matrix.host }}"
-
-          sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
+          #ssh -i "$SSH_KEY_FILE" -o IdentitiesOnly=yes "${SSH_USER}@${{ matrix.host }}" \
+          ssh -o IdentitiesOnly=yes StrictHostKeyChecking=no "${SSH_USER}@${{ matrix.host }}" \
             "set -e; sudo systemctl stop ${SERVICE_NAME}; cd ${DEPLOY_DIR}; find . -maxdepth 1 -type f -name '${APP_NAME}-*.jar' -exec mv {} {}_backup_\$(date +%Y%m%d.%H%M) \; || exit \$?; rm -f ${APP_NAME}.jar"
 
       - name: Copy new jar to deployment directory
@@ -180,24 +189,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          target_host="${{ matrix.host }}"
-          local_jar="/tmp/${GITHUB_RUN_ID}-${target_host}-${JAR_NAME}"
-          trap 'sudo rm -f "$local_jar"' EXIT
-
-          sudo cp "$JAR_PATH" "$local_jar"
-          sudo chown "$RUNNER_SSH_USER" "$local_jar"
-          sudo chmod 600 "$local_jar"
-
-          sudo -iu "$RUNNER_SSH_USER" scp -o IdentitiesOnly=yes -p \
-            "$local_jar" \
-            "${SSH_USER}@${target_host}:${DEPLOY_DIR}/${JAR_NAME}"
+          scp -i "$SSH_KEY_FILE" -o IdentitiesOnly=yes -p \
+          ssh -o IdentitiesOnly=yes StrictHostKeyChecking=no "${SSH_USER}@${{ matrix.host }}" \
+            "$JAR_PATH" \
+            "${SSH_USER}@${{ matrix.host }}:${DEPLOY_DIR}/${JAR_NAME}"
 
       - name: Create symlink and start service
         shell: bash
         run: |
           set -euo pipefail
 
-          target_host="${{ matrix.host }}"
-
-          sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
+          #ssh -i "$SSH_KEY_FILE" -o IdentitiesOnly=yes "${SSH_USER}@${{ matrix.host }}" \
+          ssh -o IdentitiesOnly=yes StrictHostKeyChecking=no "${SSH_USER}@${{ matrix.host }}" \
             "set -e; cd ${DEPLOY_DIR}; ln -sfn ${JAR_NAME} ${APP_NAME}.jar; sudo systemctl start ${SERVICE_NAME}"
