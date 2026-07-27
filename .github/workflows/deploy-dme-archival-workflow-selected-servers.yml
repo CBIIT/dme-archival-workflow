@@ -154,7 +154,7 @@ jobs:
           mkdir -p ~/.ssh
           ssh_key_file="$HOME/.ssh/id_rsa"
           printf '%s\n' "$SSH_KEY" > "$ssh_key_file"
-          chmod 600 "$ssh_key_file"
+          chmod 400 "$ssh_key_file"
           #debug
           #echo "Validating private key format..."
           #ssh-keygen -y -f "$ssh_key_file" > /dev/null
