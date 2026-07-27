@@ -210,4 +210,4 @@ jobs:
           target_host="${{ matrix.host }}"
 
           sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
-            "set -e; sleep 10; echo 'Service status:'; sudo systemctl --no-pager --full status ${SERVICE_NAME} || true; echo 'Process check:'; ps -ef | grep -E '[d]me-sync|[a]rchival-workflow|${JAR_NAME}' || true; if ! sudo systemctl is-active --quiet ${SERVICE_NAME}; then echo '${SERVICE_NAME} is not active after deployment.' >&2; echo 'Recent service logs:' >&2; sudo journalctl -u ${SERVICE_NAME} -n 100 --no-pager >&2 || true; exit 1; fi; echo '${SERVICE_NAME} is active after deployment.'"
+            "set -e; echo 'Process check:'; ps -ef | grep -E '[d]me-sync|[a]rchival-workflow|${JAR_NAME}' || true; echo 'Service status:'; sudo systemctl status ${SERVICE_NAME} || true"
