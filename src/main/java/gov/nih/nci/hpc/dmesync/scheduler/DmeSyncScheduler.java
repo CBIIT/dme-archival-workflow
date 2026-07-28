@@ -322,6 +322,19 @@ public class DmeSyncScheduler {
       List<HpcPathAttributes> files = new ArrayList<>();
       if (paths != null && paths.isEmpty()) {
         logger.info("[Scheduler] No files/folders found for runID: {}", runId);
+
+        String emailBody= "There were no files/folders found for processing"+(!StringUtils.isEmpty(syncBaseDirFolders)?" in "+syncBaseDirFolders+" folders":"")+ ".";
+        dmeSyncMailServiceFactory.getService(doc).sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir,
+  			  emailBody);
+        try {
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+          } catch (IllegalArgumentException e) {
+            logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
+          }
+		if (shutDownFlag) {
+			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
+			DmeSyncApplication.shutdown();
+		}
         MDC.clear();
         return;
       } else {
