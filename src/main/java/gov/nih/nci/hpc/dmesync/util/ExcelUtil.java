@@ -39,6 +39,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
@@ -71,6 +73,11 @@ public class ExcelUtil {
     headerFont.setBold(true);
     CellStyle headerCellStyle = workbook.createCellStyle();
     headerCellStyle.setFont(headerFont);
+
+	 // Create yellow style for failed rows
+    CellStyle failedRowStyle = workbook.createCellStyle();
+    failedRowStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+    failedRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
     try (FileOutputStream outputStream = new FileOutputStream(fileName); ) {
 
@@ -113,6 +120,7 @@ public class ExcelUtil {
     	    cell.setCellStyle(headerCellStyle);
      }
       for (StatusInfo data : statusInfo) {
+        boolean highlightFailure = !WorkflowConstants.isCompletedStatus(data.getStatus());
         colCount = 0;
         Row row = sheet.createRow(rowCount++);
         row.createCell(colCount++).setCellValue(data.getRunId());
@@ -174,7 +182,19 @@ public class ExcelUtil {
             row.createCell(colCount++).setCellValue("");
           }
         }
-      }
+        if (highlightFailure) {
+            int totalColumns = Math.max(header.getLastCellNum(), 50); 
+            for (int i = 0; i < totalColumns; i++) {
+              Cell cell = row.getCell(i);
+              if (cell == null) {
+                cell = row.createCell(i);
+                cell.setCellValue("");
+              }
+              cell.setCellStyle(failedRowStyle);
+            }
+          }
+        }
+      
 
       workbook.write(outputStream);
 
