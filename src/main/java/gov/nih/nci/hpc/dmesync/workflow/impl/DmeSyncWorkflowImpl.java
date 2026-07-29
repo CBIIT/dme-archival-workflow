@@ -132,7 +132,7 @@ public class DmeSyncWorkflowImpl implements DmeSyncWorkflow {
     
     tasks.add(metadataTask);
     
-    if (!awsFlag) {
+    if (!awsFlag || !dryRun) {
 	    if (tar || tarIndividualFiles || selectiveScan ) {
 	    	tasks.add(tarTask);
 	    	if(createTarContentsFile) {
