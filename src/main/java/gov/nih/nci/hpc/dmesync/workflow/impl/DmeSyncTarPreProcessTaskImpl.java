@@ -3,7 +3,10 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -63,6 +66,9 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 	
 	@Value("${dmesync.multiple.tars.dir.folders:}")
 	private String multipleTarsFolders;
+	
+	@Value("${dmesync.tar.exclude.folder:}")
+	private String excludeFolder;
 
 	@PostConstruct
 	public boolean init() {
@@ -103,6 +109,8 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			String sourceDirLeafNode = object.getOriginalFilePath() != null
 					? ((Paths.get(object.getOriginalFilePath())).getFileName()).toString()
 					: null;
+			List<String> excludeFolders = excludeFolder == null || excludeFolder.isEmpty() ? null
+					: new ArrayList<>(Arrays.asList(excludeFolder.split(",")));
 			
 			/** This condition when dmesync.process.multiple.tars is true  only applies to multipleTarsFolders
 			 * because the processMultipleTarsTask will set the sourcefilename
@@ -132,6 +140,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			// Update the record for metadata processing
 			object.setSourceFileName(tarFileName);
 			object.setSourceFilePath(tarFile);
+			object.setFilesize(TarUtil.getDirectorySize(originalFilePath,excludeFolders));
 			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
 
 		} catch (Exception e) {
