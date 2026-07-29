@@ -413,6 +413,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 		String sampleName = fileName.replaceAll("\\.tar$", "");
 
+		// Remove known trailing chemistry suffixes from the filename stem.
+				// Examples:
+				//   SCAF12345_GEX.tar  -> SCAF12345
+				//   SCAF12345_ATAC.tar -> SCAF12345
+				//   SCAF12345.tar      -> SCAF12345
+		sampleName = sampleName.replaceFirst("_(GEX|ATAC|FPC|VDJ|RNA|ADT|BCR|TCR)$", "");
 		logger.info("Sample Name", sampleName);
 		if (sampleName != null && sampleName.startsWith("SCAF")) {
 			return sampleName;
