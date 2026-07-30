@@ -45,12 +45,6 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   @Value("${dmesync.db.access:local}")
   private String access;
   
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.destination.base.dir}")
-  protected String destinationBaseDir;
-  
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
   @Autowired
@@ -370,6 +364,6 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	    }
 	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
-  
+
 
 }

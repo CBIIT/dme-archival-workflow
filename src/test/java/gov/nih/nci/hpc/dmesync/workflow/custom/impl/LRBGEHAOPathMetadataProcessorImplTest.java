@@ -9,9 +9,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -25,13 +27,21 @@ class LRBGEHAOPathMetadataProcessorImplTest {
 
   @TempDir
   Path tempDir;
+  
+  DocConfig config;
+  LRBGEHAOPathMetadataProcessorImpl processor;
 
+  @BeforeEach
+  public void init() {
+    DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/DME", 1);
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "dummy.xlsx", "", false, false, null, null, false, null, false, false, false, 0);
+    config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
+    processor = new LRBGEHAOPathMetadataProcessorImpl();
+  }
+  
   @Test
   void testGetArchivePath_FlowcellRawData() throws Exception {
-    LRBGEHAOPathMetadataProcessorImpl processor = new LRBGEHAOPathMetadataProcessorImpl();
-    setField(processor, "destinationBaseDir", "/DME");
-    setField(processor, "metadataFile", "dummy.xlsx");
-
+	  
     // Build structure: .../Hager/OUT/OUT_20250320/Flowcell/Sample_ABC/reads.fastq.gz
     Path sampleDir = Files.createDirectories(
         tempDir.resolve("Hager/OUT/OUT_20250320/Flowcell/Sample_ABC")
@@ -46,16 +56,13 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     statusInfo.setSourceFilePath(file.toString());
     statusInfo.setSourceFileName("reads.fastq.gz");
 
-    String archivePath = processor.getArchivePath(statusInfo);
+    String archivePath = processor.getArchivePath(statusInfo, config);
 
     assertEquals("/DME/PI_Gordon_Hager/Project_PROJ1/OUT_20250320/Raw_Data/Sample_ABC/reads.fastq.gz", archivePath);
   }
 
   @Test
   void testGetArchivePath_Analysis() throws Exception {
-    LRBGEHAOPathMetadataProcessorImpl processor = new LRBGEHAOPathMetadataProcessorImpl();
-    setField(processor, "destinationBaseDir", "/DME");
-    setField(processor, "metadataFile", "dummy.xlsx");
 
     Path analysisDir = Files.createDirectories(tempDir.resolve("Hager/OUT/OUT_20250320/Analysis"));
     Path file = Files.createFile(analysisDir.resolve("report.tsv"));
@@ -67,16 +74,13 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     statusInfo.setSourceFilePath(file.toString());
     statusInfo.setSourceFileName("report.tsv");
 
-    String archivePath = processor.getArchivePath(statusInfo);
+    String archivePath = processor.getArchivePath(statusInfo, config);
 
     assertEquals("/DME/PI_Gordon_Hager/Project_PROJ1/OUT_20250320/Analysis/report.tsv", archivePath);
   }
 
   @Test
   void testGetArchivePath_QC() throws Exception {
-    LRBGEHAOPathMetadataProcessorImpl processor = new LRBGEHAOPathMetadataProcessorImpl();
-    setField(processor, "destinationBaseDir", "/DME");
-    setField(processor, "metadataFile", "dummy.xlsx");
 
     Path qcDir = Files.createDirectories(tempDir.resolve("Hager/OUT/OUT_20250320/QC"));
     Path file = Files.createFile(qcDir.resolve("qc.html"));
@@ -88,16 +92,13 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     statusInfo.setSourceFilePath(file.toString());
     statusInfo.setSourceFileName("qc.html");
 
-    String archivePath = processor.getArchivePath(statusInfo);
+    String archivePath = processor.getArchivePath(statusInfo, config);
 
     assertEquals("/DME/PI_Gordon_Hager/Project_PROJ1/OUT_20250320/QC/qc.html", archivePath);
   }
 
   @Test
   void testGetArchivePath_ReadmeUnderOutCollection() throws Exception {
-    LRBGEHAOPathMetadataProcessorImpl processor = new LRBGEHAOPathMetadataProcessorImpl();
-    setField(processor, "destinationBaseDir", "/DME");
-    setField(processor, "metadataFile", "dummy.xlsx");
 
     Path outRunDir = Files.createDirectories(tempDir.resolve("Hager/OUT/OUT_20250320"));
     Path file = Files.createFile(outRunDir.resolve("readme.txt"));
@@ -109,16 +110,13 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     statusInfo.setSourceFilePath(file.toString());
     statusInfo.setSourceFileName("readme.txt");
 
-    String archivePath = processor.getArchivePath(statusInfo);
+    String archivePath = processor.getArchivePath(statusInfo, config);
 
     assertEquals("/DME/PI_Gordon_Hager/Project_PROJ1/OUT_20250320/readme.txt", archivePath);
   }
 
   @Test
   void testGetArchivePath_ThrowsWhenUnknownSubcollectionType() throws Exception {
-    LRBGEHAOPathMetadataProcessorImpl processor = new LRBGEHAOPathMetadataProcessorImpl();
-    setField(processor, "destinationBaseDir", "/DME");
-    setField(processor, "metadataFile", "dummy.xlsx");
 
     injectMessageServiceReturning(processor);
 
@@ -136,7 +134,7 @@ class LRBGEHAOPathMetadataProcessorImplTest {
     statusInfo.setSourceFilePath(file.toString());
     statusInfo.setSourceFileName("file.txt");
 
-    assertThrows(DmeSyncMappingException.class, () -> processor.getArchivePath(statusInfo));
+    assertThrows(DmeSyncMappingException.class, () -> processor.getArchivePath(statusInfo, config));
   }
 
   /**

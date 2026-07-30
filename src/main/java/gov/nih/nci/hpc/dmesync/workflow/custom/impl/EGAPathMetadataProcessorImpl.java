@@ -14,13 +14,16 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -40,17 +43,16 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //EGA Custom logic for DME path construction and meta data creation
 
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String mappingFile;
-
   @Autowired private EGAMetadataMapper mapper;
 
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] EGA getArchivePath called");
 
-    threadLocalMap.set(loadMetadataFile(mappingFile, "FILE_ACCESSION"));
+    threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "FILE_ACCESSION"));
 
 
     Path path = Paths.get(object.getSourceFilePath());
@@ -64,7 +66,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
     if (runId == null) {
       archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/Study_"
               + getCollectionMappingValue(datasetId, "Study", "ega")
               + "/Dataset_"
@@ -73,7 +75,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
               + fileName;
     } else {
       archivePath =
-          destinationBaseDir
+    	  sourceConfig.destinationBaseDir
               + "/Study_"
               + studyId
               + "/Dataset_"
@@ -93,9 +95,10 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
         new HpcDataObjectRegistrationRequestDTO();
     try {
@@ -119,7 +122,7 @@ public class EGAPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         studyId = getCollectionMappingValue(datasetId, "Study", "ega");
       }
       String projectCollectionName = getCollectionMappingValue(datasetId, "Study", "ega");
-      String projectCollectionPath = destinationBaseDir + "/Study_" + projectCollectionName;
+      String projectCollectionPath = sourceConfig.destinationBaseDir + "/Study_" + projectCollectionName;
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       pathEntriesProject
           .getPathMetadataEntries()

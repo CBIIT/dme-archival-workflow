@@ -103,7 +103,7 @@ $ sh dme-sync-generate-token.sh
 $ sh dme-sync.sh
 ```
 
-On your local machine, perfrom the following to tunnel port 8888.
+On your local machine, perform the following to tunnel port 8888:
 ```
 $ ssh -L 8887:localhost:8888 user@remotemachine
 ```
@@ -117,43 +117,50 @@ http://localhost:8887/home
 
 ### Configuration Parameters
 
-The following properties can be set in `application.properties` file:
+The following properties can be configured in the tables:
 
-* `dmesync.source.base.dir=<dir>`
-  * The app will scan the directory specified
-* `dmesync.source.base.dir.folders=<comma separeted list of folders>`
-  * If specified, app will only scan these folders under the base dir.
-* `dmesync.work.base.dir=<dir>`
-  * The app will use this as a working directory for tar/untar and compression
-* `dmesync.destination.base.dir=<collection>`
-  * The base collection path in DME
-* `dmesync.doc.name=[hitif|cmm|default]`
-  * The doc name used for the custom business logic to build DME path, collection metadata and metadata for the object.
-  * Default: `default`
-* `dmesync.noscan.rerun=[true|false]`
-  * If `true`, instead of scanning for files under the base dir, it will reprocess files from the database.
-  * Default: `false`
-* `dmesync.retry.prior.run.failures=[true|false]`
-  * If `true`, This will retrieve the failed files from the previous run and add them to the current run. It is mainly used when we are not scanning the entire source path, but only specific months.
-  * Default: `false`  
-* `dmesync.tar=[true|false]`
-  * If `true`, it will tar the collection specified by `dmesync.preprocess.depth` from `dmesync.source.base.dir`.
-  * Default: `false` 
-* `dmesync.tar.exclude.folder=[folder1,folder2]`
-  * If specified, folders that matches the folder names in a comma separated list will be excluded from the tar ball. 
-* `dmesync.untar=[true|false]`
-  * If `true`, it will untar the collection specified by `dmesync.preprocess.depth` from `dmesync.source.base.dir`.
-  * Default: `false` 
-* `dmesync.compress=[true|false]`
-  * If `true`, the data object will be compressed prior to upload.
-  * Default: `false` 
-* `dmesync.preprocess.depth=[1,2,...|-1]`
-  * If `dmesync.tar` or `dmesync.untar` is true, `dmesync.preprocess.depth` will be used to determine the collection 
-  which requires tar or untar.
-  * If -1 is specified with tar option, it will tar the leaf folder only.
-  * For example:
-     ```
-    dmesync.source.base.dir = /home/user/instrument
+#### Table: DOC_CONFIG (Stores the DOC workflow configuration)
+* `DOC_NAME` - DOC name.
+* `SERVER_ID` - Server identifier.
+* `WORKFLOW_ID` - Unique workflow identifier.
+* `DME_SERVER_ID` - DME server identifier.
+* `DME_SERVER_URL` - DME server URL.
+* `THREADS` - Number of processing threads.
+* `ENABLED` - Indicates whether this DOC configuration is enabled. 1 = enabled, 0 = disabled.
+* `CRON_EXPRESSION` - Cron expression used to schedule the workflow.
+
+---
+#### Table: DOC_SOURCE_CONFIG (Stores source, work, and destination directory configuration for a DOC workflow)
+* `SOURCE_BASE_DIR` - Base source directory where the app will scan for files/folders to upload.
+* `WORK_BASE_DIR` - Base working directory used during processing of tar/untar and compression.
+* `DESTINATION_BASE_DIR` - Base collection path in DME.
+
+---
+#### Table: DOC_SOURCE_RULE (Stores source selection and scanning rules for a DOC workflow)
+* `SOURCE_BASE_DIR_FOLDERS` - Source base directory folders to include or process.
+* `INCLUDE_PATTERN` - File or folder include pattern. Comma-separated multiple patterns can be specified.
+* `EXCLUDE_PATTERN` - File or folder exclude pattern. If both include and exclude pattern is applicable for a file/folder, the file/folder will be excluded as the exclusion takes precedence.
+* `METADATA_FILE` - Metadata file name or path. If specified, application will load the custom metadata excel file supplied by the user.
+* `PI_METADATA_FILE` - PI metadata file name or path. If specified, application will load the custom data owner PI metadata excel file supplied by the user.
+* `NOSCAN_RERUN` - Indicates whether rerun should occur without scanning. 1 = yes, 0 = no. If true, instead of scanning for files under the base dir, it will reprocess files from the database.
+* `FILE_EXIST_UNDER_BASEDIR` - Check if the marker file specified in `TAR_FILE_EXIST_EXT` is directly under the base directory. 1 = yes, 0 = no.
+* `FILE_EXIST_UNDER_BASEDIR_DEPTH` - If specified, it will check for the file under the specified depth from the basedir.
+* `LAST_MODIFIED_DAYS` - Number of days used for last-modified filtering. If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
+* `LAST_MODIFIED_UNDER_BASE_DIR` - Indicates whether last-modified filtering under the base directory is enabled. 1 = yes, 0 = no. If specified, checks modified date of the folder in the base directory instead of folder/file.
+* `LAST_MODIFIED_UNDER_BASE_DIR_DEPTH` - Directory depth for last-modified filtering under the base directory. If specified, it will check for the last modified folder under the specified depth from the basedir.
+* `SELECTIVE_SCAN` - Indicates whether selective scan is enabled. 1 = yes, 0 = no.
+* `RETRY_PRIOR_RUN_FAILURES` - Indicates whether prior run failures should be retried. 1 = yes, 0 = no. It is mainly used when we are not scanning the entire source path, but only specific months.
+* `AWS` - Indicates whether AWS-based source handling is enabled. 1 = yes, 0 = no.
+
+---
+#### Table: DOC_PREPROCESSING_CONFIG (Stores preprocessing configuration for a DOC workflow)
+* `TAR` - Indicates whether tar processing is enabled. 1 = yes, 0 = no. If true, it will tar the collection specified by `DEPTH` from `SOURCE_BASE_DIR`.
+* `DEPTH` - Directory depth used during tar or untar. It is used to determine the folder to tar/untar. If -1 is specified with tar option, it will tar the leaf folder only.
+* `FILE_TAR` - Indicates whether file-level tar processing is enabled. 1 = yes, 0 = no.
+* `UNTAR` - Indicates whether untar processing is enabled. 1 = yes, 0 = no. If true, it will untar the collection specified by `DEPTH` from `SOURCE_BASE_DIR`.
+* `COMPRESS_TAR` - Indicates whether tar compression is enabled. 1 = yes, 0 = no. If true, the data object will be compressed prior to upload.
+
+```SOURCE_BASE_DIR = /home/user/instrument
     ├── instrument                        # Depth 0
     │   ├── pi_a                          # Depth 1
     │       ├── project1                  # Depth 2
@@ -165,122 +172,60 @@ The following properties can be set in `application.properties` file:
     │           ├── sample1               # Depth 3
     │           ├── sample2               # Depth 3
     │       ├── project2                  # Depth 2
-    ```
-  
-* `dmesync.exclude.pattern=[glob]`
-  * If specified, object with the specified pattern will be excluded.
-  * Comma-separated multiple patterns can be specified.
-  * If both include and exclude pattern is applicable for a file/folder, the file/folder will be excluded as the 
-  exclusion takes precedence.
-  * For example:
-     ```
-     **/pi_b/**
-     - Will exclude any file/folders which has pi_b folder in the path.
-     ```
-* `dmesync.include.pattern=[glob]`
-  * If specified, only object with the specified pattern will be include.
-  * Comma-separated multiple patterns can be specified.
-  * For example:
-     ```
-     **/pi_a/**
-     - Will include file/folders which has pi_a folder in the path.
-     instrument/**/project1/**
-     - Will include file/folders which starts with instrument folder directly under the base dir, and has project1 folder after any parent folder.
-     ```
-* `dmesync.dryrun=[true|false]`
-  * If true, only records the files to be processed in the local DB without running the workflow.
-  * Default: `false` 
-* `dmesync.cleanup=[true|false]`
-  * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
-  * Default: `false` 
-* ` dmesync.check.end.workflow=[true|false]`
-  * If true, the system will check for endWorkflow flag to end task processing if no further processing is necessary.
-  * Default: `false` 
-* `dmesync.verify.prev.upload=[none|local]`
-  * If `none`, it does not check whether it has previously been uploaded.
-  * If `local`, it will check the local db if it has previously been uploaded, and skip the file.
-  * Default: `none`
-* `dmesync.cron.expression=[cron expression]` 
-  * **This expression is not used if `dmesync.run.once.and.shutdown` flag is `true`**
-  * For example:
-    ```
-    0 0/5 * * * ? //every 5 minutes
-    0 0 0 1 1 ? //Jan 1st of the year
-    format: Sec Min Hour Day Mon SUN-SUN:0-7
-    ```
-* `dmesync.run.once.and.shutdown=[true|false]`
-  * **Also see `dmesync.run.once.run_id`**
-  * If `true`, once the run has completed regardless of any failures, the application will shutdown.
-  * Default: `false` 
-* `dmesync.run.once.run_id=<run id>`
-  * If `dmesync.run.once.and.shutdown=true`, the user **must** supply a unique run id for this run.
-  * Recommended run id example: `Run_YYYYMMDDHHMISS`
-* `dmesync.last.modified.days=[1,2,...]`
-  * If specified, if modified date of the file/folder is within the number of days specified, it will not be archived.
-* `dmesync.last.modified.under.basedir=[true|false]`
-  * If specified, checks modified date of the folder in the base directory instead of folder/file
-* `dmesync.last.modified.under.basedir.depth=[1,2,...]`
-  * If specified, it will check for the last modified folder under the specified depth from the basedir.
-* `dmesync.replace.modified.files=[true|false]`
-  * If `true`, the system will compare the modified date against the last uploaded and reupload if modified.
-* `dmesync.tar.excluded.contents.file=[true|false]`
-  * If `true`, the system will  enable creation of a tar contents file to list the files that are included in a tar archive which are broken symlinks.
-* `dmesync.upload.modified.files=[true|false]`
-  * If `true`, the system will compare the new file checksum and file length with archived file and if doesn't match will append _ver_fileLastModifiedDate to the filename and archive to DME.
-* `dmesync.tar.file.exist=<filename>`
-  * If specified, it will check whether a file with the specified file name exists before tar operation is performed.
-* `dmesync.tar.file.exist.ext=<ext>`
-  * If specified, it will check whether a file with the specified file extension exists before tar operation is performed.
-* `dmesync.file.exist.under.basedir=[true|false]`
-  * Check if the marker file specified in dmesync.tar.file.exist.ext is directly under the base directory.
-* `dmesync.file.exist.under.basedir.depth=[1,2,...]`
-  * If specified, it will check for the file under the specified depth from the basedir.
-* `dmesync.tar.filename.excel.exist=[true|false]`
-  * If specified, it will retrieve the tar name from the excel spreadsheet.
-* `dmesync.tar.contents.file=[true|false]`
-  * If specified, it will create the content file which includes files in the each tar and archive.
-* `dmesync.process.multiple.tars=[true|false]`
-  * If specified, it will create batch tars for the folder with the count specified by below property.
-* `dmesync.multiple.tars.files.count=[50,..]`
-  * If specified, it will create the tars for every specified batch files in the folder.
-* `dmesync.multiple.tars.batch.folders=[true|false]`
-  * Enables “grouped/batched folder” mode for multiple tar processing.
-  * If `true`, the workflow will create one tar per folder-group derived from the folder naming convention (see delimiter properties below), instead of creating tars based on `dmesync.multiple.tars.files.count`.
-  * Default: `false`
+```
 
-* `dmesync.multiple.tars.batch.folder.delimiter=<delimiter>`
-  * Delimiter used to split each immediate child folder name (under the dataset directory) into segments to derive the group key.
-  * Default: ``
-  * Example: for folder name `1_11_3` with delimiter `_`, segments are `1`, `11`, `3`.
+---
+#### Table: DOC_PREPROCESSING_RULE (Stores detailed preprocessing rules for a DOC workflow)
+* `EXTRACT_METADATA` - Indicates whether metadata extraction is enabled. 1 = yes, 0 = no.
+* `EXTRACT_METADATA_EXT` - File extension used for metadata extraction.
+* `TAR_EXCLUDE_FOLDER` - List of comma separated folders to exclude from tar processing. If specified, folders that match the folder names in a comma separated list will be excluded from the tar ball.
+* `TAR_CONTENTS_FILE` - Indicates whether a tar contents file should be generated which includes files in each tar and archive. 1 = yes, 0 = no.
+* `TAR_EXCLUDED_CONTENTS_FILE` - Indicates whether the system will enable creation of a tar contents file to list the files that are included in a tar archive which are broken symlinks. 1 = yes, 0 = no.
+* `TAR_FILE_EXIST` - If specified, it will check whether a file with the specified file name exists before tar operation is performed.
+* `TAR_FILE_EXIST_EXT` - If specified, it will check whether a file with the specified file extension exists before tar operation is performed.
+* `TAR_FILENAME_EXCEL_EXIST` - Indicates whether to retrieve the tar name from the excel spreadsheet. 1 = yes, 0 = no.
+* `TAR_IGNORE_BROKEN_LINK` - Indicates whether broken links should be ignored during tar processing. 1 = yes, 0 = no. If set to false, the tar will not be created and the error from broken links will be recorded in the email report. If it is set to true, these errors will be ignored and the tar will be created. Default is false.
+* `TAR_SKIP_NON_LEAF_FOLDER` - Indicates whether non-leaf folders should be skipped during tar processing. 1 = yes, 0 = no.
+* `TAR_INCLUDE_PATTERN` - Include pattern for tar processing.
+* `PROCESS_MULTIPLE_TARS` - Indicates whether to create batch tars for the folder with the count specified by MULTIPLE_TARS_FILES_COUNT. 1 = yes, 0 = no.
+* `MULTIPLE_TARS_FILES_COUNT` - The number of files to be batched in a single tar when the multiple tar mode is enabled.
+* `MULTIPLE_TARS_DIR_FOLDERS` - Directory folders used for multiple tar processing.
+* `MULTIPLE_TARS_DIR_FOLDERS_PREFIX` - Folder prefix used for multiple tar directory selection.
+* `MULTIPLE_TARS_EXCLUDE_FOLDERS_PREFIX` - Folder prefix used to exclude folders from multiple tar processing.
+* `MULTIPLE_TARS_FILES_VALIDATION` - Indicates whether multiple tar file validation is enabled. 1 = yes, 0 = no.
+* `MULTIPLE_TARS_BATCH_FOLDERS` - Indicates whether grouped/batched folder mode for multiple tar processing is enabled. 1 = yes, 0 = no. If true, the workflow will create one tar per folder-group derived from the folder naming convention, instead of creating tars based on count.
+* `MULTIPLE_TARS_BATCH_FOLDER_DELIMITER` - Delimiter used for multiple tar batch folder parsing. Delimiter used to split each immediate child folder name (under the dataset directory) into segments to derive the group key.
+* `MULTIPLE_TARS_BATCH_FOLDER_DELIMITER_LEVEL` - Delimiter level used for multiple tar batch folder parsing. Number of leading segments (after splitting by dmesync.multiple.tars.batch.folder.delimiter) to join back together to form the group key.
+    * Example:
+      * folder `1_11_3`, delimiter `_`, level `2` → group key `1_11` → tar name `1_11.tar`
+      * folder `a-b-c-d`, delimiter `-`, level `3` → group key `a-b-c` → tar name `a-b-c.tar`
+    * Notes: 
+      * When batching is enabled, all folders being grouped must match the naming convention (i.e., they must have at least `level` segments). If not, the workflow will fail verification.
 
-* `dmesync.multiple.tars.batch.folder.delimiter.level=<N>`
-  * Number of leading segments (after splitting by `dmesync.multiple.tars.batch.folder.delimiter`) to join back together to form the **group key**.
-  * Default: `0`
-  * Example:
-    * folder `1_11_3`, delimiter `_`, level `2` → group key `1_11` → tar name `1_11.tar`
-    * folder `a-b-c-d`, delimiter `-`, level `3` → group key `a-b-c` → tar name `a-b-c.tar`
-  * Notes:
-    * When batching is enabled, all folders being grouped must match the naming convention (i.e., they must have at least `level` segments). If not, the workflow will fail verification.
-* `dmesync.tar.ignore.broken.link=[true|false]`
-  * If set to false, the tar will not be created and the error from broken links will be recorded in the email report. If it is set to true, these errors will be ignored and the tar will be created. Default will be false.
-* `dmesync.admin.emails=<comma separated email addrresses>`
-  * Once a run completes, the run result will be emailed to this address.
+---
+#### Table: DOC_UPLOAD_CONFIG (Stores upload behavior and post-processing configuration for a DOC workflow)
+* `VERIFY_PREV_UPLOAD` - Indicates whether previous uploads should be verified. 1 = yes, 0 = no. If true, it will check the local db if it has previously been uploaded, and skip the file.
+* `DRY_RUN` - Indicates whether upload should run in dry-run mode. 1 = yes, 0 = no. If true, only records the files to be processed in the local DB without running the workflow.
+* `CHECKSUM` - Indicates whether checksum validation is enabled. 1 = yes, 0 = no.
+* `CLEANUP_WORKDIR` - Indicates whether the work directory should be cleaned up after processing. 1 = yes, 0 = no.
+* `CHECK_END_WORKFLOW` - Indicates whether end-of-workflow checks are enabled. 1 = yes, 0 = no. If true, the system will check for endWorkflow flag to end task processing if no further processing is necessary.
+* `UPLOAD_MODIFIED_FILES` - Indicates whether modified files should be uploaded. 1 = yes, 0 = no. If true, the system will compare the new file checksum and file length with archived file and if doesn't match will append _ver_fileLastModifiedDate to the filename and archive to DME.
+* `REPLACE_MODIFIED_FILES` - Indicates whether modified files should replace existing files. 1 = yes, 0 = no. If true, the system will compare the modified date against the last uploaded and reupload if modified.
+* `METADATA_UPDATE_ONLY` - Indicates whether only metadata should be updated. 1 = yes, 0 = no.
+* `MOVE_PROCESSED_FILES` - Indicates whether processed files should be moved after upload. 1 = yes, 0 = no.
+* `FILESYSTEM_UPLOAD` - Indicates whether filesystem upload mode is enabled. 1 = yes, 0 = no.
+* `SOFTLINK` - Indicates whether softlink creation is enabled. 1 = yes, 0 = no.
+* `COLLECTION_SOFTLINK` - Indicates whether collection-level softlink creation is enabled. 1 = yes, 0 = no.
+* `SOFTLINK_FILE` - Softlink file path or file name.
 
-* `dmesync.additional.metadata.excel=<file path to the metadata file>`
-  * If specified, application will load the custom metadata excel file supplied by the user.
-* `dmesync.additional.pi.metadata.excel=<file path to the level PI metadata file>`
-  * If specified, application will load the custom data owner PI metadata excel file supplied by the user.
-* `spring.main.web-environment=[true|false]`
-  * If `true`, enables the web environment.
-* `dmesync.workflow.id=<workflow name>`
-  * This id will be the workflow name for the user.
-* `dmesync.workflow.server.id=<workflow server name>`
-  * This id will be the server name that the workflow is running.
-* `dmesync.dme.server.id=<dme server name>`
-  * This id will be the dme server the workflow is configured.
+---
+#### Table: DOC_NOTIFICATION_CONFIG (Stores notification settings for a DOC workflow)
+* `RECIPIENTS` - Notification recipient list. Once a run completes, the run result will be emailed to this address.
+* `SEND_USER` - Indicates whether notifications are enabled for HiTIF configured users. 1 = yes, 0 = no.
+* `ENABLED` - Indicates whether notifications are enabled. 1 = enabled, 0 = disabled.
 
-
-Optionally, override system defaults for concurrent file processing with the following parameters.
+---
+#### Optionally, override system defaults for concurrent file processing with the following parameters:
 
 * Number of threads to process the files concurrently
     ```
@@ -299,19 +244,19 @@ Refer to [Required mapping for customized DOC](#required-mapping-for-customized-
 configuration on existing DOCs.
 
 #### collection_name_mapping table
-
+```
 | id | collection_type | map_key | map_value |
-|---|---|---|---|
-| 1 | PI | pi_a | PI_A_NAME |
-| 2 | PI | pi_b | PI_B_NAME |
-
+|----|-----------------|---------|-----------|
+|  1 |              PI |    pi_a | PI_A_NAME |
+|  2 |              PI |    pi_b | PI_B_NAME |
+```
 #### metadata_mapping table
-
-| id | collection_type | collection_name | map_key | map_value |
-|---|---|---|---|---|
-| 1 | PI | PI_A_NAME | full_name | Jane Doe |
-| 2 | PI | PI_A_NAME | email | someemail@address |
-
+```
+| id | collection_type | collection_name | map_key |   map_value   | 
+|----|-----------------|-----------------|---------|---------------| 
+|  1 |              PI |       PI_A_NAME |full_name|   Jane Doe    | 
+|  2 |              PI |       PI_A_NAME |   email | email@address |
+```
 ### Adding User permissions and bookmarks
 
 This feature is only available if you are running the workflow as a **GROUP_ADMIN** role.
@@ -320,11 +265,12 @@ it could be specified in the following table. The entries can be loaded by inclu
 for the metadata entries.
 
 ####  permission_bookmark_info table
-| id | path | user_id | permission | create_bookmark | created | error |
-|---|---|---|---|---|---|---|
-| 1 | /DME/path1 | usera | READ | Y | "Y" if created | Error if any |
-| 2 | /DME/path2 | userb | WRITE | N | "Y" if created | Error if any |
-
+```
+| id |    path    | user_id | permission | create_bookmark |     created    |    error     |
+|----|------------|---------|------------|-----------------|----------------|--------------|
+|  1 | /DME/path1 |  usera  |    READ    |          Y      | "Y" if created | Error if any |
+|  2 | /DME/path2 |  userb  |    WRITE   |          N      | "Y" if created | Error if any |
+```
 For the example above in the table, for id 1, READ permission will be given to usera for /DME/path1, and a bookmark 
 called "path1" will be created for usera for /DME/path1. For id 2, WRITE permission will be given to userb for 
 /DME/path2 and no bookmark will be created.

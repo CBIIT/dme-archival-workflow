@@ -10,7 +10,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -33,10 +36,11 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   //CMM Custom logic for DME path construction and meta data creation
 
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
     logger.info("CMM DmeSyncPathMetadataProcessor getArchivePath for object {}", object.getId());
-
+    SourceConfig sourceConfig = config.getSourceConfig();
+    
     //extract the PI id from the Path
     //Example path 1 - Negative_Stain /data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar
     //Example path 2 - cryo_EM - /data/CMM_CryoEM/CMM_Data/0001/Csy_Prashant/Latitude_runs/Csy_20170417_1650/DataImages/Stack
@@ -64,7 +68,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     
     		
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + piCollectionPath
             + projectCollectionPath
             + variantCollectionPath
@@ -76,10 +80,11 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
   
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) 
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) 
 		  throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
     
 	  HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
+	  SourceConfig sourceConfig = config.getSourceConfig();
 	  
 	  //Add default path entry
       HpcMetadataEntry defaultEntry = new HpcMetadataEntry();
@@ -93,7 +98,7 @@ public class CMMPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //key = affiliation, value = TSRI
       //key = data_generator, value = Weimin Wu
       String piCollectionName = getPiCollectionName(object);
-      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.setPath(piCollectionPath);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(

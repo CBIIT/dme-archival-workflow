@@ -10,6 +10,7 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dto.error.HpcExceptionDTO;
 import gov.nih.nci.hpc.exception.HpcException;
 
@@ -33,9 +34,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public class DmeSyncDeleteDataObject {
 
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 	
@@ -58,13 +56,13 @@ public class DmeSyncDeleteDataObject {
    * @throws HpcException The exception
    * @throws IOException 
    */
-  public boolean deleteDataObject(String dataObjectPath) throws HpcException, IOException {
+  public boolean deleteDataObject(String dataObjectPath, DocConfig config) throws HpcException, IOException {
 
 	  boolean results = false;
 	  
     //Call queryAllDataObjectsInPath API
     final URI dataObjectUrl =
-        UriComponentsBuilder.fromHttpUrl(serverUrl)
+        UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
             .path("/dataObject/".concat(dataObjectPath))
             .build().encode()
             .toUri();

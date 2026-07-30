@@ -6,9 +6,9 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -34,21 +34,6 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   @Autowired private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
   @Autowired private MessageService messageService;
 
-  @Value("${dmesync.doc.name:default}")
-  private String doc;
-
-  @Value("${dmesync.extract.metadata:false}")
-  private boolean extractMetadata;
-  
-  @Value("${dmesync.extract.metadata.ext:}")
-  private String extractMetadatafileTypes;
-  
-  @Value("${dmesync.filesystem.upload:false}")
-  private boolean fileSystemUpload;
-  
-  @Value("${dmesync.move.processed.files:false}")
-  private boolean moveProcessedFiles;
-  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -57,27 +42,30 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	  DocConfig.UploadConfig upload = config.getUploadConfig();
+	  DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+	  
     try {
-      DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
-      String archivePath = metadataTask.getArchivePath(object);
-      if(moveProcessedFiles)
+      DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
+      String archivePath = metadataTask.getArchivePath(object, config);
+      if(upload.moveProcessedFiles)
     	  object.setMoveDataObjectOrignalPath(object.getFullDestinationPath());
       object.setFullDestinationPath(archivePath);
       //Save Archive Path in DB
       saveArchivePath(object, archivePath);
 
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
-          metadataTask.getMetaDataJson(object);
+          metadataTask.getMetaDataJson(object, config);
       object.setDataObjectRegistrationRequestDTO(dataObjectRegistrationRequestDTO);
 
       //If automated metadata extraction is turned on, extractMetadata
       String fileType = object.getOriginalFilePath().substring(object.getOriginalFilePath().lastIndexOf('.') + 1);
-      boolean extractMetadataFromFile = extractMetadata;
-      if(StringUtils.isNotBlank(fileType) && StringUtils.isNotBlank(extractMetadatafileTypes)) {
-        List<String> extractMetadataFileTypeList = Arrays.asList(extractMetadatafileTypes.toLowerCase().split("\\s*,\\s*"));
+      boolean extractMetadataFromFile = preRule.extractMetadata;
+      if(StringUtils.isNotBlank(fileType) && StringUtils.isNotBlank(preRule.extractMetadataExt)) {
+        List<String> extractMetadataFileTypeList = Arrays.asList(preRule.extractMetadataExt.toLowerCase().split("\\s*,\\s*"));
         if(!extractMetadataFileTypeList.contains(fileType.toLowerCase()))
             extractMetadataFromFile=false;
       }
@@ -110,7 +98,7 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       saveMetaDataInfo(object, dataObjectRegistrationRequestDTO);
 
       //If file system upload, get the archive permission
-      if (fileSystemUpload) {
+      if (upload.fileSystemUpload) {
         HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO =
               metadataTask.getArchivePermission(object);
         object.setArchivePermissionsRequestDTO(archivePermissionsRequestDTO);

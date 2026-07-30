@@ -14,15 +14,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 
 public class LICICISPathMetadataProcessorImplTest {
 
     private LICICISPathMetadataProcessorImpl liciCisPathMetadataProcessorImpl;
+    DocConfig config;
 
     private static final String DESTINATION_BASE_DIR = "/CCR_LICI_CIS_Archive";
     private static final String PROJECT_ID = "ProjectABC";
@@ -34,8 +37,11 @@ public class LICICISPathMetadataProcessorImplTest {
     @BeforeEach
     public void init() throws Exception {
         liciCisPathMetadataProcessorImpl = new LICICISPathMetadataProcessorImpl();
-        liciCisPathMetadataProcessorImpl.destinationBaseDir = DESTINATION_BASE_DIR;
 
+        DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, DESTINATION_BASE_DIR, 1);
+        DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
+        config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
+        
         // Inject a Mockito mock for DmeMetadataBuilder via reflection
         DmeMetadataBuilder mockMetadataBuilder = Mockito.mock(DmeMetadataBuilder.class);
         when(mockMetadataBuilder.getMetadataMap(any(), any()))
@@ -45,6 +51,13 @@ public class LICICISPathMetadataProcessorImplTest {
                 LICICISPathMetadataProcessorImpl.class.getDeclaredField("dmeMetadataBuilder");
         dmeMetadataBuilderField.setAccessible(true);
         dmeMetadataBuilderField.set(liciCisPathMetadataProcessorImpl, mockMetadataBuilder);
+
+        // Inject a Mockito mock for MessageService via reflection
+        MessageService mockMessageService = Mockito.mock(MessageService.class);
+        when(mockMessageService.get(any(), any())).thenReturn("Mocked message");
+        Field messageServiceField = AbstractPathMetadataProcessor.class.getDeclaredField("messageService");
+        messageServiceField.setAccessible(true);
+        messageServiceField.set(liciCisPathMetadataProcessorImpl, mockMessageService);
     }
 
     @Test
@@ -57,7 +70,7 @@ public class LICICISPathMetadataProcessorImplTest {
         String expected = DESTINATION_BASE_DIR
                 + "/PI_Giorgio_Trinchieri/Project_" + PROJECT_ID
                 + "/JAMSAlpha/reads/sample.fastq";
-        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo));
+        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo, config));
     }
 
     @Test
@@ -70,7 +83,7 @@ public class LICICISPathMetadataProcessorImplTest {
         String expected = DESTINATION_BASE_DIR
                 + "/PI_Giorgio_Trinchieri/Project_" + PROJECT_ID
                 + "/JAMSAlpha/JAMStarballs/sample.tar";
-        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo));
+        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo, config));
     }
 
     @Test
@@ -83,7 +96,7 @@ public class LICICISPathMetadataProcessorImplTest {
         String expected = DESTINATION_BASE_DIR
                 + "/PI_Giorgio_Trinchieri/Project_" + PROJECT_ID
                 + "/JAMSAlpha/sample.txt";
-        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo));
+        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo, config));
     }
 
     @Test
@@ -96,7 +109,7 @@ public class LICICISPathMetadataProcessorImplTest {
         String expected = DESTINATION_BASE_DIR
                 + "/PI_Giorgio_Trinchieri/Project_" + PROJECT_ID
                 + "/JAMSBeta/results.tsv";
-        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo));
+        assertEquals(expected, liciCisPathMetadataProcessorImpl.getArchivePath(statusInfo, config));
     }
 
     // ---------------------------------------------------------------------------
@@ -116,7 +129,7 @@ public class LICICISPathMetadataProcessorImplTest {
         setMetadataMap(buildMetadataMap());
 
         HpcDataObjectRegistrationRequestDTO dto =
-                liciCisPathMetadataProcessorImpl.getMetaDataJson(statusInfo);
+                liciCisPathMetadataProcessorImpl.getMetaDataJson(statusInfo, config);
 
         assertNotNull(dto);
         assertEquals(Boolean.TRUE, dto.getCreateParentCollections());
@@ -188,7 +201,7 @@ public class LICICISPathMetadataProcessorImplTest {
         setMetadataMap(buildMetadataMap());
 
         HpcDataObjectRegistrationRequestDTO dto =
-                liciCisPathMetadataProcessorImpl.getMetaDataJson(statusInfo);
+                liciCisPathMetadataProcessorImpl.getMetaDataJson(statusInfo, config);
 
         assertNotNull(dto);
         assertEquals(Boolean.TRUE, dto.getCreateParentCollections());

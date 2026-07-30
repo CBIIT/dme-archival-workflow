@@ -29,7 +29,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 	@Autowired
 	protected WorkflowRunInfoDao<WorkflowRunInfo> workflowRunInfoDao;
-
+	
 	@Autowired
 	protected StatusInfoDao<StatusInfo> statusInfoDao;
 
@@ -43,6 +43,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 		return workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
 	}
 
+	@Override
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId) {
+		return workflowRunInfoDao.findFirstByDocIdOrderByRunStartTimestampDesc(docId);
+	}
+	
 	@Override
 	public void logWorkflowRunStartHeartbeat(Long id) {
 	}
@@ -79,6 +84,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 		}else {
 			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
 		}
+	}
+	
+	@Override
+	public void resetWorkflowRunInfo() {
+		workflowRunInfoDao.resetWorkflowRunInfo();
 	}
 
 }
