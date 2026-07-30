@@ -152,12 +152,12 @@ jobs:
           echo "Remote deploy user: ${SSH_USER}"
           echo "Runner SSH user: ${RUNNER_SSH_USER}"
 
-          sudo -iu "$RUNNER_SSH_USER" bash -lc 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+          #sudo -iu "$RUNNER_SSH_USER" bash -lc 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
 
-          echo "Scanning host key for ${target_host}..."
-          sudo -iu "$RUNNER_SSH_USER" bash -lc "ssh-keyscan -T 15 -H '$target_host' >> ~/.ssh/known_hosts"
+          #echo "Scanning host key for ${target_host}..."
+          #sudo -iu "$RUNNER_SSH_USER" bash -lc "ssh-keyscan -T 15 -H '$target_host' >> ~/.ssh/known_hosts"
 
-          echo "Testing SSH connection as ${RUNNER_SSH_USER}..."
+          #echo "Testing SSH connection as ${RUNNER_SSH_USER}..."
           sudo -iu "$RUNNER_SSH_USER" ssh \
             -o IdentitiesOnly=yes \
             -o BatchMode=yes \
