@@ -451,7 +451,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	    java.util.regex.Matcher m = p.matcher(sampleName);
 
 	    if (m.matches()) {
-	        String normalized = (m.group(1) + m.group(2)).toUpperCase();
+	        String normalized = (m.group(1) + m.group(2));
 	        logger.info("Derived normalized SCAF number: {} from sampleName: {}", normalized, sampleName);
 	        return normalized;
 	    }
