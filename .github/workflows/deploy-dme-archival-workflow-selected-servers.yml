@@ -158,10 +158,11 @@ jobs:
           #sudo -iu "$RUNNER_SSH_USER" bash -lc "ssh-keyscan -T 15 -H '$target_host' >> ~/.ssh/known_hosts"
 
           #echo "Testing SSH connection as ${RUNNER_SSH_USER}..."
-          sudo -iu "$RUNNER_SSH_USER" ssh \
+          sudo -iu "$RUNNER_SSH_USER" ssh -vvv -4 -i"/home/${RUNNER_SSH_USER}/.ssh/id_rsa" \
             -o IdentitiesOnly=yes \
             -o BatchMode=yes \
             -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=no \
             "${SSH_USER}@${target_host}" \
             "echo SSH connection OK"
 
