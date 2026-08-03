@@ -18,13 +18,18 @@ on:
         description: "Build workflow run number that produced dme-archival-workflow-artifacts"
         required: true
         type: string
-      fsdmel_wflow05p_ncifcrf_gov:
+      fsdmel-wflow05p.ncifcrf.gov:
         description: "Deploy to fsdmel-wflow05p.ncifcrf.gov"
         required: false
         type: boolean
         default: false
-      fsdmel_wflow04p_ncifcrf_gov:
+      fsdmel-wflow04p.ncifcrf.gov:
         description: "Deploy to fsdmel-wflow04p.ncifcrf.gov"
+        required: false
+        type: boolean
+        default: false
+      ncias-p2140-v.nci.nih.gov:
+        description: "Deploy to ncias-p2140-v.nci.nih.gov"
         required: false
         type: boolean
         default: false
@@ -57,12 +62,16 @@ jobs:
             separator=','
           }
 
-          if [ "${{ inputs.fsdmel_wflow05p_ncifcrf_gov }}" = "true" ]; then
+          if [ "${{ inputs.fsdmel-wflow05p.ncifcrf.gov }}" = "true" ]; then
             add_server "fsdmel-wflow05p.ncifcrf.gov" "fsdmel-wflow05p.ncifcrf.gov"
           fi
 
-          if [ "${{ inputs.fsdmel_wflow04p_ncifcrf_gov }}" = "true" ]; then
+          if [ "${{ inputs.fsdmel-wflow04p.ncifcrf.gov }}" = "true" ]; then
             add_server "fsdmel-wflow04p.ncifcrf.gov" "fsdmel-wflow04p.ncifcrf.gov"
+          fi
+
+          if [ "${{ inputs.ncias-p2140-v.nci.nih.gov }}" = "true" ]; then
+            add_server "ncias-p2140-v.nci.nih.gov" "ncias-p2140-v.nci.nih.gov"
           fi
 
           matrix="${matrix}]}"
