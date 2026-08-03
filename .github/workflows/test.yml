@@ -14,5 +14,5 @@ jobs:
       - name: Run your steps
         run: |
           echo "Using the org-level runner!"
-          cat /etc/redhat-release
+          cat /etc/os-release
           systemctl status docker
