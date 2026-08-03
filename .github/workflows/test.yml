@@ -5,8 +5,14 @@ permissions:
   id-token: write
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64]
+    #runs-on: [self-hosted, Linux, X64]
+    runs-on:
+      group: cbiit-global-runners
+      labels: [self-hosted]
     steps:
       - uses: actions/checkout@v4
       - name: Run your steps
-        run: echo "Using the org-level runner!"
+        run: |
+          echo "Using the org-level runner!"
+          cat /etc/redhat-release
+          systemctl status docker
