@@ -6,7 +6,7 @@ permissions:
 jobs:
   build:
     runs-on:
-      group: cbiit-global-runners
+      #group: cbiit-global-runners
       #labels: [self-hosted]
       labels: [nonprod-org-runner]
     steps:
