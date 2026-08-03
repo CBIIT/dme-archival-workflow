@@ -5,7 +5,6 @@ permissions:
   id-token: write
 jobs:
   build:
-    #runs-on: [self-hosted, Linux, X64]
     runs-on:
       group: cbiit-global-runners
       labels: [self-hosted]
@@ -14,5 +13,6 @@ jobs:
       - name: Run your steps
         run: |
           echo "Using the org-level runner!"
+          uname -a
           cat /etc/os-release
           systemctl status docker
