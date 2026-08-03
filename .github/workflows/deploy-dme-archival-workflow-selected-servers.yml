@@ -159,20 +159,20 @@ jobs:
           #sudo -iu "$RUNNER_SSH_USER" bash -lc "ssh-keyscan -T 15 -H '$target_host' >> ~/.ssh/known_hosts"
 
           #echo "Testing SSH connection as ${RUNNER_SSH_USER}..."
-          #sudo -iu "$RUNNER_SSH_USER" ssh -vvv -4 -i"/home/${RUNNER_SSH_USER}/.ssh/id_rsa" \
-            #-o IdentitiesOnly=yes \
-            #-o BatchMode=yes \
-            #-o ConnectTimeout=15 \
-            #-o StrictHostKeyChecking=no \
-            #"${SSH_USER}@${target_host}" \
-            #"echo SSH connection OK"
-          ssh -vvv -4 -i"/home/${RUNNER_SSH_USER}/.ssh/id_ecdsa" \
+          sudo -iu "$RUNNER_SSH_USER" ssh -vvv -4 -i"/home/${RUNNER_SSH_USER}/.ssh/id_rsa" \
             -o IdentitiesOnly=yes \
             -o BatchMode=yes \
             -o ConnectTimeout=15 \
             -o StrictHostKeyChecking=no \
-            hpcdm-wf-svc@fsdmel-wflow05p.ncifcrf.gov \
+            "${SSH_USER}@${target_host}" \
             "echo SSH connection OK"
+          #ssh -vvv -4 -i"/home/${RUNNER_SSH_USER}/.ssh/id_ecdsa" \
+            #-o IdentitiesOnly=yes \
+            #-o BatchMode=yes \
+            #-o ConnectTimeout=15 \
+            #-o StrictHostKeyChecking=no \
+            #hpcdm-wf-svc@fsdmel-wflow05p.ncifcrf.gov \
+            #"echo SSH connection OK"
 
       - name: Stop service, back up old jar, and remove current symlink
         shell: bash
