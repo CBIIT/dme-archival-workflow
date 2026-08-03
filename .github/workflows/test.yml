@@ -17,3 +17,6 @@ jobs:
           uname -a
           cat /etc/os-release
           systemctl status docker
+          systemctl enable docker
+          systemctl start docker
+          systemctl status docker
