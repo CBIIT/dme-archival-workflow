@@ -7,7 +7,8 @@ jobs:
   build:
     runs-on:
       group: cbiit-global-runners
-      labels: [self-hosted]
+      #labels: [self-hosted]
+      labels: [nonprod-org-runner]
     steps:
       - uses: actions/checkout@v4
       - name: Run your steps
