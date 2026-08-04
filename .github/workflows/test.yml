@@ -5,8 +5,15 @@ permissions:
   id-token: write
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on:
+      group: cbiit-global-runners
+      #labels: [self-hosted]
+      labels: [nonprod-org-runner]
     steps:
       - uses: actions/checkout@v4
       - name: Run your steps
-        run: echo "Using the org-level runner!"
+        run: |
+          echo "Using the org-level runner!"
+          uname -a
+          cat /etc/os-release
+          systemctl status docker
