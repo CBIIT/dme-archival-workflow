@@ -370,6 +370,19 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	    }
 	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
+   
+   public boolean isArchiveReady(String key) {
+	   
+	   if (metadataMap == null || !metadataMap.containsKey(key)) {
+ 		   return false;
+ 	   }
+	   String archiveStatus = getAttrValueWithExactKeyFromMetadataMap(key, "Archive");
+		
+	   if (StringUtils.isBlank(archiveStatus)) {
+ 		   return true;
+ 	   }
+ 	   return archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
+   }
   
 
 }
