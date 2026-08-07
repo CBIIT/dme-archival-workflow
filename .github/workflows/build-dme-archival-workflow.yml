@@ -21,7 +21,9 @@ jobs:
     name: Build jar file
     runs-on:
       group: cbiit-global-runners
-      labels: [self-hosted]
+      #labels: [self-hosted]
+      labels: [nonprod-org-runner]
+      #labels: [prod-org-runner]
     environment: ${{ inputs.environment }}
     env:
       CODE_BRANCH: "${{ github.event.inputs.code_branch }}"
