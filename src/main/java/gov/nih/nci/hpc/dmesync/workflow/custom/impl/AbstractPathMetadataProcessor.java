@@ -5,10 +5,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.exception.TikaException;
@@ -50,6 +52,12 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
+  
+  @Value("${dmesync.metadata.project.inclusion.list:}")
+  private String projectMetadataInclusionList;
+  
+  @Value("${dmesync.metadata.exclusion.list:}")
+  private String metadataExclusionList;
   
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
@@ -370,6 +378,141 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	    }
 	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
-  
+   
+	protected boolean isMetadataIncluded(String metadataKey, boolean isMandatoryMetadata , String metadataValue) {
+		if (StringUtils.isBlank(metadataKey)) {
+			return false;
+		}
+
+		if (StringUtils.isNotBlank(metadataExclusionList)) {
+			for (String excluded : Arrays.asList(metadataExclusionList.split(","))) {
+				if (StringUtils.equalsIgnoreCase(StringUtils.trim(excluded), metadataKey)) {
+					return false;
+				}
+			}
+		}
+
+		if (!isMandatoryMetadata && StringUtils.isBlank(metadataValue)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	protected void addMetadataIfIncluded(HpcBulkMetadataEntry bulkMetadataEntry, String metadataKey, String value,
+			boolean isMandatoryMetadata) {
+		if (isMetadataIncluded(metadataKey, isMandatoryMetadata , value)) {
+			bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(metadataKey, value));
+		}
+	}
+	
+	protected void addIncludedProjectMetadataEntries(HpcBulkMetadataEntry bulkMetadataEntry, String metadataFilePathKey) {
+		if (StringUtils.isBlank(projectMetadataInclusionList)) {
+			return;
+		}
+
+		for (String value : Arrays.asList(projectMetadataInclusionList.split(","))) {
+			String metadataKey = StringUtils.trim(value);
+
+			String metadataValue = getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, metadataKey);
+			if (StringUtils.isBlank(metadataKey)) {
+				continue;
+			}
+			if (!isMetadataIncluded(metadataKey, true , metadataValue)) {
+				continue;
+			}
+
+			bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(metadataKey, metadataValue));
+			
+		}
+	}
+
+	protected void addDateMetadataIfIncluded(HpcBulkMetadataEntry bulkMetadataEntry, String metadataKey, String value,
+			String dateFormat, boolean isMandatoryMetadata) {
+		if (isMetadataIncluded(metadataKey, isMandatoryMetadata , value)) {
+			bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(metadataKey, value, dateFormat));
+		}
+	}
+
+	protected HpcBulkMetadataEntry buildPathEntriesPI(String piCollectionPath, String metadataFilePathKey) {
+		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
+		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
+		pathEntriesPI.setPath(piCollectionPath);
+
+		addMetadataIfIncluded(pathEntriesPI, "data_owner",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner"), true);
+		addMetadataIfIncluded(pathEntriesPI, "data_owner_email",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_email"), true);
+		addMetadataIfIncluded(pathEntriesPI, "data_owner_affiliation",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_affiliation"), true);
+		addMetadataIfIncluded(pathEntriesPI, "data_generator",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator"), true);
+		addMetadataIfIncluded(pathEntriesPI, "data_generator_affiliation",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator_affiliation"), true);
+		addMetadataIfIncluded(pathEntriesPI, "data_generator_email",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generator_email"), true);
+
+		addMetadataIfIncluded(pathEntriesPI, "data_owner_designee",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee"), false);
+		addMetadataIfIncluded(pathEntriesPI, "data_owner_designee_email",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee_email"), false);
+		addMetadataIfIncluded(pathEntriesPI, "data_owner_designee_affiliation",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_owner_designee_affiliation"), false);
+
+		return pathEntriesPI;
+	}
+
+	protected HpcBulkMetadataEntry buildPathEntriesProject(String projectCollectionPath, String projectCollectionName,
+			String metadataFilePathKey) {
+		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
+		pathEntriesProject.setPath(projectCollectionPath);
+
+		addMetadataIfIncluded(pathEntriesProject, "project_poc",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc"), true);
+		addMetadataIfIncluded(pathEntriesProject, "project_poc_affiliation",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc_affiliation"), true);
+		addMetadataIfIncluded(pathEntriesProject, "project_poc_email",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_poc_email"), true);
+		addDateMetadataIfIncluded(pathEntriesProject, "project_start_date",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_start_date"), "MM/dd/yy", true);
+		addMetadataIfIncluded(pathEntriesProject, "project_title",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_title"), true);
+		addMetadataIfIncluded(pathEntriesProject, "project_id", projectCollectionName, true);
+		addMetadataIfIncluded(pathEntriesProject, "project_description",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_description"), true);
+		addMetadataIfIncluded(pathEntriesProject, "platform_name",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "platform_name"), true);
+		addMetadataIfIncluded(pathEntriesProject, "organism",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "organism"), true);
+		addMetadataIfIncluded(pathEntriesProject, "is_cell_line",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "is_cell_line"), true);
+		addMetadataIfIncluded(pathEntriesProject, "study_disease",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "study_disease"), true);
+		addMetadataIfIncluded(pathEntriesProject, "data_generating_facility",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "data_generating_facility"), true);
+		addMetadataIfIncluded(pathEntriesProject, "project_status", "Active", true);
+		addMetadataIfIncluded(pathEntriesProject, "access", "Controlled Access", true);
+		addMetadataIfIncluded(pathEntriesProject, "retention_years", "7", true);
+
+		addMetadataIfIncluded(pathEntriesProject, "key_collaborator",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator"), false);
+		addMetadataIfIncluded(pathEntriesProject, "key_collaborator_affiliation",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_affiliation"), false);
+		addMetadataIfIncluded(pathEntriesProject, "key_collaborator_email",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "key_collaborator_email"), false);
+		addDateMetadataIfIncluded(pathEntriesProject, "project_completed_date",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_completed_date"), "MM/dd/yy",
+				false);
+		addMetadataIfIncluded(pathEntriesProject, "pubmed_id",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "pubmed_id"), false);
+		addMetadataIfIncluded(pathEntriesProject, "public_data_accession_id",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "public_data_accession_id"), false);
+		addMetadataIfIncluded(pathEntriesProject, "Collaborators",
+				getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "Collaborators"), false);
+        
+		addIncludedProjectMetadataEntries(pathEntriesProject, metadataFilePathKey);
+		return pathEntriesProject;
+	}
 
 }
