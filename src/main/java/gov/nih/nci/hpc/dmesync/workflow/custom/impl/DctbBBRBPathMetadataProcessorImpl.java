@@ -3,7 +3,6 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -110,14 +109,19 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	private String getCollectionNameFromParent(String path, String parentName) {
 		Path fullFilePath = Paths.get(path);
 		logger.info("Full File Path = {}", fullFilePath);
-		int count = fullFilePath.getNameCount();
-		for (int i = 0; i <= count; i++) {
-			if (fullFilePath.getParent().getFileName().toString().equals(parentName)) {
-				return fullFilePath.getFileName().toString();
-			}
-			fullFilePath = fullFilePath.getParent();
-		}
-		return null;
+		
+		while (fullFilePath != null) {
+ 			Path parent = fullFilePath.getParent();
+ 			if (parent == null) {
+ 				return null;
+ 			}
+ 			Path parentFileName = parent.getFileName();
+ 			if (parentFileName != null && parentFileName.toString().equals(parentName)) {
+ 				return fullFilePath.getFileName().toString();
+ 			}
+ 			fullFilePath = parent;
+ 		}
+ 		return null;
 	}
 
 	private String getPICollectionName(StatusInfo object) throws DmeSyncMappingException {
