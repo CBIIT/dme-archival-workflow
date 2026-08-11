@@ -1,14 +1,30 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.io.File;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
+import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
+import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -20,7 +36,10 @@ import gov.nih.nci.hpc.domain.error.HpcDomainValidationResult;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
+import gov.nih.nci.hpc.domain.metadata.HpcMetadataValidationRule;
 import gov.nih.nci.hpc.dto.datamanagement.HpcArchivePermissionsRequestDTO;
+import gov.nih.nci.hpc.dto.datamanagement.HpcDataManagementModelDTO;
+import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 /**
@@ -49,6 +68,19 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
   @Value("${dmesync.move.processed.files:false}")
   private boolean moveProcessedFiles;
   
+  @Value("${dmesync.destination.base.dir}")
+  protected String destinationBaseDir;
+  
+  @Value("${hpc.server.url}")
+  private String serverUrl;
+
+  @Value("${auth.token}")
+  private String authToken;
+  
+  @Autowired private RestTemplateFactory restTemplateFactory;
+  
+  @Autowired private ObjectMapper objectMapper;
+  
   @PostConstruct
   public boolean init() {
     super.setTaskName("PathMetadataTask");
@@ -61,6 +93,28 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
     try {
+    	
+		// Call datatobject API /dm/model with doc name to get themetadata rules from
+		// DME
+		final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+				.path("/dm/model/".concat(destinationBaseDir)).build().encode().toUri();
+
+		HttpHeaders header = new HttpHeaders();
+		header.setContentType(MediaType.MULTIPART_FORM_DATA);
+		header.set(HttpHeaders.AUTHORIZATION, "Bearer ".concat(authToken));
+
+		ResponseEntity<Object> response = restTemplateFactory.getRestTemplate(new RestTemplateResponseErrorHandler())
+				.exchange(dataObjectUrl, HttpMethod.GET, new HttpEntity<Object>(header), Object.class);
+
+		if (HttpStatus.OK.equals(response.getStatusCode())) {
+			logger.debug("[{}] Received 200 response", super.getTaskName());
+			String json = objectMapper.writeValueAsString(response.getBody());
+			HpcDataManagementModelDTO dataObjectListDTO = objectMapper.readValue(json, HpcDataManagementModelDTO.class);
+
+			// Set metaDataEntries into a map
+			List<HpcMetadataValidationRule> metaDataEntries = dataObjectListDTO.getDocRules().get(0).getRules().get(0)
+					.getCollectionMetadataValidationRules().stream().collect(Collectors.toList());
+      
       DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(doc);
       String archivePath = metadataTask.getArchivePath(object);
       if(moveProcessedFiles)
@@ -114,6 +168,12 @@ public class DmeSyncMetadataTaskImpl extends AbstractDmeSyncTask implements DmeS
         HpcArchivePermissionsRequestDTO archivePermissionsRequestDTO =
               metadataTask.getArchivePermission(object);
         object.setArchivePermissionsRequestDTO(archivePermissionsRequestDTO);
+      }
+     } else {
+         logger.error(
+                 "[{}] Received bad response from metadata dataObject, responseCode {}", super.getTaskName(),
+                     response.getStatusCode());            
+             throw new DmeSyncWorkflowException("Received bad response from metadata dataObject");
       }
           
     } catch (DmeSyncMappingException e) {
