@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,12 +51,6 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   
   @Value("${dmesync.destination.base.dir}")
   protected String destinationBaseDir;
-  
-  @Value("${dmesync.metadata.project.inclusion.list:}")
-  private String projectMetadataInclusionList;
-  
-  @Value("${dmesync.metadata.exclusion.list:}")
-  private String metadataExclusionList;
   
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
