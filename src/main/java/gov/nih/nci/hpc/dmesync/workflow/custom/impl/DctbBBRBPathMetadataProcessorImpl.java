@@ -47,6 +47,8 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "project_id");
 		
+		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(destinationBaseDir);
+		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object)  + "/" + getCaseId(object) + "/" + fileName;
@@ -74,13 +76,13 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object);
 		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
-		HpcBulkMetadataEntry pathEntriesPI = buildPathEntriesPI(piCollectionPath, projectCollectionName);
+		HpcBulkMetadataEntry pathEntriesPI = buildPathEntries(piCollectionPath, "DataOwner_Lab", projectCollectionName , metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for "Project" collection
 		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
 		HpcBulkMetadataEntry pathEntriesProject =
-									buildPathEntriesProject(projectCollectionPath, projectCollectionName, projectCollectionName);
+									buildPathEntries(projectCollectionPath, "Project", projectCollectionName , metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 		
 		// Add path metadata entries for "Case" folder
