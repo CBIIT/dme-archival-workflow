@@ -50,8 +50,15 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(destinationBaseDir);
 		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
-		String archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+		String caseId=getCaseId(object);
+		String archivePath =null;
+		if(caseId !=null) {
+		 archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object)  + "/" + getCaseId(object) + "/" + fileName;
+		}else {
+		  archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+					+ getProjectCollectionName(object)  + "/"  + fileName;
+		}
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
 
@@ -87,13 +94,14 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		
 		// Add path metadata entries for "Case" folder
 		String caseId = getCaseId(object);
+		if (caseId != null) {
 		String caseCollectionPath = projectCollectionPath  + "/" + caseId.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesCase = new HpcBulkMetadataEntry();
 		pathEntriesCase.setPath(caseCollectionPath);
 		pathEntriesCase.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Case"));
 		pathEntriesCase.getPathMetadataEntries().add(createPathEntry("case_id", caseId));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCase);
-
+		}
 		// Set it to dataObjectRegistrationRequestDTO
 		dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
 		dataObjectRegistrationRequestDTO.setParentCollectionsBulkMetadataEntries(hpcBulkMetadataEntries);
