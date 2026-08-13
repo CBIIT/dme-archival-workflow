@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -382,7 +383,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     * @param metaDataEntries
     * @param collectionType
     */
-	protected void addMetadataEntriesFromValidationRules(HpcBulkMetadataEntry bulkMetadataEntry,
+	public void addMetadataEntriesFromValidationRules(HpcBulkMetadataEntry bulkMetadataEntry,
 			String metadataFilePathKey, List<HpcMetadataValidationRule> metaDataEntries, String collectionType) {
 
 		if (bulkMetadataEntry == null || metaDataEntries == null || StringUtils.isBlank(collectionType)) {
@@ -399,16 +400,20 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 			}
 
 			String attribute = rule.getAttribute();
-			String value = StringUtils.isNotBlank(rule.getDefaultValue()) ? rule.getDefaultValue()
-					: getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, attribute);
+			String value =  getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, attribute);
 
+			// metadata map value takes precedence, and only fall back to rule.defaultValue when the map value is null/blank.
+			if (StringUtils.isBlank(value) && StringUtils.isNotBlank(rule.getDefaultValue())) {
+				       value = rule.getDefaultValue();
+			 }
+			
 			// We have another validation function , so this function only add non mandatory values when value is not null
 			if (!rule.getMandatory() && StringUtils.isBlank(value)) {
 				continue;
 			}
 
-			if (StringUtils.isNotBlank(rule.getDateFormat()) && !StringUtils.equalsIgnoreCase(value, "NA")) {
-				bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(attribute, value, rule.getDateFormat()));
+			if (StringUtils.isNotBlank(rule.getDateFormat())) {
+				bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(attribute, value, detectDateFormat(value)));
 			} else {
 				bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(attribute, value));
 			}
@@ -421,7 +426,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	 * @param collectionType
 	 * @return boolean indicating if there's a match
 	 */
-	protected boolean isCollectionTypeMatch(HpcMetadataValidationRule rule, String collectionType) {
+	public boolean isCollectionTypeMatch(HpcMetadataValidationRule rule, String collectionType) {
 		if (rule.getCollectionTypes() == null || rule.getCollectionTypes().isEmpty()) {
 			return false;
 		}
@@ -436,13 +441,15 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     
 	/**
 	 * Builds a HpcBulkMetadataEntry for a given collection path and name, adding metadata entries based on the provided validation rules.
+	 * This method is used in the custom implementations to setup the metadata entries
+	 * If there are any derived values in the metadata they can be overrided in the custom implementation.
 	 * @param collectionPath
 	 * @param collectionName
 	 * @param metadataFilePathKey
 	 * @param metaDataEntries
 	 * @return HpcBulkMetadataEntry containing the path and associated metadata entries
 	 */
-	protected HpcBulkMetadataEntry buildPathEntries(String collectionPath, String collectionName, String metadataFilePathKey,
+	public HpcBulkMetadataEntry buildPathEntries(String collectionPath, String collectionName, String metadataFilePathKey,
 			List<HpcMetadataValidationRule> metaDataEntries) {
 		HpcBulkMetadataEntry pathEntries = new HpcBulkMetadataEntry();
 		pathEntries.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, collectionName));
@@ -451,4 +458,31 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 		return pathEntries;
 	}
 
+	private String detectDateFormat(String value) {
+		  if (StringUtils.isBlank(value)) {
+		    return null;
+		  }
+
+		  String trimmedValue = StringUtils.trim(value);
+
+		  String[] patterns = {
+		      "MM/dd/yyyy",
+		      "yyyy/MM/dd",
+		      "MM-dd-yyyy",
+		      "yyyy-MM-dd",
+		      "MM/dd/yy"
+		  };
+
+		  for (String pattern : patterns) {
+		    try {
+		      DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		      formatter.parse(trimmedValue);
+		      return pattern;
+		    } catch (Exception e) {
+		      // ignore and try next pattern
+		    }
+		  }
+
+		  return null;
+		}
 }

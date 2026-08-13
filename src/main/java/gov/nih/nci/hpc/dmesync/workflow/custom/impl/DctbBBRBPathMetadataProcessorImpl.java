@@ -45,7 +45,7 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		logger.info("[PathMetadataTask] DOC DCTB BBRB getArchivePath called");
 
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "project_id");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "project");
 		
 		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(destinationBaseDir);
 		

@@ -29,7 +29,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -109,7 +108,7 @@ public class DmeMetadataBuilder {
 	 * @return metadataDMEModel
 	 * @throws DmeSyncWorkflowException
 	 */
-	@Cacheable(value = "metadata", key = "'dmeMetadataModel'", sync = true)
+	@Cacheable(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir", sync = true)
 	public List<HpcMetadataValidationRule> getDMEMetadataModel(String destinationBaseDir)
 			throws DmeSyncWorkflowException {
 
@@ -123,7 +122,7 @@ public class DmeMetadataBuilder {
 	 * @return metadataDMEModel
 	 * @throws DmeSyncWorkflowException
 	 */
-	@CachePut(value = "metadata", key = "'dmeMetadataModel'")
+	@CachePut(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir")
 	public List<HpcMetadataValidationRule> updateDMEMetadataModel(String destinationBaseDir)
 			throws DmeSyncWorkflowException {
 
@@ -139,7 +138,7 @@ public class DmeMetadataBuilder {
 	}
 	
 	/**
-	 * Retrieving metadata model from DME for path
+	 * Retrieving metadata model from DME for construction of metadata entries
 	 * @param destinationBaseDir
 	 * @return
 	 * @throws DmeSyncWorkflowException
