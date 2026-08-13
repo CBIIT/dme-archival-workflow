@@ -75,19 +75,19 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesPI = buildPathEntries(piCollectionPath, "DataOwner_Lab", projectCollectionName , metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for "Project" collection
-		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
+		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesProject =
 									buildPathEntries(projectCollectionPath, "Project", projectCollectionName , metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 		
 		// Add path metadata entries for "Case" folder
 		String caseId = getCaseId(object);
-		String caseCollectionPath = projectCollectionPath  + "/" + caseId;
+		String caseCollectionPath = projectCollectionPath  + "/" + caseId.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesCase = new HpcBulkMetadataEntry();
 		pathEntriesCase.setPath(caseCollectionPath);
 		pathEntriesCase.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Case"));

@@ -169,6 +169,15 @@ public class DmeMetadataBuilder {
 			HpcDataManagementModelDTO dataObjectListDTO =
 					objectMapper.readValue(json, HpcDataManagementModelDTO.class);
 
+			if (dataObjectListDTO.getDocRules() == null
+ 					|| dataObjectListDTO.getDocRules().isEmpty()
+ 					|| dataObjectListDTO.getDocRules().get(0).getRules() == null
+ 					|| dataObjectListDTO.getDocRules().get(0).getRules().isEmpty()
+ 					|| dataObjectListDTO.getDocRules().get(0).getRules().get(0).getCollectionMetadataValidationRules() == null) {
+ 				throw new DmeSyncWorkflowException(
+ 						"Metadata model response missing collection metadata validation rules for path " + destinationBaseDir);
+ 			}
+			
 			return dataObjectListDTO.getDocRules().get(0).getRules().get(0)
 					.getCollectionMetadataValidationRules()
 					.stream()
