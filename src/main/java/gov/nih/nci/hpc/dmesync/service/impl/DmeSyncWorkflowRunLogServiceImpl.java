@@ -74,9 +74,10 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 					.map(StatusInfo::getFilesize).filter(Objects::nonNull).mapToLong(Long::longValue).sum();
 			
 			double completionPercentage = runIdRows.isEmpty() ? 0.0
-										: BigDecimal.valueOf((completedRows * 100.0) / runIdRows.size())
-												.setScale(2, RoundingMode.HALF_UP)
-												.doubleValue();
+										: BigDecimal.valueOf(completedRows)
+ 										.multiply(BigDecimal.valueOf(100))
+ 										.divide(BigDecimal.valueOf(runIdRows.size()), 2, RoundingMode.HALF_UP)
+ 										.doubleValue();;
 
 			Long durationMinutes = mins;
 			workflowRunInfo.setRunLastHeartbeatTimestamp(Timestamp.from(Instant.now()));
