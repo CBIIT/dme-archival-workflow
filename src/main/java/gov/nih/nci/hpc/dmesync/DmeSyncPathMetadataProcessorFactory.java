@@ -170,6 +170,11 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Autowired
   @Qualifier("dtb")
   private DmeSyncPathMetadataProcessor dtbProcessor;
+  
+  @Autowired
+  @Qualifier("dctb-bbrb")
+  private DmeSyncPathMetadataProcessor dctbBbrbProcessor;
+  
  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
@@ -252,7 +257,9 @@ public class DmeSyncPathMetadataProcessorFactory {
     	return liciCisProcessor;
     }else if ("dtb".equals(doc)){
     	return dtbProcessor;
-    }
+    }else if ("dctb-bbrb".equals(doc)){
+    	return dctbBbrbProcessor;
+    } 
     else {
         return defaultProcessor;
     }

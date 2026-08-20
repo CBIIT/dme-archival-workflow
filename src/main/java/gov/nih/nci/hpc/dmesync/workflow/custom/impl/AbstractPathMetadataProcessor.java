@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -37,6 +38,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
+import gov.nih.nci.hpc.domain.metadata.HpcMetadataValidationRule;
 
 public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetadataProcessor {
 
@@ -61,6 +63,9 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   Map<String, Map<String, String>> piMetadataMap = null;
   
   Map<String, Map<String, String>> metadataMapWithTwoKeys = null;
+  
+  List<HpcMetadataValidationRule> metaDataEntries = new ArrayList<HpcMetadataValidationRule>();
+  
 
 
   protected static ThreadLocal<Map<String, Map<String, String>>> threadLocalMap = new ThreadLocal<Map<String, Map<String, String>>>() {
@@ -370,6 +375,115 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	    }
 	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
-  
+   
+   /**
+    * Adds metadata entries to the provided HpcBulkMetadataEntry based on the given validation rules and collection type.
+    * @param bulkMetadataEntry
+    * @param metadataFilePathKey
+    * @param metaDataEntries
+    * @param collectionType
+    */
+	public void addMetadataEntriesFromValidationRules(HpcBulkMetadataEntry bulkMetadataEntry,
+			String metadataFilePathKey, List<HpcMetadataValidationRule> metaDataEntries, String collectionType) {
 
+		if (bulkMetadataEntry == null || metaDataEntries == null || StringUtils.isBlank(collectionType)) {
+			return;
+		}
+
+		for (HpcMetadataValidationRule rule : metaDataEntries) {
+			if (rule == null || StringUtils.isBlank(rule.getAttribute())) {
+				continue;
+			}
+
+			if (!isCollectionTypeMatch(rule, collectionType)) {
+				continue;
+			}
+
+			String attribute = rule.getAttribute();
+			String value =  getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, attribute);
+
+			// metadata map value takes precedence, and only fall back to rule.defaultValue when the map value is null/blank.
+			if (StringUtils.isBlank(value) && StringUtils.isNotBlank(rule.getDefaultValue())) {
+				       value = rule.getDefaultValue();
+			 }
+			
+			// We have another validation function , so this function only add non mandatory values when value is not null
+			if (!rule.getMandatory() && StringUtils.isBlank(value)) {
+				continue;
+			}
+
+			if (StringUtils.isNotBlank(rule.getDateFormat())) {
+				bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(attribute, value, detectDateFormat(value)));
+			} else {
+				bulkMetadataEntry.getPathMetadataEntries().add(createPathEntry(attribute, value));
+			}
+		}
+	}
+    
+	/**
+	 * Checks if the collection type matches any of the collection types specified in the validation rule.
+	 * @param rule
+	 * @param collectionType
+	 * @return boolean indicating if there's a match
+	 */
+	public boolean isCollectionTypeMatch(HpcMetadataValidationRule rule, String collectionType) {
+		if (rule.getCollectionTypes() == null || rule.getCollectionTypes().isEmpty()) {
+			return false;
+		}
+
+		for (String value : rule.getCollectionTypes()) {
+			if (StringUtils.equalsIgnoreCase(StringUtils.trim(value), collectionType)) {
+				return true;
+			}
+		}
+		return false;
+	}
+    
+	/**
+	 * Builds a HpcBulkMetadataEntry for a given collection path and name, adding metadata entries based on the provided validation rules.
+	 * This method is used in the custom implementations to setup the metadata entries. Before calling this method, the metadata map , metadata entries should be loaded 
+	 * by calling the cache methods getDMEMetadataModel(), getMetadataMap in DmeMetadataBuilder.
+	 * If there are any derived values in the metadata they can be overrided in the custom implementation.
+	 * @param collectionPath
+	 * @param collectionName
+	 * @param metadataFilePathKey
+	 * @param metaDataEntries
+	 * @return HpcBulkMetadataEntry containing the path and associated metadata entries
+	 */
+	public HpcBulkMetadataEntry buildPathEntries(String collectionPath, String collectionName, String metadataFilePathKey,
+			List<HpcMetadataValidationRule> metaDataEntries) {
+		HpcBulkMetadataEntry pathEntries = new HpcBulkMetadataEntry();
+		pathEntries.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, collectionName));
+		pathEntries.setPath(collectionPath);
+		addMetadataEntriesFromValidationRules(pathEntries, metadataFilePathKey, metaDataEntries, collectionName);
+		return pathEntries;
+	}
+
+	private String detectDateFormat(String value) {
+		  if (StringUtils.isBlank(value)) {
+		    return null;
+		  }
+
+		  String trimmedValue = StringUtils.trim(value);
+
+		  String[] patterns = {
+		      "MM/dd/yyyy",
+		      "yyyy/MM/dd",
+		      "MM-dd-yyyy",
+		      "yyyy-MM-dd",
+		      "MM/dd/yy"
+		  };
+
+		  for (String pattern : patterns) {
+		    try {
+		      DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		      formatter.parse(trimmedValue);
+		      return pattern;
+		    } catch (Exception e) {
+		      // ignore and try next pattern
+		    }
+		  }
+
+		  return null;
+		}
 }
