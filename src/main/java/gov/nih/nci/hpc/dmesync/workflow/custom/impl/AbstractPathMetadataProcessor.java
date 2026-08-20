@@ -441,7 +441,8 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
     
 	/**
 	 * Builds a HpcBulkMetadataEntry for a given collection path and name, adding metadata entries based on the provided validation rules.
-	 * This method is used in the custom implementations to setup the metadata entries
+	 * This method is used in the custom implementations to setup the metadata entries. Before calling this method, the metadata map , metadata entries should be loaded 
+	 * by calling the cache methods getDMEMetadataModel(), getMetadataMap in DmeMetadataBuilder.
 	 * If there are any derived values in the metadata they can be overrided in the custom implementation.
 	 * @param collectionPath
 	 * @param collectionName

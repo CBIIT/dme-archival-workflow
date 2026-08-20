@@ -140,7 +140,7 @@ public class DmeMetadataBuilder {
 	/**
 	 * Retrieving metadata model from DME for construction of metadata entries
 	 * @param destinationBaseDir
-	 * @return
+	 * @return List of HpcMetadataValidationRules
 	 * @throws DmeSyncWorkflowException
 	 */
 	private List<HpcMetadataValidationRule> fetchMetadataDMEModel(String destinationBaseDir)
