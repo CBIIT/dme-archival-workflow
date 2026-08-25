@@ -51,6 +51,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "project");
 
+		// load the doc metadata  model from the DME 
 		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(destinationBaseDir);
 
 		String metadataFileKey = getMetadataFileKey(object);
