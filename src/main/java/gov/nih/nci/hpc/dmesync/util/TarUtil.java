@@ -346,30 +346,30 @@ public class TarUtil {
 		}
 
 		if (file.isFile()) {
-				Path realPath = path.toRealPath();
-				realPathsIncludedInTar.add(realPath);
+			Path realPath = path.toRealPath();
+			realPathsIncludedInTar.add(realPath);
 
-				out.putArchiveEntry(new TarArchiveEntry(file, entry));
-				try (FileInputStream in = new FileInputStream(file)) {
-					IOUtils.copy(in, out);
-				}
-				out.closeArchiveEntry();
-				includedFiles.add(file);
+			out.putArchiveEntry(new TarArchiveEntry(file, entry));
+			try (FileInputStream in = new FileInputStream(file)) {
+				IOUtils.copy(in, out);
+			}
+			out.closeArchiveEntry();
+			includedFiles.add(file);
 		} else if (file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty()
-					&& excludeFolders.contains(file.getName())) {
-				logger.info("{} is excluded for tar", file.getName());
+				&& excludeFolders.contains(file.getName())) {
+			logger.info("{} is excluded for tar", file.getName());
 		} else if (file.isDirectory()) {
-				if (!Files.isReadable(path)) {
-					throw new Exception("No Read permission to " + file.getAbsolutePath());
+			if (!Files.isReadable(path)) {
+				throw new Exception("No Read permission to " + file.getAbsolutePath());
+			}
+			File[] children = file.listFiles();
+			if (children != null) {
+				for (File child : children) {
+					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
 				}
-				File[] children = file.listFiles();
-				if (children != null) {
-					for (File child : children) {
-						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
-					}
-				}
+			}
 		} else {
-				logger.error("{} is not supported", file.getName());
+			logger.error("{} is not supported", file.getName());
 		}
   }
   

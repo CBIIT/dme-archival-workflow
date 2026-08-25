@@ -97,17 +97,13 @@ public class TarContentsFileUtil {
 			textWriter.write("\n");
 
 			logger.info("Writing Files list to TarContents file Completed {}", tarFileHeader);
-			textWriter.close();
 			return true;
 
-		} catch (IOException e) {
-			textWriter.close();
-			logger.error("Error writing data to the contents file {}", tarFileHeader);
-			throw new DmeSyncMappingException("Error writing data to the contents file ", e);
 		} catch (NoSuchAlgorithmException e) {
-			textWriter.close();
 			logger.error("SHA-256 algorithm not available while writing contents file {}", tarFileHeader);
 			throw new DmeSyncMappingException("SHA-256 algorithm not available", e);
+		} finally {
+			textWriter.close();
 		}
 	}
 
