@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -225,6 +226,14 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	private String getProjectCollectionName(StatusInfo object, String metadataFilePathKey)
 			throws DmeSyncMappingException {
 		String projectId = getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_id");
+		if (StringUtils.isBlank(projectId)) {
+			String msg = messageService.get("VALIDATION_003",
+					metadataFilePathKey,
+			        Locale.getDefault()
+			    );
+			logger.info(msg);
+ 			throw new DmeSyncMappingException(msg);
+ 		}
 		logger.info("Project Id = {}", projectId);
 		return projectId;
 	}
