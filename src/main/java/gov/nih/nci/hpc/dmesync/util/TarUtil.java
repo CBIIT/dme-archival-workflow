@@ -48,11 +48,13 @@ public class TarUtil {
    */
   public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
 	  Set<Path> realPathsIncludedInTar = new HashSet<>();
+	  List<File> includedFiles = new ArrayList<>();
 	  try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
       }
     }
+	  TarTaskContext.setIncludedFiles(includedFiles);
   }
 
   /**
@@ -65,11 +67,13 @@ public class TarUtil {
    */
   public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
 	  Set<Path> realPathsIncludedInTar = new HashSet<>();
+	  List<File> includedFiles = new ArrayList<>();
 	  try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
       }
     }
+	  TarTaskContext.setIncludedFiles(includedFiles);
   }
 
   /**
@@ -269,7 +273,7 @@ public class TarUtil {
 	  }
 
   private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders,
-				boolean ignoreBrokenLinksInTar, Set<Path> realPathsIncludedInTar) throws Exception {
+				boolean ignoreBrokenLinksInTar, Set<Path> realPathsIncludedInTar, List<File> includedFiles) throws Exception {
 
 		String entry = dir + File.separator + file.getName();
 		Path path = file.toPath();
@@ -314,7 +318,7 @@ public class TarUtil {
 				File[] children = resolvedPath.toFile().listFiles();
 				if (children != null) {
 					for (File child : children) {
-						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
+							addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
 					}
 				}
 				return;
@@ -326,33 +330,35 @@ public class TarUtil {
 				IOUtils.copy(in, out);
 			}
 			out.closeArchiveEntry();
-			return;
+				includedFiles.add(file);
+				return;
 		}
 
 		if (file.isFile()) {
-			Path realPath = path.toRealPath();
-			realPathsIncludedInTar.add(realPath);
+				Path realPath = path.toRealPath();
+				realPathsIncludedInTar.add(realPath);
 
-			out.putArchiveEntry(new TarArchiveEntry(file, entry));
-			try (FileInputStream in = new FileInputStream(file)) {
-				IOUtils.copy(in, out);
-			}
-			out.closeArchiveEntry();
-		} else if (file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty()
-				&& excludeFolders.contains(file.getName())) {
-			logger.info("{} is excluded for tar", file.getName());
-		} else if (file.isDirectory()) {
-			if (!Files.isReadable(path)) {
-				throw new Exception("No Read permission to " + file.getAbsolutePath());
-			}
-			File[] children = file.listFiles();
-			if (children != null) {
-				for (File child : children) {
-					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
+				out.putArchiveEntry(new TarArchiveEntry(file, entry));
+				try (FileInputStream in = new FileInputStream(file)) {
+					IOUtils.copy(in, out);
 				}
-			}
+				out.closeArchiveEntry();
+				includedFiles.add(file);
+		} else if (file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty()
+					&& excludeFolders.contains(file.getName())) {
+				logger.info("{} is excluded for tar", file.getName());
+		} else if (file.isDirectory()) {
+				if (!Files.isReadable(path)) {
+					throw new Exception("No Read permission to " + file.getAbsolutePath());
+				}
+				File[] children = file.listFiles();
+				if (children != null) {
+					for (File child : children) {
+						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
+					}
+				}
 		} else {
-			logger.error("{} is not supported", file.getName());
+				logger.error("{} is not supported", file.getName());
 		}
   }
   

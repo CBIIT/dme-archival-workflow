@@ -33,6 +33,7 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
+import gov.nih.nci.hpc.dmesync.util.TarTaskContext;
 
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
@@ -202,77 +203,85 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 
 		BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 
-		File[] files = sourceDirPath.toFile().listFiles();
-		if (files != null && files.length > 0) {
-			Arrays.sort(files, Comparator.comparing(File::lastModified));
-			// List<File> fileList = new ArrayList<>(Arrays.asList(files));
+		// Use the file lists already collected by TarTask when available, so the
+		// source directory does not have to be walked a second time.
+		List<File> includedTarFiles = TarTaskContext.getIncludedFiles();
+		List<File> excludedTarFiles = TarTaskContext.getExcludedFiles();
 
-			// Using Files.walkFileTree() to traverse the directory and subdirectories
-			 List<File> includedTarFiles = new ArrayList<>();
-		     List<File> excludedTarFiles = new ArrayList<>();
-		     Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
-		            @Override
-		            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-		            	// Don't visit this directory or its files    
-		                if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
-                  	      logger.info("{} is excluded for tar", dir.getFileName().toString());
-                  	     // excludedTarFiles.add(dir.toFile());
-                  	    return FileVisitResult.SKIP_SUBTREE; 
-		                }                     	
-		                return FileVisitResult.CONTINUE;
-		            }
-
-		            @Override
-		            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
-		            	try {
-	                        if (Files.isSymbolicLink(path)) {
-	                            try {
-	                                Path target = Files.readSymbolicLink(path);
-	                                Path resolved = path.getParent().resolve(target).normalize();
-	                                
-
-	                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
-	                                    includedTarFiles.add(path.toFile());  // Valid symlink
-	                                } else {
-	                                    logger.error("{} is not supported", path.toString());
-	                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
-	                                }
-	                            } catch (IOException e) {
-                                    logger.error("{} is not supported", path.toString());
-	                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
-	                            }
-	                        } else if (Files.isReadable(path)) {
-	                            includedTarFiles.add(path.toFile()); // Regular readable file
-	                        } else {
-                                logger.error("{} is not readable", path.toString());
-	                        	excludedTarFiles.add(path.toFile()); // Not readable
-	                        }
-
-	                    } catch (Exception e) {
-	                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
-	                    }
-		                return FileVisitResult.CONTINUE;
-		            }
-		        });
-		    
-		     
-		    if(!includedTarFiles.isEmpty()) {
-			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-					object.getOriginalFilePath(), includedTarFiles);
-			if (contentsFileCheck) {
-				sendContentsFileRequestToJms(tarMappingFile, object);
+		if (includedTarFiles == null) {
+			// Fallback: TarTask context is not available (e.g. standalone run). Walk the
+			// source directory as before.
+			File[] files = sourceDirPath.toFile().listFiles();
+			if (files == null || files.length == 0) {
+				return;
 			}
-		    }
-			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
+			Arrays.sort(files, Comparator.comparing(File::lastModified));
+
+			includedTarFiles = new ArrayList<>();
+			excludedTarFiles = new ArrayList<>();
+			final List<File> includedRef = includedTarFiles;
+			final List<File> excludedRef = excludedTarFiles;
+
+			Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
+				@Override
+				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+					if (excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
+						logger.info("{} is excluded for tar", dir.getFileName().toString());
+						return FileVisitResult.SKIP_SUBTREE;
+					}
+					return FileVisitResult.CONTINUE;
+				}
+
+				@Override
+				public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+					try {
+						if (Files.isSymbolicLink(path)) {
+							try {
+								Path target = Files.readSymbolicLink(path);
+								Path resolved = path.getParent().resolve(target).normalize();
+
+								if (Files.exists(resolved) && Files.isReadable(resolved)) {
+									includedRef.add(path.toFile());
+								} else {
+									logger.error("{} is not supported", path.toString());
+									excludedRef.add(path.toFile());
+								}
+							} catch (IOException e) {
+								logger.error("{} is not supported", path.toString());
+								excludedRef.add(path.toFile());
+							}
+						} else if (Files.isReadable(path)) {
+							includedRef.add(path.toFile());
+						} else {
+							logger.error("{} is not readable", path.toString());
+							excludedRef.add(path.toFile());
+						}
+					} catch (Exception e) {
+						excludedRef.add(path.toFile());
+					}
+					return FileVisitResult.CONTINUE;
+				}
+			});
+		}
+
+		try {
+			if (!includedTarFiles.isEmpty()) {
+				boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
+						object.getOriginalFilePath(), includedTarFiles);
+				if (contentsFileCheck) {
+					sendContentsFileRequestToJms(tarMappingFile, object);
+				}
+			}
+			if (tarExcludedFile != null && excludedTarFiles != null && !excludedTarFiles.isEmpty()) {
 				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
 				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
 						object.getOriginalFilePath(), excludedTarFiles);
-
 				if (excludedContentsFileCheck) {
 					sendContentsFileRequestToJms(tarExcludedFile, object);
 				}
 			}
-
+		} finally {
+			TarTaskContext.clear();
 		}
 	}
 
