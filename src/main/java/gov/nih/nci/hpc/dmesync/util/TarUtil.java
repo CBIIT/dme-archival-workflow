@@ -53,8 +53,12 @@ public class TarUtil {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
       }
+      // Populate TarTaskContext inside the try block so that on success the list is
+      // available to DmeSyncTarContentsFileTaskImpl. On exception it is not set,
+      // causing the contents task to fall back to its own directory walk.
+      TarTaskContext.setIncludedFiles(includedFiles);
+      TarTaskContext.setExcludedFiles(new ArrayList<>());
     }
-	  TarTaskContext.setIncludedFiles(includedFiles);
   }
 
   /**
@@ -72,8 +76,12 @@ public class TarUtil {
       for (File file : files) {
         addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar, includedFiles);
       }
+      // Populate TarTaskContext inside the try block so that on success the list is
+      // available to DmeSyncTarContentsFileTaskImpl. On exception it is not set,
+      // causing the contents task to fall back to its own directory walk.
+      TarTaskContext.setIncludedFiles(includedFiles);
+      TarTaskContext.setExcludedFiles(new ArrayList<>());
     }
-	  TarTaskContext.setIncludedFiles(includedFiles);
   }
 
   /**
@@ -330,8 +338,11 @@ public class TarUtil {
 				IOUtils.copy(in, out);
 			}
 			out.closeArchiveEntry();
-				includedFiles.add(file);
-				return;
+			// Reached only for symlinks that resolve to a regular file (directory symlinks
+			// return early above). Record the original symlink path so callers can preserve
+			// symlink metadata in the manifest.
+			includedFiles.add(file);
+			return;
 		}
 
 		if (file.isFile()) {
