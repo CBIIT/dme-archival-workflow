@@ -14,8 +14,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -215,7 +213,6 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			if (files == null || files.length == 0) {
 				return;
 			}
-			Arrays.sort(files, Comparator.comparing(File::lastModified));
 
 			includedTarFiles = new ArrayList<>();
 			excludedTarFiles = new ArrayList<>();
@@ -228,6 +225,10 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 					if (excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
 						logger.info("{} is excluded for tar", dir.getFileName().toString());
 						return FileVisitResult.SKIP_SUBTREE;
+					}
+					// Record each non-excluded directory (except the root itself) in the manifest.
+					if (!dir.equals(sourceDirPath)) {
+						includedRef.add(dir.toFile());
 					}
 					return FileVisitResult.CONTINUE;
 				}
