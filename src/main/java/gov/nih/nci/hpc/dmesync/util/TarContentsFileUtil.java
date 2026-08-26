@@ -3,16 +3,15 @@ package gov.nih.nci.hpc.dmesync.util;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.hash.Hashing;
 
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 
@@ -21,7 +20,7 @@ public class TarContentsFileUtil {
 	static final Logger logger = LoggerFactory.getLogger(TarContentsFileUtil.class);
 
 	// Column header written at the top of every manifest.
-	private static final String HEADER_ROW = "TYPE\tPATH\tSIZE\tSHA256\tSYMLINK_TARGET";
+	private static final String HEADER_ROW = "TYPE\tPATH\tSIZE\tMD5\tSYMLINK_TARGET";
 
 	private TarContentsFileUtil() {
 	}
@@ -31,8 +30,8 @@ public class TarContentsFileUtil {
 	 *
 	 * <p>Each entry is a tab-separated line with the following columns:
 	 * <pre>
-	 * TYPE    PATH                        SIZE        SHA256          SYMLINK_TARGET
-	 * FILE    data/sample.fastq           123456      sha256:<hex>    -
+	 * TYPE    PATH                        SIZE        MD5             SYMLINK_TARGET
+	 * FILE    data/sample.fastq           123456      md5:<hex>       -
 	 * SYMLINK data/link.fastq             -           -               data/sample.fastq
 	 * </pre>
 	 *
@@ -80,8 +79,8 @@ public class TarContentsFileUtil {
 					rows.add(new String[]{"DIR", normalizedRelPath, "-", "-", "-"});
 				} else {
 					long size = fileName.length();
-					String sha256 = computeSha256(filePath);
-					rows.add(new String[]{"FILE", normalizedRelPath, String.valueOf(size), "sha256:" + sha256, "-"});
+					String md5 = computeMd5(fileName);
+					rows.add(new String[]{"FILE", normalizedRelPath, String.valueOf(size), "md5:" + md5, "-"});
 				}
 			}
 
@@ -99,34 +98,20 @@ public class TarContentsFileUtil {
 			logger.info("Writing Files list to TarContents file Completed {}", tarFileHeader);
 			return true;
 
-		} catch (NoSuchAlgorithmException e) {
-			logger.error("SHA-256 algorithm not available while writing contents file {}", tarFileHeader);
-			throw new DmeSyncMappingException("SHA-256 algorithm not available", e);
 		} finally {
 			textWriter.close();
 		}
 	}
 
 	/**
-	 * Computes the SHA-256 hex digest of the file at {@code path}.
+	 * Computes the MD5 hex digest of {@code file} using Guava, consistent with
+	 * how {@code DmeSyncCreateChecksumTaskImpl} computes checksums.
 	 *
-	 * @param path the file to hash
-	 * @return lower-case hex string of the SHA-256 digest
+	 * @param file the file to hash
+	 * @return lower-case hex string of the MD5 digest
 	 */
-	private static String computeSha256(Path path) throws IOException, NoSuchAlgorithmException {
-		MessageDigest digest = MessageDigest.getInstance("SHA-256");
-		try (InputStream in = Files.newInputStream(path)) {
-			byte[] buffer = new byte[8192];
-			int read;
-			while ((read = in.read(buffer)) != -1) {
-				digest.update(buffer, 0, read);
-			}
-		}
-		byte[] hashBytes = digest.digest();
-		StringBuilder hex = new StringBuilder(hashBytes.length * 2);
-		for (byte b : hashBytes) {
-			hex.append(String.format("%02x", b));
-		}
-		return hex.toString();
+	@SuppressWarnings("deprecation")
+	private static String computeMd5(File file) throws IOException {
+		return com.google.common.io.Files.hash(file, Hashing.md5()).toString();
 	}
 }
