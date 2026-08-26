@@ -175,6 +175,10 @@ public class DmeSyncPathMetadataProcessorFactory {
   @Qualifier("dctb-bbrb")
   private DmeSyncPathMetadataProcessor dctbBbrbProcessor;
   
+  @Autowired
+  @Qualifier("crtp-cmdl")
+  private DmeSyncPathMetadataProcessor crtpCmdlProcessor;
+  
  
   public DmeSyncPathMetadataProcessor getService(String doc) {
     if ("hitif".equals(doc)) {
@@ -259,6 +263,8 @@ public class DmeSyncPathMetadataProcessorFactory {
     	return dtbProcessor;
     }else if ("dctb-bbrb".equals(doc)){
     	return dctbBbrbProcessor;
+    }else if ("crtp-cmdl".equals(doc)){
+    	return crtpCmdlProcessor;
     } 
     else {
         return defaultProcessor;

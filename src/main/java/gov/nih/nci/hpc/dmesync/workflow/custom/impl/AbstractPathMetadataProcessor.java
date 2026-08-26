@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -466,23 +467,20 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 
 		  String trimmedValue = StringUtils.trim(value);
 
-		  String[] patterns = {
-		      "MM/dd/yyyy",
-		      "yyyy/MM/dd",
-		      "MM-dd-yyyy",
-		      "yyyy-MM-dd",
-		      "MM/dd/yy"
-		  };
+		  Map<String, String> patterns = new LinkedHashMap<>();
 
-		  for (String pattern : patterns) {
-		    try {
-		      DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-		      formatter.parse(trimmedValue);
-		      return pattern;
-		    } catch (Exception e) {
-		      // ignore and try next pattern
-		    }
+		  patterns.put("MM/dd/yyyy", "\\d{2}/\\d{2}/\\d{4}");
+		  patterns.put("yyyy/MM/dd", "\\d{4}/\\d{2}/\\d{2}");
+		  patterns.put("MM-dd-yyyy", "\\d{2}-\\d{2}-\\d{4}");
+		  patterns.put("yyyy-MM-dd", "\\d{4}-\\d{2}-\\d{2}");
+		  patterns.put("MM/dd/yy", "\\d{2}/\\d{2}/\\d{2}");
+
+		  for (Map.Entry<String, String> entry : patterns.entrySet()) {
+		      if (trimmedValue.matches(entry.getValue())) {
+		          return entry.getKey();
+		      }
 		  }
+
 
 		  return null;
 		}
