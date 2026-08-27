@@ -270,7 +270,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 		try {
 		    if(!includedTarFiles.isEmpty()) {
 			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-					object.getOriginalFilePath(), includedTarFiles);
+					object.getOriginalFilePath(), true , includedTarFiles);
 			if (contentsFileCheck) {
 				sendContentsFileRequestToJms(tarMappingFile, object);
 			}
@@ -278,7 +278,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
 				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
 				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
-						object.getOriginalFilePath(), excludedTarFiles);
+						object.getOriginalFilePath(), false , excludedTarFiles);
 
 				if (excludedContentsFileCheck) {
 					sendContentsFileRequestToJms(tarExcludedFile, object);

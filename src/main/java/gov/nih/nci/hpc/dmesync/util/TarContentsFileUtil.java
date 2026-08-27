@@ -38,12 +38,13 @@ public class TarContentsFileUtil {
 	 *
 	 * @param textWriter    writer for the manifest file (will be closed by this method)
 	 * @param tarFileHeader absolute path of the source directory (used as the relativization root)
+	 * @param isIncludedContentsFile true for contents file, false for excluded contents file
 	 * @param subList       list of {@link File} objects to include in the manifest
 	 * @return {@code true} if the manifest was written successfully
 	 * @throws IOException            on I/O error
 	 * @throws DmeSyncMappingException on any other failure while building the manifest
 	 */
-	public static boolean writeToTarContentsFile(BufferedWriter textWriter, String tarFileHeader, List<File> subList)
+	public static boolean writeToTarContentsFile(BufferedWriter textWriter, String tarFileHeader, boolean isIncludedContentsFile,  List<File> subList)
 			throws IOException, DmeSyncMappingException {
 
 		try {
@@ -65,6 +66,7 @@ public class TarContentsFileUtil {
 				if (Files.isSymbolicLink(filePath)) {
 					Path target = Files.readSymbolicLink(filePath);
 					Path resolvedTarget = filePath.getParent().resolve(target).normalize();
+					
 					// Express the symlink target relative to the source dir when possible.
 					String targetStr;
 					try {
@@ -73,8 +75,12 @@ public class TarContentsFileUtil {
 						// Target is outside the source tree; record the absolute path.
 						targetStr = resolvedTarget.toString().replace(File.separatorChar, '/');
 					}
+					if(!isIncludedContentsFile) {
+					      rows.add(new String[]{"SYMLINK", normalizedRelPath, "-" , "-" , resolvedTarget.toString()});
+					}else {
 					String md5 = computeMd5(filePath.toFile());
 					rows.add(new String[]{"SYMLINK", normalizedRelPath, String.valueOf(Files.size(filePath)), "md5:" + md5, targetStr});
+					}
 				} else if (fileName.isDirectory()) {
 					rows.add(new String[]{"DIR", normalizedRelPath, "-", "-", "-"});
 				} else {
