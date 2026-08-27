@@ -210,7 +210,7 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 		if (includedTarFiles == null) {
 			// Fallback: TarTask context is not available (e.g. standalone run). Walk the
 			// source directory as before
-			logger.info("Included files list is blanl from the threadlocal, so building again");
+			logger.info("Included files list is blank in ThreadLocal context, rebuilding from source directory");
 			File[] files = sourceDirPath.toFile().listFiles();
 		  if (files != null && files.length > 0) {
 			Arrays.sort(files, Comparator.comparing(File::lastModified));
@@ -285,7 +285,11 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 				}
 			}
 		} finally {
-			TarTaskContext.clear();
+			try {
+ 				tarContentsFileWriter.close();
+ 			} finally {
+ 				TarTaskContext.clear();
+ 			}
 		}
 	}
 	

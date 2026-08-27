@@ -31,7 +31,7 @@ public class TarContentsFileUtil {
 	 * <pre>
 	 * TYPE    PATH                        SIZE        MD5          SYMLINK_TARGET
 	 * FILE    data/sample.fastq           123456      md5:<hex>    -
-	 * SYMLINK data/link.fastq             -           -               data/sample.fastq
+	 * SYMLINK data/link.fastq             123456      md5:<hex>            data/sample.fastq
 	 * </pre>
 	 *
 	 * <p>Entries are sorted by normalized relative path before writing.
@@ -104,9 +104,10 @@ public class TarContentsFileUtil {
 	}
 
 	/**
-	 * Computes the MD5 hex digest of {@code file} using Guava, consistent with
+	 * Computes the MD5 hex digest of {@code file} using Guava
 	 * @param file the file to hash
 	 * @return lower-case hex string of the MD5 digest
+	 * @throws IOException if the file cannot be read
 	 */
 	@SuppressWarnings("deprecation")
 	private static String computeMd5(File file) throws IOException {
