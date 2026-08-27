@@ -59,10 +59,16 @@ public class TarContentsFileUtil {
 					continue;
 				}
 				Path filePath = fileName.toPath();
-				// Normalize: relativize, then convert separators to '/' for portability.
-				Path relativePath = sourcePath.relativize(filePath);
-				String normalizedRelPath = relativePath.toString().replace(File.separatorChar, '/');
-
+				// Normalize: relativize (when possible), then convert separators to '/' for portability.
+ 				String normalizedRelPath;
+ 				try {
+ 					Path relativePath = sourcePath.relativize(filePath);
+ 					normalizedRelPath = relativePath.toString().replace(File.separatorChar, '/');
+ 				} catch (IllegalArgumentException e) {
+ 					// File is outside the source tree (can happen with dereferenced symlinks); record an absolute path.
+ 					normalizedRelPath = filePath.toAbsolutePath().normalize().toString().replace(File.separatorChar, '/');
+ 				}
+				
 				if (Files.isSymbolicLink(filePath)) {
 					Path target = Files.readSymbolicLink(filePath);
 					Path resolvedTarget = filePath.getParent().resolve(target).normalize();
