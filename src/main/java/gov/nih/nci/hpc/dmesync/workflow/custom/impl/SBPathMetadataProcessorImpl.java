@@ -150,7 +150,9 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		        	ExcelUtil.convertTextToExcel(new File(sampleSheetPath.toString()), new File(excelFilePath.toString()),"\t");
 		        }
     		} catch (IOException e) {
-        		throw new DmeSyncMappingException("Can't convert patient samplesheet to excel", e);
+    			String msg = "Can't convert patient samplesheet to excel: " + e.getMessage();
+     			logger.error(msg, e);
+         		throw new DmeSyncMappingException(msg, e);
         	}
 	    } else if(object.getOriginalFilePath().contains("fastq_files")) {
 	    	//Set source path to the actual file.
@@ -228,6 +230,11 @@ public class SBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String patientCollectionPath = projectCollectionPath + "/Patient_" + patientId;
     HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
     pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Patient"));
+    if(StringUtils.isBlank(patientKey)) {
+    	String msg = "MRN column is empty for file: " + object.getOrginalFileName();
+    	logger.info(msg);
+		throw new DmeSyncMappingException(msg);
+    }
     String patientIdEncrypted = Base64.getEncoder().encodeToString(encryptor.encrypt(patientKey));
     pathEntriesPatient
         .getPathMetadataEntries()

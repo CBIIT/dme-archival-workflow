@@ -48,11 +48,19 @@ public class TarUtil {
    */
   public static void tar(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
 	  Set<Path> realPathsIncludedInTar = new HashSet<>();
+	  List<File> includedFiles = new ArrayList<>();
+	  List<File> excludedFiles = new ArrayList<>();
 	  try (TarArchiveOutputStream out = getTarArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar , includedFiles
+        		, excludedFiles);
       }
+      // Populate TarTaskContext inside the try block so that on success the list is
+      // available to DmeSyncTarContentsFileTaskImpl. On exception it is not set
+      TarTaskContext.setIncludedFiles(includedFiles);
+      TarTaskContext.setExcludedFiles(excludedFiles);
     }
+	  
   }
 
   /**
@@ -65,11 +73,19 @@ public class TarUtil {
    */
   public static void targz(String name, List<String> excludeFolders, boolean ignoreBrokenLinksInTar, File... files) throws Exception {
 	  Set<Path> realPathsIncludedInTar = new HashSet<>();
+	  List<File> includedFiles = new ArrayList<>();
+	  List<File> excludedFiles = new ArrayList<>();
 	  try (TarArchiveOutputStream out = getTarGzArchiveOutputStream(name); ) {
       for (File file : files) {
-        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar);
+        addToArchive(out, file, ".", excludeFolders, ignoreBrokenLinksInTar , realPathsIncludedInTar , includedFiles
+        		, excludedFiles);
       }
+      // Populate TarTaskContext inside the try block so that on success the list is
+      // available to DmeSyncTarContentsFileTaskImpl. On exception it is not set
+      TarTaskContext.setIncludedFiles(includedFiles);
+      TarTaskContext.setExcludedFiles(excludedFiles);
     }
+	  
   }
 
   /**
@@ -269,7 +285,7 @@ public class TarUtil {
 	  }
 
   private static void addToArchive(TarArchiveOutputStream out, File file, String dir, List<String> excludeFolders,
-				boolean ignoreBrokenLinksInTar, Set<Path> realPathsIncludedInTar) throws Exception {
+				boolean ignoreBrokenLinksInTar, Set<Path> realPathsIncludedInTar , List<File> includedFiles , List<File> excludedFiles ) throws Exception {
 
 		String entry = dir + File.separator + file.getName();
 		Path path = file.toPath();
@@ -281,6 +297,7 @@ public class TarUtil {
 			} catch (IOException e) {
 				if (ignoreBrokenLinksInTar) {
 					logger.warn("Skipping broken symbolic link {}", path);
+					excludedFiles.add(file);
 					return;
 				}
 				throw new Exception("Broken symbolic link detected: " + path, e);
@@ -289,6 +306,7 @@ public class TarUtil {
 			if (!Files.exists(resolvedPath) || !Files.isReadable(resolvedPath)) {
 				if (ignoreBrokenLinksInTar) {
 					logger.warn("Skipping unreadable symbolic link target {} -> {}", path, resolvedPath);
+					excludedFiles.add(file);
 					return;
 				}
 				throw new Exception("Broken symbolic link detected: " + resolvedPath + " (target is inaccessible)");
@@ -309,23 +327,23 @@ public class TarUtil {
 					throw new Exception("No Read permission to " + resolvedPath);
 				}
 
-				realPathsIncludedInTar.add(resolvedPath);
-
 				File[] children = resolvedPath.toFile().listFiles();
 				if (children != null) {
 					for (File child : children) {
-						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
+						addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar , includedFiles , excludedFiles);
 					}
 				}
 				return;
 			}
 
-			realPathsIncludedInTar.add(resolvedPath);
+			
 			out.putArchiveEntry(new TarArchiveEntry(resolvedPath.toFile(), entry));
 			try (FileInputStream in = new FileInputStream(resolvedPath.toFile())) {
 				IOUtils.copy(in, out);
 			}
 			out.closeArchiveEntry();
+			realPathsIncludedInTar.add(resolvedPath);
+			includedFiles.add(file);
 			return;
 		}
 
@@ -338,6 +356,7 @@ public class TarUtil {
 				IOUtils.copy(in, out);
 			}
 			out.closeArchiveEntry();
+			includedFiles.add(file);
 		} else if (file.isDirectory() && excludeFolders != null && !excludeFolders.isEmpty()
 				&& excludeFolders.contains(file.getName())) {
 			logger.info("{} is excluded for tar", file.getName());
@@ -348,7 +367,7 @@ public class TarUtil {
 			File[] children = file.listFiles();
 			if (children != null) {
 				for (File child : children) {
-					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar);
+					addToArchive(out, child, entry, excludeFolders, ignoreBrokenLinksInTar, realPathsIncludedInTar , includedFiles , excludedFiles);
 				}
 			}
 		} else {
