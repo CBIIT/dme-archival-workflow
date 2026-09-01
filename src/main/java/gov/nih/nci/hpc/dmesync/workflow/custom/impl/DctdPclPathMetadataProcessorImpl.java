@@ -12,9 +12,11 @@ import java.util.Date;
 import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -33,15 +35,10 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	// DCTD OCCPR PCL DME path construction and meta data creation
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	private String sourceDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] DCTD OCCPR PCL getArchivePath called");
 
 		// load the user metadata from the POC folder placed excel
@@ -76,10 +73,10 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 		// If there are files directly under the Project folder, archive it under the project
 		if (StringUtils.equals(filePath.getParent().getFileName().toString(), getProjectCollectionName(object))) {
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object) + "/" + fileName;
 		} else {
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/" + getPOCCollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object) + "/Experiment_" + getExperimentType(object) + "/Instrument_" + getInstrumentType(object) 
 				+ (object.getOriginalFilePath().contains("Raw")? "/Data_Raw" : "/Data_Processed") + "/" + fileName;
 		}
@@ -93,9 +90,10 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		Path filePath = Paths.get(object.getSourceFilePath());
@@ -109,7 +107,7 @@ public class DctdPclPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// key = data_owner_designee_email, (user metadata)
 
 		String piCollectionName = getPiCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		piCollectionPath = piCollectionPath.replace(" ", "_");
 		String projectCollectionName = getProjectCollectionName(object);
 		String projectId = getProjectId(object);

@@ -33,18 +33,19 @@ import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarContentsFileUtil;
-
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
-
+import gov.nih.nci.hpc.dmesync.util.TarTaskContext;
 /**
  * DME Sync Tar Contents File Task Implementation
  * 
@@ -52,53 +53,7 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
-	
-	
-	@Value("${dmesync.doc.name}")
-	private String doc;
 
-	@Value("${dmesync.compress:false}")
-	private boolean compress;
-
-	@Value("${dmesync.source.base.dir}")
-	private String syncBaseDir;
-
-	@Value("${dmesync.work.base.dir}")
-	private String syncWorkDir;
-
-	@Value("${dmesync.dryrun:false}")
-	private boolean dryRun;
-
-	@Value("${dmesync.tar.exclude.folder:}")
-	private String excludeFolder;
-
-	@Value("${dmesync.file.tar:false}")
-	private boolean tarIndividualFiles;
-
-	@Value("${dmesync.multiple.tars.dir.folders:}")
-	private String multpleTarsFolders;
-
-	@Value("${dmesync.multiple.tars.files.count:0}")
-	private Integer filesPerTar;
-
-	@Value("${dmesync.verify.prev.upload:none}")
-	private String verifyPrevUpload;
-
-	@Value("${dmesync.multiple.tars.files.validation:true}")
-	private boolean verifyTarFilesCount;
-
-	@Value("${dmesync.tar.filename.excel.exist:false}")
-	private boolean tarNameinExcelFile;
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-	
-	@Value("${dmesync.tar.contents.file:false}")
-	private boolean createTarContentsFile;
-	
-	@Value("${dmesync.tar.excluded.contents.file:false}")
-	private boolean createTarExcludedContentsFile;
-	
 	@Value("${dmesync.max.recommended.file.size}")
 	private String maxRecommendedFileSize;
 
@@ -113,18 +68,22 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	@Autowired
 	private DmeSyncProducer sender;
 
+	@Autowired
+	private DocQueueNameResolver queueNameResolver;
+
 	@Override
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 				
-		
+	  DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	  DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	
       if (object.getSourceFileName()!=null && object.getSourceFileName().endsWith("tar")) {
 
     	  try {
 			// Construct work dir path
-			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+			Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
+			Path workDirPath = Paths.get(sourceConfig.workBaseDir).toRealPath();
 			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
 			Path relativePath = baseDirPath.relativize(sourceDirPath);
 			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
@@ -135,13 +94,13 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 					logger.info("[{}] Creating Tar contents file {}", super.getTaskName(),
 							tarMappingFile.getAbsolutePath());
 					File tarExcludedFile =null;
-					if(createTarExcludedContentsFile) {
+					if(preRule.tarExcludedContentsFile) {
 						 tarExcludedFile = new File(tarWorkDir + "/" + tarFileName +WorkflowConstants.tarExcludedContentsFileEndswith);
 						logger.info("[{}] Creating Tar excluded contents file {}", super.getTaskName(),
 								tarExcludedFile.getAbsolutePath());
 					}
 
-					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile);
+					createContentsFile(tarMappingFile,sourceDirPath,object,tarExcludedFile, config);
 				} catch (Exception e) {
 			logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 			throw new DmeSyncStorageException("Error occurred during tar. " + e.getMessage(), e);
@@ -153,14 +112,16 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	
 	
 	// This method validate and sends content file request to JMS if contents file is not uploaded to DME
-	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object) throws IOException {
+	private void sendContentsFileRequestToJms(File tarMappingFile, StatusInfo object, DocConfig config) throws IOException {
 
+		DocConfig.UploadConfig upload = config.getUploadConfig();
+		
 		StatusInfo checkForUploadedContentsFile = dmeSyncWorkflowService.getService(access)
-				.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(doc, tarMappingFile.getAbsolutePath() , object.getOriginalFilePath());
+				.findTopStatusInfoByDocAndSourceFilePathAndOriginalFilePath(config.getDocName(), tarMappingFile.getAbsolutePath() , object.getOriginalFilePath());
 
 		StatusInfo contentsFileRecord = null;
 
-		if ("local".equals(verifyPrevUpload) && checkForUploadedContentsFile != null) {
+		if ("local".equals(upload.verifyPrevUpload) && checkForUploadedContentsFile != null) {
 
 			if (StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
 				// Tar contents file request have already uplaoded in previous run
@@ -191,30 +152,44 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 			// This contentsFileRecord objectId is send to the message queue in the cleanup
 			DmeSyncMessageDto message = new DmeSyncMessageDto();
 			message.setObjectId(contentsFileRecord.getId());
-			sender.send(message, "inbound.queue");
-			logger.info("get queue count" + sender.getQueueCount("inbound.queue"));
+			message.setDocConfigId(config.getId());
+			sender.send(message, queueNameResolver.resolve(config));
+			logger.info("get queue count" + sender.getQueueCount(queueNameResolver.resolve(config)));
 		}
 
 	}
 	
-	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile)
+	private void createContentsFile(File tarMappingFile, Path sourceDirPath, StatusInfo object , File tarExcludedFile, DocConfig config)
 			throws IOException, DmeSyncMappingException {
 
+		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+		
 		BufferedWriter tarContentsFileWriter = new BufferedWriter(new FileWriter(tarMappingFile));
 
-		File[] files = sourceDirPath.toFile().listFiles();
-		if (files != null && files.length > 0) {
+		
+		// Use the file lists already collected by TarTask when available, so the
+		// source directory does not have to be walked a second time.
+		List<File> includedTarFiles = TarTaskContext.getIncludedFiles();
+		List<File> excludedTarFiles = TarTaskContext.getExcludedFiles();
+		if (includedTarFiles == null) {
+			// Fallback: TarTask context is not available (e.g. standalone run). Walk the
+			// source directory as before
+			logger.info("Included files list is blank in ThreadLocal context, rebuilding from source directory");
+			File[] files = sourceDirPath.toFile().listFiles();
+		  if (files != null && files.length > 0) {
 			Arrays.sort(files, Comparator.comparing(File::lastModified));
 			// List<File> fileList = new ArrayList<>(Arrays.asList(files));
 
 			// Using Files.walkFileTree() to traverse the directory and subdirectories
-			 List<File> includedTarFiles = new ArrayList<>();
-		     List<File> excludedTarFiles = new ArrayList<>();
+			 includedTarFiles = new ArrayList<>();
+		     excludedTarFiles = new ArrayList<>();
+		     final List<File> includedRef = includedTarFiles;
+			 final List<File> excludedRef = excludedTarFiles;
 		     Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
 		            @Override
 		            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
 		            	// Don't visit this directory or its files    
-		                if(excludeFolder != null && !excludeFolder.isEmpty() && excludeFolder.contains(dir.getFileName().toString())) {
+		                if(preRule.tarExcludeFolder != null && !preRule.tarExcludeFolder.isEmpty() && preRule.tarExcludeFolder.contains(dir.getFileName().toString())) {
                   	      logger.info("{} is excluded for tar", dir.getFileName().toString());
                   	     // excludedTarFiles.add(dir.toFile());
                   	    return FileVisitResult.SKIP_SUBTREE; 
@@ -232,49 +207,56 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	                                
 
 	                                if (Files.exists(resolved) && Files.isReadable(resolved)) {
-	                                    includedTarFiles.add(path.toFile());  // Valid symlink
+	                                	includedRef.add(path.toFile());  // Valid symlink
 	                                } else {
 	                                    logger.error("{} is not supported", path.toString());
-	                                	excludedTarFiles.add(path.toFile());  // Broken or unreadable symlink
+	                                    excludedRef.add(path.toFile());  // Broken or unreadable symlink
 	                                }
 	                            } catch (IOException e) {
                                     logger.error("{} is not supported", path.toString());
-	                            	excludedTarFiles.add(path.toFile()); // Couldn't resolve symlink
+                                    excludedRef.add(path.toFile()); // Couldn't resolve symlink
 	                            }
 	                        } else if (Files.isReadable(path)) {
-	                            includedTarFiles.add(path.toFile()); // Regular readable file
+	                        	includedRef.add(path.toFile()); // Regular readable file
 	                        } else {
                                 logger.error("{} is not readable", path.toString());
-	                        	excludedTarFiles.add(path.toFile()); // Not readable
+                                excludedRef.add(path.toFile()); // Not readable
 	                        }
 
 	                    } catch (Exception e) {
-	                    	excludedTarFiles.add(path.toFile()); // Any error accessing file
+	                    	excludedRef.add(path.toFile()); // Any error accessing file
 	                    }
 		                return FileVisitResult.CONTINUE;
 		            }
 		        });
-		    
-		     
+		  }
+		}
+		try {
 		    if(!includedTarFiles.isEmpty()) {
 			boolean contentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(tarContentsFileWriter,
-					object.getOriginalFilePath(), includedTarFiles);
+					object.getOriginalFilePath(), true , includedTarFiles);
 			if (contentsFileCheck) {
-				sendContentsFileRequestToJms(tarMappingFile, object);
+				sendContentsFileRequestToJms(tarMappingFile, object, config);
 			}
 		    }
 			if(tarExcludedFile!=null && !excludedTarFiles.isEmpty()) {
 				BufferedWriter excludedFilesContentsFileWriter = new BufferedWriter(new FileWriter(tarExcludedFile));
 				boolean excludedContentsFileCheck = TarContentsFileUtil.writeToTarContentsFile(excludedFilesContentsFileWriter,
-						object.getOriginalFilePath(), excludedTarFiles);
+						object.getOriginalFilePath(), false , excludedTarFiles);
 
 				if (excludedContentsFileCheck) {
-					sendContentsFileRequestToJms(tarExcludedFile, object);
+					sendContentsFileRequestToJms(tarExcludedFile, object, config);
 				}
 			}
-
+		} finally {
+			try {
+ 				tarContentsFileWriter.close();
+ 			} finally {
+ 				TarTaskContext.clear();
+ 			}
 		}
 	}
+	
 
 	private StatusInfo insertNewRowForContentsFile(File tarMappingFile, StatusInfo object) {
 		StatusInfo statusInfo = new StatusInfo();

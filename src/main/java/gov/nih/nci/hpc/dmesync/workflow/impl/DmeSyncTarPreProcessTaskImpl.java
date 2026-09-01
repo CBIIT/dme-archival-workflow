@@ -9,11 +9,11 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.apache.commons.io.FilenameUtils;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -27,42 +27,6 @@ import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
  */
 @Component
 public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
-
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.compress:false}")
-	private boolean compress;
-
-	@Value("${dmesync.source.base.dir}")
-	private String syncBaseDir;
-
-	@Value("${dmesync.work.base.dir}")
-	private String syncWorkDir;
-
-	@Value("${dmesync.file.tar:false}")
-	private boolean tarIndividualFiles;
-
-	@Value("${dmesync.multiple.tars.files.count:0}")
-	private Integer filesPerTar;
-
-	@Value("${dmesync.tar.filename.excel.exist:false}")
-	private boolean tarNameinExcelFile;
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.tar.contents.file:false}")
-	private boolean createTarContentsFile;
-
-	@Value("${dmesync.selective.scan:false}")
-	private boolean selectiveScan;
-
-	@Value("${dmesync.process.multiple.tars:false}")
-	private boolean processMultipleTars;
-	
-	@Value("${dmesync.multiple.tars.dir.folders:}")
-	private String multipleTarsFolders;
 
 	@PostConstruct
 	public boolean init() {
@@ -78,23 +42,28 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 	};
 
 	@Override
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncStorageException {
 
+		DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+		DocConfig.SourceRule sourceRule = config.getSourceRule();
+		DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
+		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+		
 		Path originalFilePath=Paths.get(object.getOriginalFilePath());
 		
-		if((processMultipleTars || createTarContentsFile)  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt")){
+		if((preRule.processMultipleTars || preRule.tarContentsFile)  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars and Tars processing
 			return object;	
-		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
+		}else if (sourceRule.selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
 			// Skipping this task for the selective scan files upload
 			return object;
 		}else {
 
 		// Task: update the tar file source name and source path in database for metadata processing
 		try {
-			Path baseDirPath = Paths.get(syncBaseDir).toRealPath();
-			Path workDirPath = Paths.get(syncWorkDir).toRealPath();
+			Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
+			Path workDirPath = Paths.get(sourceConfig.workBaseDir).toRealPath();
 			Path sourceDirPath = Paths.get(object.getOriginalFilePath());
 			Path relativePath = baseDirPath.relativize(sourceDirPath);
 			String tarWorkDir = workDirPath.toString() + File.separatorChar + relativePath.toString();
@@ -107,12 +76,12 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			/** This condition when dmesync.process.multiple.tars is true  only applies to multipleTarsFolders
 			 * because the processMultipleTarsTask will set the sourcefilename
 			 */
-			if(processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
+			if(preRule.processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , sourceDirLeafNode )) {
 				tarFileName = object.getSourceFileName();
 			}else {
 			
-			if (tarNameinExcelFile) {
-				threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
+			if (preRule.tarFilenameExcelExist) {
+				threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Path"));
 				String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
 				tarFileName = getAttrValueWithKey(path, "tar_name");
 			} else {
@@ -124,7 +93,7 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 
 			logger.info("[{}] Updating source file name {} and source file path  {}", super.getTaskName(), tarFileName , tarFile );
 
-			if (compress) {
+			if (pre.compressTar) {
 				tarFileName = tarFileName + ".gz";
 
 			}

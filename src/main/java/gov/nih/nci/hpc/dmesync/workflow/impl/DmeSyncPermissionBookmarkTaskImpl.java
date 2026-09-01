@@ -21,6 +21,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -39,8 +40,6 @@ import gov.nih.nci.hpc.dto.error.HpcExceptionDTO;
 @Component
 public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
-  @Value("${hpc.server.url}")
-  private String serverUrl;
 
   @Value("${auth.token}")
   private String authToken;
@@ -55,7 +54,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
   }
   
   @Override
-  public StatusInfo process(StatusInfo object) {
+  public StatusInfo process(StatusInfo object, DocConfig config) {
 
     try {
       //Get all permission-bookmark entries that are not yet created
@@ -66,7 +65,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
         if (object.getFullDestinationPath().contains(entry.getPath())) {
           //Check user permission on path
           HpcUserPermissionDTO permission =
-              getPermissionForUser(entry.getPath(), entry.getUserId());
+              getPermissionForUser(entry.getPath(), entry.getUserId(), config);
           if (permission == null
               || !permission.getPermission().equals(HpcPermission.valueOf(entry.getPermission()))) {
             //Add the user permission specified if permission is not there
@@ -77,7 +76,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
             dto.getUserPermissions().add(userPermission);
 
             //Call DME API to add permission
-            if (!updatePermission(entry.getPath(), dto)) {
+            if (!updatePermission(entry.getPath(), dto, config)) {
               entry.setCreated("N");
               entry.setError("Error setting permission");
             } else {
@@ -92,7 +91,7 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
             String bookmarkName = bookmarkPath.getFileName().toString();
 
             //Add bookmark and ignore error if already exists.
-            createBookmark(entry.getPath(), bookmarkName, entry.getUserId());
+            createBookmark(entry.getPath(), bookmarkName, entry.getUserId(), config);
           }
 
           //Save entry
@@ -107,14 +106,14 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
     return object;
   }
 
-  private boolean createBookmark(String path, String bookmarkName, String userId) {
+  private boolean createBookmark(String path, String bookmarkName, String userId, DocConfig config) {
     //Call bookmark API
     HpcBookmarkRequestDTO dto = new HpcBookmarkRequestDTO();
     dto.setPath(path);
     dto.setUserId(userId);
 
     final URI bookmarkUrl =
-        UriComponentsBuilder.fromHttpUrl(serverUrl)
+        UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
             .path("/bookmark/{bookmark-name}")
             .buildAndExpand(bookmarkName)
             .encode()
@@ -151,11 +150,11 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
     return true;
   }
 
-  private HpcUserPermissionDTO getPermissionForUser(String path, String userId) {
+  private HpcUserPermissionDTO getPermissionForUser(String path, String userId, DocConfig config) {
 
     //Call acl API
     final URI permissionUrl =
-        UriComponentsBuilder.fromHttpUrl(serverUrl)
+        UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
             .path("/collection/{dme-archive-path}/acl/user/{user-id}")
             .buildAndExpand(path, userId)
             .encode()
@@ -188,11 +187,11 @@ public class DmeSyncPermissionBookmarkTaskImpl extends AbstractDmeSyncTask imple
     return response.getBody();
   }
 
-  private boolean updatePermission(String path, HpcEntityPermissionsDTO dto) {
+  private boolean updatePermission(String path, HpcEntityPermissionsDTO dto, DocConfig config) {
 
     //Call acl API
     final URI permissionUrl =
-        UriComponentsBuilder.fromHttpUrl(serverUrl)
+        UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
             .path("/collection/{dme-archive-path}/acl")
             .buildAndExpand(path)
             .encode()

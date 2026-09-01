@@ -2,7 +2,10 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.nio.file.Paths;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -29,8 +32,9 @@ public class PCLRetroPathMetadataProcessorImpl extends AbstractPathMetadataProce
   public static final int FOLDER_FIELD_STAFF = 5;
 	
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     logger.info("[PathMetadataTask] PCL getArchivePath called");
 
     //extract the detail from the Path
@@ -39,7 +43,7 @@ public class PCLRetroPathMetadataProcessorImpl extends AbstractPathMetadataProce
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
  
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/DataOwner_"
             + getPiCollectionName(fileName)
             + "/Project_"
@@ -59,8 +63,9 @@ public class PCLRetroPathMetadataProcessorImpl extends AbstractPathMetadataProce
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	  SourceConfig sourceConfig = config.getSourceConfig();
 	  String folderName = Paths.get(object.getOriginalFilePath()).toFile().getName();
 	  String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 	  String[] piName = getFieldFromFolderName(folderName, FOLDER_FIELD_PI).split("-");
@@ -87,7 +92,7 @@ public class PCLRetroPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	  //key = data_generator_affiliation, value = CCR PCL
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       String piCollectionName = getPiCollectionName(folderName);
-      pathEntriesPI.setPath(destinationBaseDir + "/DataOwner_" + piCollectionName);
+      pathEntriesPI.setPath(sourceConfig.destinationBaseDir + "/DataOwner_" + piCollectionName);
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("collection_type", "DataOwner_Lab"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", piLastName + ", " + piFirstName));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_generator", "Thorkell Andresson"));
@@ -99,7 +104,7 @@ public class PCLRetroPathMetadataProcessorImpl extends AbstractPathMetadataProce
       //Add path metadata entries for "Project_XXX" collection
       HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
       String projectCollectionName = getProjectCollectionName(folderName);
-      pathEntriesProject.setPath(destinationBaseDir + "/DataOwner_" + piCollectionName + "/Project_" + projectCollectionName);
+      pathEntriesProject.setPath(sourceConfig.destinationBaseDir + "/DataOwner_" + piCollectionName + "/Project_" + projectCollectionName);
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("collection_type", "Project"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
       pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility", "Protein Characterization Laboratory"));

@@ -21,6 +21,14 @@ public interface DmeSyncWorkflowRunLogService {
 	public WorkflowRunInfo findFirstByRunIdAndUserId(String runId, String doc);
 
 	/**
+	 * findFirstByDocIdOrderByRunStartTimestampDesc : retrive the latest workflow run
+	 * 
+	 * @param docId	doc id
+	 * @return WorkflowRunInfo information
+	 */
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId);
+	
+	/**
 	 * update Only the Heartbeat : *
 	 * 
 	 * @param Id WorkflowRunInfo_id
@@ -48,4 +56,11 @@ public interface DmeSyncWorkflowRunLogService {
 	 * @return updated WorkflowRunInfo information
 	 */
 	public WorkflowRunInfo saveWorkflowRunInfo(WorkflowRunInfo WorkflowRunInfo);
+	
+	/**
+	 * Reset workflow Run Info if anything was running before application shutdown
+	 * 
+	 */
+	public void resetWorkflowRunInfo();
+	
 }

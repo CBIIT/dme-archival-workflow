@@ -5,6 +5,7 @@ import java.io.Serializable;
 public class DmeSyncMessageDto implements Serializable {
 
   private Long objectId;
+  private Long configId;
 
   public DmeSyncMessageDto() {}
 
@@ -19,9 +20,19 @@ public class DmeSyncMessageDto implements Serializable {
   public void setObjectId(Long objectId) {
     this.objectId = objectId;
   }
-
+  
+  public Long getDocConfigId() {
+	return configId;
+  }
+	
+  public void setDocConfigId(Long configId) {
+	this.configId = configId;
+  }
+  
   @Override
   public String toString() {
-    return "SyncMessage [objectId=" + objectId.toString() + "]";
+    return "SyncMessage [objectId=" + String.valueOf(objectId) + ", configId=" + String.valueOf(configId) + "]";
   }
+
+
 }

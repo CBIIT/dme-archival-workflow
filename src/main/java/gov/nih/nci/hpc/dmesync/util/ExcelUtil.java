@@ -43,6 +43,8 @@ import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -54,9 +56,9 @@ public class ExcelUtil {
   private ExcelUtil() {}
 
   public static String export(
-      String runId, List<StatusInfo> statusInfo, List<MetadataInfo> metadataInfo, String path) {
+      String runId, List<StatusInfo> statusInfo, List<MetadataInfo> metadataInfo, String path, DocConfig config) {
 
-    final String fileName = path + File.separatorChar + runId + ".xlsx";
+    final String fileName = path + File.separatorChar + config.getWorkflowId() + "_" + runId + ".xlsx";
     
     Path safeDirectory = Paths.get(path).getParent().toAbsolutePath().normalize();
     Path filePath = Paths.get(fileName).toAbsolutePath().normalize();

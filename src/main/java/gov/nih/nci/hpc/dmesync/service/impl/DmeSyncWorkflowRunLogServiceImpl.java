@@ -14,6 +14,8 @@ import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,7 +31,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 	@Autowired
 	protected WorkflowRunInfoDao<WorkflowRunInfo> workflowRunInfoDao;
-
+	
 	@Autowired
 	protected StatusInfoDao<StatusInfo> statusInfoDao;
 
@@ -43,6 +45,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 		return workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
 	}
 
+	@Override
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId) {
+		return workflowRunInfoDao.findFirstByDocIdOrderByRunStartTimestampDesc(docId);
+	}
+	
 	@Override
 	public void logWorkflowRunStartHeartbeat(Long id) {
 	}
@@ -64,8 +71,18 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, doc);
 
+			long completedRows = runIdRows.stream()
+										.filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
+										.count();
+			
 			long totalSize = runIdRows.stream().filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
 					.map(StatusInfo::getFilesize).filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+			
+			double completionPercentage = runIdRows.isEmpty() ? 0.0
+										: BigDecimal.valueOf(completedRows)
+ 										.multiply(BigDecimal.valueOf(100))
+ 										.divide(BigDecimal.valueOf(runIdRows.size()), 2, RoundingMode.HALF_UP)
+ 										.doubleValue();;
 
 			Long durationMinutes = mins;
 			workflowRunInfo.setRunLastHeartbeatTimestamp(Timestamp.from(Instant.now()));
@@ -74,11 +91,17 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setStatus(finalStatus);
 			workflowRunInfo.setErrorMessage(errorMessage);
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
+			workflowRunInfo.setCompletionPercentage(completionPercentage);
 			workflowRunInfoDao.save(workflowRunInfo);
 			logger.info("Completed updating the Workflow run Information for workflow " + workflowRunInfo.getRunId());
 		}else {
 			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
 		}
+	}
+	
+	@Override
+	public void resetWorkflowRunInfo() {
+		workflowRunInfoDao.resetWorkflowRunInfo();
 	}
 
 }

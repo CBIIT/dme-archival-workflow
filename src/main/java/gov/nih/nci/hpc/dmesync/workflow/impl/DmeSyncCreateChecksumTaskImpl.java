@@ -6,6 +6,8 @@ import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -26,7 +28,7 @@ public class DmeSyncCreateChecksumTaskImpl extends AbstractDmeSyncTask implement
   }
   
   @Override
-  public StatusInfo process(StatusInfo object)
+  public StatusInfo process(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
  
     //Create checksum and record in db for verification task.

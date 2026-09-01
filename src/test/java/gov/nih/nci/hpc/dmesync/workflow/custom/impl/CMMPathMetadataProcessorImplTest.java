@@ -2,21 +2,19 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.runner.RunWith;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
-
 import gov.nih.nci.hpc.dmesync.DmeSyncWorkflowServiceFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
@@ -27,21 +25,30 @@ import gov.nih.nci.hpc.domain.metadata.HpcMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
 
 
-@RunWith(SpringRunner.class)
-@SpringBootTest({"hpc.server.url=https://fr-s-hpcdm-gp-d.ncifcrf.gov:7738/hpc-server", "auth.token=xxxx"})
 public class CMMPathMetadataProcessorImplTest {
 
 
 //The service under test.
-@Autowired
 CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;	
 
+private DocConfig config;
+
+DmeSyncWorkflowServiceFactory dmeSyncWorkflowServiceFactory;
+@Mock
+DmeSyncWorkflowService dmeSyncWorkflowService;
 
 
- @Before
+ @BeforeEach
  public void init() {
      //Create the statusInfo object with the test Path
-	 cmmPathMetadataProcessorImpl.destinationBaseDir = "/CCR_CMM_Archive";
+	 DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/CCR_CMM_Archive", 1);
+     config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, null, null, null, null, null);
+     cmmPathMetadataProcessorImpl = new CMMPathMetadataProcessorImpl();
+     // Use a mock for the service factory and service
+     dmeSyncWorkflowServiceFactory = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
+     dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowService.class);
+     cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = dmeSyncWorkflowServiceFactory;
+     Mockito.when(dmeSyncWorkflowServiceFactory.getService(any())).thenReturn(dmeSyncWorkflowService);
  }
  
  private StatusInfo setupStatusInfo(String sourcePath) {
@@ -64,7 +71,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  //Determine the expected and actual archive path
 	  //data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar 
 	  String expectedArchivePath = "/CCR_CMM_Archive/PI_0022/Project_HIV_Trimer/Variant_Trimer02/Negative_Stain/Raw_Data/Trimer02_January_10_2018.tar";
-	  String computedArchivePath = cmmPathMetadataProcessorImpl.getArchivePath(statusInfoNS);
+	  String computedArchivePath = cmmPathMetadataProcessorImpl.getArchivePath(statusInfoNS, config);
 	  
 	  //Confirm they are same
 	  assertEquals(expectedArchivePath, computedArchivePath);
@@ -76,10 +83,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
   public void testGetMetadataJsonForNS() throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 	  
 	  StatusInfo statusInfoNS = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar");
-	  
-	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
-	  
+	    
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setDoc("cmm");
@@ -106,7 +110,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  //Execute the method to test
 	  
 	  HpcDataObjectRegistrationRequestDTO requestDto = 
-		cmmPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS);
+		cmmPathMetadataProcessorImpl.getMetaDataJson(statusInfoNS, config);
 	  
 	  //validate results
 	  
@@ -168,7 +172,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  //Determine the expected and actual archive path
 	  //data/CMM_CryoEM/CMM_Data/0022/HIV_Trimer/Trimer02/Negative_Stain/T20/Trimer02_January_10_2018.tar 
 	  String expectedArchivePath = "/CCR_CMM_Archive/PI_0010/Project_Project-B/Variant_Latitude_runs/CryoEM/20180310_0568/image_file.tif";
-	  String computedArchivePath = cmmPathMetadataProcessorImpl.getArchivePath(statusInfoCryoEM);
+	  String computedArchivePath = cmmPathMetadataProcessorImpl.getArchivePath(statusInfoCryoEM, config);
 	  
 	  //Confirm they are same
 	  assertEquals(expectedArchivePath, computedArchivePath);
@@ -181,9 +185,6 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  
 	  StatusInfo statusInfoCryoEM = setupStatusInfo("/data/CMM_CryoEM/CMM_Data/0010/Project-B/Latitude_runs/20180310_0568/DataImages/Stack/image_file.tif");
 		
-	  cmmPathMetadataProcessorImpl.dmeSyncWorkflowService = Mockito.mock(DmeSyncWorkflowServiceFactory.class);
-	  when(cmmPathMetadataProcessorImpl.dmeSyncWorkflowService.getService("local")).thenReturn(Mockito.mock(DmeSyncWorkflowService.class));
-	  
 	  List<MetadataMapping> piNameMetaMappings = new ArrayList<>();
 	  MetadataMapping nameMapping = new MetadataMapping();
 	  nameMapping.setDoc("cmm");
@@ -210,7 +211,7 @@ CMMPathMetadataProcessorImpl cmmPathMetadataProcessorImpl;
 	  //Execute the method to test
 	  
 	  HpcDataObjectRegistrationRequestDTO requestDto = 
-		cmmPathMetadataProcessorImpl.getMetaDataJson(statusInfoCryoEM);
+		cmmPathMetadataProcessorImpl.getMetaDataJson(statusInfoCryoEM, config);
 	  
 	  //validate results
 	  
