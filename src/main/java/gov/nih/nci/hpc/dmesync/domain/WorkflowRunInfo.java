@@ -55,8 +55,11 @@ public class WorkflowRunInfo {
 	@Column(name = "DME_SERVER_ID")
 	private String dmeServerId;
 	
-	 @Column(name = "CRON_EXPRESSION")
-	  private String cronExpression;
+	@Column(name = "CRON_EXPRESSION")
+	private String cronExpression;
+	
+	@Column(name = "COMPLETION_PERCENTAGE")
+	private Double completionPercentage;
 
 	public Long getId() {
 		return id;
@@ -184,6 +187,14 @@ public class WorkflowRunInfo {
 
 	public void setCronExpression(String cronExpression) {
 		this.cronExpression = cronExpression;
+	}
+	
+	public Double getCompletionPercentage() {
+		return completionPercentage;
+	}
+
+	public void setCompletionPercentage(Double completionPercentage) {
+		this.completionPercentage = completionPercentage;
 	}
 	
 	
