@@ -50,7 +50,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "project");
 
 		// load the doc metadata  model from the DME 
-		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir);
+		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
 
 		String metadataFileKey = getMetadataFileKey(object);
 

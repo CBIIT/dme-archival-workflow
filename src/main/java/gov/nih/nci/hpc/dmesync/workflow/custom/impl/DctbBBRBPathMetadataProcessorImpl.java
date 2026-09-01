@@ -45,7 +45,7 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "project");
 		
-		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir);
+		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
 		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String caseId=getCaseId(object);

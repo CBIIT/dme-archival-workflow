@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataValidationRule;
@@ -44,9 +45,6 @@ public class DmeMetadataBuilder {
 
 	protected Logger logger = LoggerFactory.getLogger(this.getClass());
 	
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 
@@ -109,11 +107,11 @@ public class DmeMetadataBuilder {
 	 * @throws DmeSyncWorkflowException
 	 */
 	@Cacheable(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir", sync = true)
-	public List<HpcMetadataValidationRule> getDMEMetadataModel(String destinationBaseDir)
+	public List<HpcMetadataValidationRule> getDMEMetadataModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 
 		logger.info("Retrieving metadata model from DME for path {}", destinationBaseDir);
-		return fetchMetadataDMEModel(destinationBaseDir);
+		return fetchMetadataDMEModel(destinationBaseDir, config);
 	}
 
 	/**
@@ -123,11 +121,11 @@ public class DmeMetadataBuilder {
 	 * @throws DmeSyncWorkflowException
 	 */
 	@CachePut(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir")
-	public List<HpcMetadataValidationRule> updateDMEMetadataModel(String destinationBaseDir)
+	public List<HpcMetadataValidationRule> updateDMEMetadataModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 
 		logger.info("Updating metadata model from DME for path {}", destinationBaseDir);
-		return fetchMetadataDMEModel(destinationBaseDir);
+		return fetchMetadataDMEModel(destinationBaseDir, config);
 	}
 	
 	
@@ -143,10 +141,10 @@ public class DmeMetadataBuilder {
 	 * @return List of HpcMetadataValidationRules
 	 * @throws DmeSyncWorkflowException
 	 */
-	private List<HpcMetadataValidationRule> fetchMetadataDMEModel(String destinationBaseDir)
+	private List<HpcMetadataValidationRule> fetchMetadataDMEModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 		try {
-			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 					.path("/dm/model/".concat(destinationBaseDir))
 					.build()
 					.encode()
