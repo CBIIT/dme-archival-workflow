@@ -18,13 +18,23 @@ on:
         description: "Build workflow run number that produced dme-archival-workflow-artifacts"
         required: true
         type: string
-      fsdmel_wflow05p_ncifcrf_gov:
-        description: "Deploy to fsdmel-wflow05p.ncifcrf.gov"
+      fsdmel_wflow02p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow02p.ncifcrf.gov"
+        required: false
+        type: boolean
+        default: false
+      fsdmel_wflow03p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow03p.ncifcrf.gov"
         required: false
         type: boolean
         default: false
       fsdmel_wflow04p_ncifcrf_gov:
         description: "Deploy to fsdmel-wflow04p.ncifcrf.gov"
+        required: false
+        type: boolean
+        default: false
+      fsdmel_wflow05p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow05p.ncifcrf.gov"
         required: false
         type: boolean
         default: false
@@ -63,12 +73,18 @@ jobs:
             separator=','
           }
 
-          if [ "${{ inputs.fsdmel_wflow05p_ncifcrf_gov }}" = "true" ]; then
-            add_server "fsdmel-wflow05p.ncifcrf.gov" "fsdmel-wflow05p.ncifcrf.gov"
+          if [ "${{ inputs.fsdmel_wflow02p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow02p.ncifcrf.gov" "fsdmel-wflow02p.ncifcrf.gov"
           fi
-
+          if [ "${{ inputs.fsdmel_wflow03p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow03p.ncifcrf.gov" "fsdmel-wflow03p.ncifcrf.gov"
+          fi
           if [ "${{ inputs.fsdmel_wflow04p_ncifcrf_gov }}" = "true" ]; then
             add_server "fsdmel-wflow04p.ncifcrf.gov" "fsdmel-wflow04p.ncifcrf.gov"
+          fi
+
+          if [ "${{ inputs.fsdmel_wflow05p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow05p.ncifcrf.gov" "fsdmel-wflow05p.ncifcrf.gov"
           fi
 
           if [ "${{ inputs.ncias_p2140_v_nci_nih_gov }}" = "true" ]; then
