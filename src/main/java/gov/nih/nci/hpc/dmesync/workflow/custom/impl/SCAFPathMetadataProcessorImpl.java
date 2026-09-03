@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
+import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -77,6 +78,16 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
+		String path = getProjectPathName(object);
+		String sampleCollectionType = getSampleCollectionType(object);
+		String tarFileName= getTarFileName(object, sampleCollectionType , path);
+		// set the sourceFileName for fastq and cellranger tars to create a wrapped folder for tar.
+		if (object.getOriginalFilePath().endsWith(".tar")) {
+			String tarFile = object.getSourceFilePath() + tarFileName;
+			tarFile = Paths.get(tarFile).normalize().toString();
+			object.setSourceFileName(tarFileName);
+			object.setSourceFilePath(tarFile);
+		}
 		//Map<String, String> reportMetadata = resolveReportMetadata(object);
 		if (StringUtils.equalsIgnoreCase(getFileType(object), "tar")
 				|| object.getOriginalFilePath().toLowerCase().matches(".*metrics.*\\.xlsx$")) {
@@ -84,10 +95,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 			
 			
-		    String path = getProjectPathName(object);
+		  
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
-			String sampleCollectionType = getSampleCollectionType(object);
+			
 			if (StringUtils.isBlank(sampleCollectionType)) {
 				archivePath = destinationBaseDir + "/" + getPiCollectionName(object, path) + "_lab" + "/"
 						+ getProjectCollectionName(object, path) + "/Analysis" + "/" + fileName;
@@ -122,10 +133,12 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		String sampleCollectionType = getSampleCollectionType(object);
+		
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 
 		// Add path metadata entries for "PI_XXX" collection
 		String metadataFileKey = getProjectPathName(object);
+		String tarFileName = getTarFileName(object, sampleCollectionType , metadataFileKey);
 		String piCollectionName = getPiCollectionName(object, metadataFileKey);
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
@@ -256,8 +269,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 
 		}
-
-		// Set it to dataObjectRegistrationRequestDTO
+		
+		//it to dataObjectRegistrationRequestDTO
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		dataObjectRegistrationRequestDTO.setCreateParentCollections(true);
 		dataObjectRegistrationRequestDTO.setGenerateUploadRequestURL(true);
@@ -279,8 +292,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 			logger.info("sample key to get the platform name {} ", samplekey);
 
+			
 			dataObjectRegistrationRequestDTO.getMetadataEntries()
-					.add(createPathEntry("object_name", getTarFileName(object, sampleCollectionType , metadataFileKey)));
+					.add(createPathEntry("object_name", tarFileName));
 			String platformNameFromSpreadsheet= getAttrValueWithKey(metadataFileKey, "platform_name");
 			threadLocalMap.set(loadCsvMetadataFile(sampleFile, "SCAF_Number"));
 			if(platformNameFromSpreadsheet == null) {            
@@ -300,6 +314,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
 
 		}
+		
+
+				// Set 
 		logger.info("Metadata custom DmeSyncPathMetadataProcessor getMetaDataJson for object {}", object.getId());
 		return dataObjectRegistrationRequestDTO;
 
@@ -399,10 +416,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		if (StringUtils.equals(FASTQ, sampleCollectionType)) {
 			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
-					+ getFileType(object);
+					+ getFileTypeOriginal(object);
 		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, sampleCollectionType))
 			// TODO: Add Chemistry function
-			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object , metadataKey) + "." + getFileType(object);
+			tarFileName = scafNumber + "_PA_" + getChemistryforPAO(object , metadataKey) + "." + getFileTypeOriginal(object);
 		logger.info("tarFileName: {}", tarFileName);
 		return tarFileName;
 	}
@@ -410,7 +427,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	private String getSCAFNumberforFileName(StatusInfo object) throws DmeSyncMappingException {
 
 		// filename without the extension is the SCAF Number
-		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+		String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
 		String sampleName = fileName.replaceAll("\\.tar$", "");
 
 		// Remove known trailing chemistry suffixes from the filename stem.
@@ -434,7 +451,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
 
-	    String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
+	    String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
 
 	    String sampleName = fileName.replaceFirst("\\.tar(\\.gz)?$", "");
 
@@ -557,6 +574,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getFileType(StatusInfo object) {
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		return fileName.substring(fileName.indexOf('.') + 1);
+	}
+	
+	private String getFileTypeOriginal(StatusInfo object) {
+		String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
 		return fileName.substring(fileName.indexOf('.') + 1);
 	}
 

@@ -114,6 +114,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 	
 	@Value("${dmesync.process.multiple.tars:false}")
 	private boolean processMultipleTars;
+	
+	@Value("${dmesync.file.nested.tar:false}")
+	private boolean tarNestedIndividualFiles;
 
 	@PostConstruct
 	public boolean init() {
@@ -155,8 +158,8 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		}else if (createTarContentsFile && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt") ){
 		   //// Skipping this task for the contents file 
 			return object;	
-		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
-			// Skipping this task for the selective scan files
+		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath , tarNestedIndividualFiles)){
+			// Skipping this task for the selective scan files when tarNestedIndividualFiles property is not set
 			return object;
 		}else if( metadataTask.isMetadataAvailable(object)) {
 		// Task: Create tar file in work directory for processing
@@ -185,6 +188,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				object=createTarForFiles(object, sourceDirPath, tarWorkDirPath.toString(), excludeFolders , hpcDataObjectRegistrationRequestDetails);
 				
 			} else {
+				
 				long folderSize=TarUtil.getDirectorySize(originalFilePath,excludeFolders);
 			    // check to validate is the folder to tar is less than maxFilesize
 				if (folderSize > maxAllowedFileSize) {
@@ -385,7 +389,71 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 		
 	return object;
 }
+	
+	private StatusInfo createNestedTarFromExistingTar(
+		    StatusInfo object,
+		    Path tarWorkDirPath,
+		    HpcDataObjectRegistrationRequestDTO hpcDataObjectRegistrationRequestDetails) throws Exception {
 
+		    String folderName = object.getSourceFileName();
+		    if (StringUtils.isBlank(folderName)) {
+		        throw new DmeSyncStorageException("Source file name is empty. Cannot create nested tar structure.");
+		    }
+
+		    String innerTarName = object.getOrginalFileName();
+		    if (StringUtils.isBlank(innerTarName)) {
+		        throw new DmeSyncStorageException("Original file name is empty. Cannot copy tar into nested folder.");
+		    }
+
+		    long maxAllowedFileSize = Long.parseLong(maxRecommendedFileSize);
+		    
+		    Path stagingDir = tarWorkDirPath.resolve(folderName).normalize();
+		    synchronized (this) {
+		        Files.createDirectories(stagingDir);
+		        logger.info("[{}] Creating nested tar staging directory {}", super.getTaskName(), stagingDir);
+		    }
+
+		    Path originalPath = Paths.get(object.getOriginalFilePath());
+
+		    if (!Files.exists(originalPath)) {
+		        throw new DmeSyncStorageException("Original tar file does not exist: " + originalPath);
+		    }
+
+		    Files.copy(originalPath, stagingDir, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		    logger.info("[{}] Copied original tar from {} to {}", super.getTaskName(), originalPath, stagingDir);
+
+		    String finalTarName = compress ? folderName + ".tar.gz" : folderName + ".tar";
+		    Path finalTarPath = tarWorkDirPath.resolve(finalTarName).normalize();
+
+		    if (!dryRun) {
+		        File nestedDirectory = stagingDir.toFile();
+		        if (compress) {
+		            TarUtil.targz(finalTarPath.toString(), null, ignoreBrokenLinksInTar, nestedDirectory);
+		        } else {
+		            TarUtil.tar(finalTarPath.toString(), null, ignoreBrokenLinksInTar, nestedDirectory);
+		        }
+		    }
+
+		    File createdTarFile = finalTarPath.toFile();
+		    long createdTarFileSize = createdTarFile.length();
+
+		    if (createdTarFileSize > maxAllowedFileSize) {
+		        logger.error("[{}] error: Nested tar size {} exceeds recommended file size of {}",
+		                super.getTaskName(), createdTarFileSize, maxAllowedFileSize);
+		        TarUtil.deleteTarAndParentsIfEmpty(finalTarPath.toString(), syncWorkDir, doc);
+		        throw new DmeSyncStorageException("Nested tar exceeds the permitted size of "
+		                + ExcelUtil.humanReadableByteCount(maxAllowedFileSize, true));
+		    }
+
+		    object.setFilesize(createdTarFileSize);
+		    object.setSourceFileName(finalTarName);
+		    object.setSourceFilePath(finalTarPath.toString());
+		    object.setTarEndTimestamp(new Date());
+		    object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+		    object.setDataObjectRegistrationRequestDTO(hpcDataObjectRegistrationRequestDetails);
+
+		    return object;
+		}
 	public Map<String, Map<String, String>> loadMetadataFile(String metadataFile, String key)
 			throws DmeSyncMappingException {
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);

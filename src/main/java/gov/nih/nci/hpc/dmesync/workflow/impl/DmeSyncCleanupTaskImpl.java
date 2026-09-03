@@ -56,6 +56,10 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
   
   @Value("${dmesync.selective.scan:false}")
   private boolean selectiveScan;
+  
+  @Value("${dmesync.file.nested.tar:false}")
+  private boolean tarNestedIndividualFiles;
+  
   @Autowired
   private DmeSyncProducer sender;
   
@@ -78,7 +82,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
       // Remove the tar file from the work directory. If no other files exists, we can remove the parent directories.
       try {
 			if (cleanup) {				
-				if (selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()))) {
+				if (selectiveScan && TarUtil.isSelectiveScanFileUpload(Paths.get(object.getOriginalFilePath()), tarNestedIndividualFiles)) {
 					// Skipping this task for the selective scan files
 					return object;
 				} else {

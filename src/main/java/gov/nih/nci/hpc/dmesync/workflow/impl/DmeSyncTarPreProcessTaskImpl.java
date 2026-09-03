@@ -1,6 +1,7 @@
 package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -70,6 +71,9 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 	@Value("${dmesync.tar.exclude.folder:}")
 	private String excludeFolder;
 
+	@Value("${dmesync.file.nested.tar:false}")
+	private boolean tarNestedIndividualFiles;
+	
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("TarPreProcessTask");
@@ -92,8 +96,8 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 		if((processMultipleTars || createTarContentsFile)  && object.getSourceFileName()!=null && StringUtils.contains(object.getSourceFileName(),"ContentsFile.txt")){
 			// Skipping this task for the contents file for multiple Tars and Tars processing
 			return object;	
-		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath)){
-			// Skipping this task for the selective scan files upload
+		}else if (selectiveScan && TarUtil.isSelectiveScanFileUpload(originalFilePath , tarNestedIndividualFiles)){
+			// Skipping this task for the selective scan files upload and tarNestedIndividualFiles is not enabled
 			return object;
 		}else {
 
@@ -117,13 +121,24 @@ public class DmeSyncTarPreProcessTaskImpl extends AbstractDmeSyncTask implements
 			 */
 			if(processMultipleTars && TarUtil.matchesAnyMultipleTarFolder( multipleTarsFolders , sourceDirLeafNode )) {
 				tarFileName = object.getSourceFileName();
-			}else {
+				
+			}
+			else {
 			
 			if (tarNameinExcelFile) {
 				threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
 				String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath() + "/");
 				tarFileName = getAttrValueWithKey(path, "tar_name");
-			} else {
+			} else  if ( Files.isRegularFile(originalFilePath) && originalFilePath.toString().endsWith(".tar")) {
+				/** This condition when dmesync.file.nested.tar is true  only applies to users hw
+				 * because the processMultipleTarsTask will set the sourcefilename
+				 */
+				tarFileName = "";
+
+				tarWorkDir = Paths.get(tarWorkDir)
+				        .getParent()
+				        .toString();
+			}else {
 				tarFileName = object.getOrginalFileName() + ".tar";
 			}
 			}

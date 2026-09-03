@@ -430,8 +430,12 @@ public class TarUtil {
 	}
   }
   
-  public static boolean isSelectiveScanFileUpload(Path originalFilePath) {
+  public static boolean isSelectiveScanFileUpload(Path originalFilePath , boolean tarNestedIndividualFiles) {
+	  if(!tarNestedIndividualFiles)
 	  return Files.isRegularFile(originalFilePath);
+	  else {
+		  return Files.isRegularFile(originalFilePath) && !originalFilePath.toString().endsWith(".tar");
+	  }
 	  
   }
   
