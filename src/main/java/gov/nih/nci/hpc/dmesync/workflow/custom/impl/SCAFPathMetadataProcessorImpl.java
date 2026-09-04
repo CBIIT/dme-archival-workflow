@@ -82,8 +82,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String sampleCollectionType = getSampleCollectionType(object);
 		String tarFileName= getTarFileName(object, sampleCollectionType , path);
 		// set the sourceFileName for fastq and cellranger tars to create a wrapped folder for tar.
-		if (object.getOriginalFilePath().endsWith(".tar")) {
-			String tarFile = object.getSourceFilePath() + tarFileName;
+		if (object.getOriginalFilePath().endsWith(".tar") && !object.getSourceFilePath().endsWith(".tar")) {
+			String tarFile = object.getSourceFilePath() + File.separatorChar + tarFileName.replace(".tar", "") + File.separatorChar + tarFileName;
 			tarFile = Paths.get(tarFile).normalize().toString();
 			object.setSourceFileName(tarFileName);
 			object.setSourceFilePath(tarFile);
@@ -93,9 +93,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				|| object.getOriginalFilePath().toLowerCase().matches(".*metrics.*\\.xlsx$")) {
 
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
-			
-			
-		  
+		
 			String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 			String archivePath = null;
 			

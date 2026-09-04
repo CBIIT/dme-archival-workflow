@@ -202,7 +202,7 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 				String tarFileName = object.getSourceFileName();
 				// String tarFile = tarWorkDir + File.separatorChar + tarFileName;
 				File directory = new File(object.getOriginalFilePath());
-
+	
 				logger.info("[{}] Creating tar file in {}", super.getTaskName(), tarFile);
 
 
@@ -216,8 +216,34 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 						TarUtil.targz(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
 					}
 				} else {
+					if (selectiveScan &&   object.getOriginalFilePath().endsWith(".tar")) {
+						if (!dryRun) {
+							String outerTarFileName = object.getSourceFileName(); // SCAF4232_Product_1_FQ_223M7HyuLT1_GEX.tar
+							String folderName = FilenameUtils.removeExtension(outerTarFileName); // SCAF4232_Product_1_FQ_223M7HyuLT1_GEX
+
+							Path originalTarPath = Paths.get(object.getOriginalFilePath());
+							Path finalTarPath = Paths.get(object.getSourceFilePath());
+
+							// parent directory where both the folder and final tar should live
+							Path baseOutputDir = finalTarPath.getParent().getParent(); 
+							Path stagingDir = baseOutputDir.resolve(folderName);
+
+							Files.createDirectories(stagingDir);
+
+							Path stagedTarPath = stagingDir.resolve(originalTarPath.getFileName());
+							Files.copy(originalTarPath, stagedTarPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+							// create tar OUTSIDE stagingDir
+							Path correctedFinalTarPath = baseOutputDir.resolve(outerTarFileName);
+
+							TarUtil.tar(correctedFinalTarPath.toString(), null, ignoreBrokenLinksInTar, stagingDir.toFile());
+							tarFile =  correctedFinalTarPath.toString();
+							object.setSourceFilePath(tarFile);
+						}
+					}else {
 					if (!dryRun) {
 						TarUtil.tar(tarFile, excludeFolders, ignoreBrokenLinksInTar, directory);
+					}
 					}
 				}
 
