@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 
 /**
@@ -42,12 +43,12 @@ public interface DmeSyncWorkflowRunLogService {
 	 * status, error message, and uploaded size.
 	 * 
 	 * @param runId        workflow run identifier
-	 * @param doc          document name or user identifier associated with the run
+	 * @param config       doc configuration associated with the run
 	 * @param finalStatus  final status of the workflow run
 	 * @param errorMessage error message associated with the workflow run, if any
 	 */
 
-	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage);
+	public void updateWorkflowRunEnd(String runId, DocConfig config, String finalStatus, String errorMessage);
 
 	/**
 	 * Save workflow Run Info information*

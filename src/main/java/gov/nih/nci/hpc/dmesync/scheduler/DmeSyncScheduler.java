@@ -240,7 +240,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir,
   			  emailBody, config);
         try {
-            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
           } catch (IllegalArgumentException e) {
             logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, config.getDocName(), e);
           }
@@ -323,7 +323,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     	  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir,
     			  emailBody, config);
           try {
-              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
             } catch (IllegalArgumentException e) {
               logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, config.getDocName(), e);
             }
@@ -991,7 +991,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 						.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody, config);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 				try {
-		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, config.getDocName(), WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, config, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
 		            } catch (IllegalArgumentException e) {
 		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", currentRunId, config.getDocName(), e);
 		            }

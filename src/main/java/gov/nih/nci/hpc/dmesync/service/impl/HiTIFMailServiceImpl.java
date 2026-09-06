@@ -188,7 +188,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
         sender.send(message);
         logger.info("Workflow Run is completed");
         try {
-            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config.getDocName(), status, null);
+            dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, config, status, null);
          } catch (IllegalArgumentException ex) {
             logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, config.getDocName(), ex.getMessage());
         }

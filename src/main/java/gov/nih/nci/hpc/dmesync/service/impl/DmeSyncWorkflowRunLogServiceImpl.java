@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import gov.nih.nci.hpc.dmesync.dao.StatusInfoDao;
 import gov.nih.nci.hpc.dmesync.dao.WorkflowRunInfoDao;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
@@ -55,11 +56,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 	}
 
 	@Override
-	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage) {
+	public void updateWorkflowRunEnd(String runId, DocConfig config, String finalStatus, String errorMessage) {
 		
 		logger.info("Updating the Workflow run Information");
 		
-		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
+		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndDoc(runId, config.getDocName());
 
 		if (workflowRunInfo != null) {
 			
@@ -69,7 +70,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 			// Compute Uploaded Size
 
-			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, doc);
+			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, config.getDocName());
 
 			long completedRows = runIdRows.stream()
 										.filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
@@ -92,10 +93,11 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setErrorMessage(errorMessage);
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
 			workflowRunInfo.setCompletionPercentage(completionPercentage);
+			workflowRunInfo.setDocId(config.getId());
 			workflowRunInfoDao.save(workflowRunInfo);
 			logger.info("Completed updating the Workflow run Information for workflow " + workflowRunInfo.getRunId());
 		}else {
-			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
+			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + config.getDocName());
 		}
 	}
 	
