@@ -80,9 +80,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 		String path = getProjectPathName(object);
 		String sampleCollectionType = getSampleCollectionType(object);
-		String tarFileName= getTarFileName(object, sampleCollectionType , path);
 		// set the sourceFileName for fastq and cellranger tars to create a wrapped folder for tar.
 		if (object.getOriginalFilePath().endsWith(".tar") && !object.getSourceFilePath().endsWith(".tar")) {
+			String tarFileName= getTarFileName(object, sampleCollectionType , path);
 			String tarFile = object.getSourceFilePath() + File.separatorChar + tarFileName.replace(".tar", "") + File.separatorChar + tarFileName;
 			tarFile = Paths.get(tarFile).normalize().toString();
 			object.setSourceFileName(tarFileName);
@@ -136,7 +136,6 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "PI_XXX" collection
 		String metadataFileKey = getProjectPathName(object);
-		String tarFileName = getTarFileName(object, sampleCollectionType , metadataFileKey);
 		String piCollectionName = getPiCollectionName(object, metadataFileKey);
 		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
@@ -287,7 +286,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String firstWord = sampleCollectionName.replaceAll("\\d.*", "");
 			String numberPart = sampleCollectionName.replaceAll("\\D", "");
 			String samplekey = firstWord + "0" + numberPart;
-
+			String tarFileName = getTarFileName(object, sampleCollectionType , metadataFileKey);
 			logger.info("sample key to get the platform name {} ", samplekey);
 
 			
