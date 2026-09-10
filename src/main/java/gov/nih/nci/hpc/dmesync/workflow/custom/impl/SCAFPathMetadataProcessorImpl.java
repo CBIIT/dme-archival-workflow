@@ -410,7 +410,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	private String getTarFileName(StatusInfo object, String sampleCollectionType , String metadataKey) throws DmeSyncMappingException {
 		String tarFileName = null;
-		String scafNumber = getSCAFNumberforFileName(object);
+		String scafNumber = getSCAFNumber(object);
 
 		if (StringUtils.equals(FASTQ, sampleCollectionType)) {
 			tarFileName = scafNumber + "_FQ_" + getFlowcellId(object) + "_" + getChemistry(object) + "."
