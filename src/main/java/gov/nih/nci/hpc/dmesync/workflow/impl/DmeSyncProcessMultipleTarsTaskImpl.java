@@ -92,6 +92,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
 	private int batchFolderDelimiterLevel;
+
+	@Value("${dmesync.multiple.tars.batch.grouping.mode:legacy}")
+	private String batchGroupingMode;
 	
 	@PostConstruct
 	public boolean init() {
@@ -476,8 +479,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	private StatusInfo processGroupedFolderTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
 			BufferedWriter notesWriter) throws IOException, DmeSyncVerificationException {
 
-		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), batchFolderDelimiter,
-				batchFolderDelimiterLevel);
+		logger.info("[{}] Grouping enabled: mode='{}', delimiter='{}', level={}", super.getTaskName(),
+				batchGroupingMode, batchFolderDelimiter, batchFolderDelimiterLevel);
 
 		// Only directories (site folders)
 		List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
@@ -489,7 +492,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 		for (File f : siteFolders) {
 			Optional<String> keyOpt = TarUtil.buildBatchGroupKey(f.getName(), batchFolderDelimiter,
-					batchFolderDelimiterLevel);
+					batchFolderDelimiterLevel, batchGroupingMode);
 			if (keyOpt.isEmpty()) {
 				nonMatching.add(f);
 				continue;
@@ -499,13 +502,13 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 		if (!nonMatching.isEmpty()) {
 			logger.error(
-					"[{}] {} folder(s) under {} did not match the expected batch folder naming convention (delimiter='{}', level={}). Sample={}",
-					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(), batchFolderDelimiter,
-					batchFolderDelimiterLevel,
+					"[{}] {} folder(s) under {} did not match the expected batch folder naming convention (mode='{}', delimiter='{}', level={}). Sample={}",
+					super.getTaskName(), nonMatching.size(), object.getOriginalFilePath(), batchGroupingMode,
+					batchFolderDelimiter, batchFolderDelimiterLevel,
 					nonMatching.stream().limit(10).map(File::getName).collect(Collectors.toList()));
 			throw new DmeSyncVerificationException("folder(s) under " + object.getOriginalFilePath()
-					+ " did not match the expected batch folder naming convention (delimiter='" + batchFolderDelimiter
-					+ "', level=" + batchFolderDelimiterLevel + ")");
+					+ " did not match the expected batch folder naming convention (mode='" + batchGroupingMode
+					+ "', delimiter='" + batchFolderDelimiter + "', level=" + batchFolderDelimiterLevel + ")");
 
 		}
 

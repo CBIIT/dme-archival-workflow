@@ -531,15 +531,62 @@ public class TarUtil {
 	    if (StringUtils.isBlank(folderName)) return Optional.empty();
 	    if (StringUtils.isBlank(delimiter)) return Optional.empty();
 	    if (level < 1) return Optional.empty();
-
+ 
 	    String[] parts = folderName.split(Pattern.quote(delimiter));
 	    if (parts.length < level) return Optional.empty();
-
+ 
 	    String key = String.join(delimiter, Arrays.copyOfRange(parts, 0, level));
 	    if (StringUtils.isBlank(key)) return Optional.empty();
-
+ 
 	    return Optional.of(key);
 	}
+
+  /**
+   * Builds a batch/grouping key using the configured grouping mode.
+   *
+   * Supported modes:
+   * <ul>
+   *   <li>{@code legacy}: delegates to {@link #buildBatchGroupKey(String, String, int)}</li>
+   *   <li>{@code and-prefix}: keeps the full prefix ending in {@code delimiter + "and" + delimiter}
+   *       and appends the first digit of the remaining numeric suffix</li>
+   * </ul>
+   *
+   * @param folderName input folder name
+   * @param delimiter configured delimiter
+   * @param level configured legacy grouping level
+   * @param groupingMode grouping mode; blank defaults to {@code legacy}
+   * @return derived grouping key, or empty when the folder name does not match the mode's expectations
+   */
+  public static Optional<String> buildBatchGroupKey(String folderName, String delimiter, int level, String groupingMode) {
+    String normalizedMode = StringUtils.defaultIfBlank(groupingMode, "legacy").trim();
+    if ("legacy".equalsIgnoreCase(normalizedMode)) {
+      return buildBatchGroupKey(folderName, delimiter, level);
+    }
+    if ("and-prefix".equalsIgnoreCase(normalizedMode)) {
+      return buildBatchGroupKeyAndPrefix(folderName, delimiter);
+    }
+    throw new IllegalArgumentException("Unsupported batch grouping mode: " + groupingMode);
+  }
+
+  static Optional<String> buildBatchGroupKeyAndPrefix(String folderName, String delimiter) {
+    if (StringUtils.isBlank(folderName) || StringUtils.isBlank(delimiter)) {
+      return Optional.empty();
+    }
+
+    String marker = delimiter + "and" + delimiter;
+    int markerIndex = folderName.lastIndexOf(marker);
+    if (markerIndex < 0) {
+      return Optional.empty();
+    }
+
+    String prefix = folderName.substring(0, markerIndex + marker.length());
+    String suffix = folderName.substring(markerIndex + marker.length());
+    if (StringUtils.isBlank(prefix) || StringUtils.isBlank(suffix) || !Character.isDigit(suffix.charAt(0))) {
+      return Optional.empty();
+    }
+
+    return Optional.of(prefix + suffix.charAt(0));
+  }
   
   /**
    * Checks whether the given sourceDirLeafNode matches any folder name or pattern

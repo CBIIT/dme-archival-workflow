@@ -111,6 +111,9 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 
 	@Value("${dmesync.multiple.tars.batch.folder.delimiter.level:0}")
 	private int batchFolderDelimiterLevel;
+
+	@Value("${dmesync.multiple.tars.batch.grouping.mode:legacy}")
+	private String batchGroupingMode;
 	
 	@Value("${dmesync.process.multiple.tars:false}")
 	private boolean processMultipleTars;
@@ -304,11 +307,13 @@ public class DmeSyncTarTaskImpl extends AbstractDmeSyncTask implements DmeSyncTa
 			}
 			String groupKey = tarFileName.replace(".tar", ""); // e.g. "1_11" from "1_11.tar"
 			
-			logger.info("[{}] Batch tar request detected: tar={}, delimiter='{}', level={}, groupKey={}",
-					super.getTaskName(), tarFileName, batchFolderDelimiter, batchFolderDelimiterLevel, groupKey);
+			logger.info("[{}] Batch tar request detected: tar={}, mode='{}', delimiter='{}', level={}, groupKey={}",
+					super.getTaskName(), tarFileName, batchGroupingMode, batchFolderDelimiter, batchFolderDelimiterLevel,
+					groupKey);
 
 			List<File> matchedFolders = Arrays.stream(files).filter(File::isDirectory)
-					.filter(f -> TarUtil.buildBatchGroupKey(f.getName(),batchFolderDelimiter,batchFolderDelimiterLevel).map(groupKey::equals).orElse(false))
+					.filter(f -> TarUtil.buildBatchGroupKey(f.getName(), batchFolderDelimiter, batchFolderDelimiterLevel,
+							batchGroupingMode).map(groupKey::equals).orElse(false))
 					.sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
 
 			if (matchedFolders.isEmpty()) {
