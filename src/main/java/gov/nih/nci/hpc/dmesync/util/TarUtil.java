@@ -548,7 +548,7 @@ public class TarUtil {
    * <ul>
    *   <li>{@code legacy}: delegates to {@link #buildBatchGroupKey(String, String, int)}</li>
    *   <li>{@code and-prefix}: keeps the full prefix ending in {@code delimiter + "and" + delimiter}
-   *       and appends the first digit of the remaining numeric suffix</li>
+   *       and appends the first character of the remaining suffix</li>
    * </ul>
    *
    * @param folderName input folder name
@@ -581,7 +581,7 @@ public class TarUtil {
 
     String prefix = folderName.substring(0, markerIndex + marker.length());
     String suffix = folderName.substring(markerIndex + marker.length());
-    if (StringUtils.isBlank(prefix) || StringUtils.isBlank(suffix) || !Character.isDigit(suffix.charAt(0))) {
+    if (StringUtils.isBlank(prefix) || StringUtils.isBlank(suffix)) {
       return Optional.empty();
     }
 

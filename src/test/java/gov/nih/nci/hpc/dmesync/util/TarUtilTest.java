@@ -14,10 +14,12 @@ class TarUtilTest {
   }
 
   @Test
-  void andPrefixGroupingUsesPrefixAndFirstSuffixDigit() {
+  void andPrefixGroupingUsesPrefixAndFirstSuffixCharacter() {
     assertEquals("1_10_and_1", TarUtil.buildBatchGroupKey("1_10_and_189", "_", 2, "and-prefix").orElseThrow());
     assertEquals("1_10_and_1", TarUtil.buildBatchGroupKey("1_10_and_167", "_", 2, "and-prefix").orElseThrow());
     assertEquals("1_10_and_2", TarUtil.buildBatchGroupKey("1_10_and_245", "_", 2, "and-prefix").orElseThrow());
+    assertEquals("CDK6_Q00534_and_A",
+        TarUtil.buildBatchGroupKey("CDK6_Q00534_and_ASB10_Q8WXI3", "_", 2, "and-prefix").orElseThrow());
   }
 
   @Test
