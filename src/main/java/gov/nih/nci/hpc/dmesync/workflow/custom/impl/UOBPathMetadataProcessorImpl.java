@@ -3,9 +3,12 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -25,16 +28,16 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //UOB Custom logic for DME path construction and meta data creation
 
-@Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-	
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
+		
     logger.info("[PathMetadataTask] UOBgetArchivePath called");
 
     // load the user metadata from the externally placed excel
-    threadLocalMap.set(loadMetadataFile(metadataFile, "File name ID"));
+    threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "File name ID"));
 
     //extract the user name from the source Path
     //Example source path - /data/UOB_genomics/rawdata/ccbr769_RNAseq/mRNA/1030-Linehan-15/1030-Linehan-15.R1.fastq.gz
@@ -46,7 +49,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
     //Extract SampleId from excel UOK208
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName()
             + "/Project_"
@@ -66,9 +69,9 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-	  
+	  SourceConfig sourceConfig = config.getSourceConfig();
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {
 		  String path = object.getOriginalFilePath();
@@ -84,7 +87,7 @@ public class UOBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = affiliation, value = ? (supplied)
 	     
 	      String piCollectionName = getPiCollectionName();
-	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+	      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);

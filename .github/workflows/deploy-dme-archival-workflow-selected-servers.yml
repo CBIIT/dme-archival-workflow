@@ -42,7 +42,8 @@ jobs:
     runs-on:
       group: cbiit-global-runners
       #labels: [self-hosted]
-      labels: [nonprod-org-runner]
+      #labels: [nonprod-org-runner]
+      labels: [prod-org-runner]
     outputs:
       matrix: ${{ steps.selected_servers.outputs.matrix }}
     steps:
@@ -89,7 +90,9 @@ jobs:
     needs: prepare
     runs-on:
       group: cbiit-global-runners
-      labels: [self-hosted]
+      #labels: [self-hosted]
+      #labels: [nonprod-org-runner]
+      labels: [prod-org-runner]
     environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false

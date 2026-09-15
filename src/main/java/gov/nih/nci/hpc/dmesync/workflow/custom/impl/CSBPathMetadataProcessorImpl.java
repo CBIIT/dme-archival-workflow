@@ -10,7 +10,10 @@ import java.util.Iterator;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -29,17 +32,13 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	// CSB Custom logic for DME path construction and meta data creation
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String mappingFile;
-	
-	@Value("${dmesync.source.base.dir}")
-	private String sourceBaseDir;
-	
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
 		logger.info("[PathMetadataTask] CSB getArchivePath called");
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+	
 		Path sourceDirPath = Paths.get(object.getSourceFilePath());
 	    Path originalDirPath = Paths.get(object.getOriginalFilePath());
         String dataSet = getCollectionNameFromParent(object, "CSB-CryoEM-raw");
@@ -66,7 +65,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		threadLocalMap.set(loadJsonMetadataFile(metadataFile, "dataset"));
 
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Instrument_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName() + "/Instrument_"
 				+ getInstrumentCollectionName() + "/Date_" + getDateCollectionName() + "/Dataset_" + getDatasetName()
 				+ StringUtils.substringAfter(sourceDirPath.toString(), dataSet);
 
@@ -80,9 +79,10 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -94,7 +94,7 @@ public class CSBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// key = data_owner, value = (derived)
 
 			String piCollectionName = getPiCollectionName();
-			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+			String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey("dataset", "ownername")));

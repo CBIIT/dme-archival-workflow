@@ -3,13 +3,14 @@ package gov.nih.nci.hpc.dmesync.util;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
-
+import java.nio.file.Files;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.hash.Hashing;
 
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 
@@ -17,53 +18,112 @@ public class TarContentsFileUtil {
 
 	static final Logger logger = LoggerFactory.getLogger(TarContentsFileUtil.class);
 
+	// Column header written at the top of every manifest.
+	private static final String HEADER_ROW = "TYPE\tPATH\tSIZE\tMD5\tSYMLINK_TARGET";
+
 	private TarContentsFileUtil() {
-		
 	}
-   /* This method writes to contents file 
-    *  notesWrtitee
-    *  tarFileHeader: The title of the file
-    *  List<File> list of files
-    * 
-    */
-	public static boolean writeToTarContentsFile(BufferedWriter textWriter, String tarFileHeader, List<File> subList)
+
+	/**
+	 * Writes a structured manifest to {@code textWriter}.
+	 *
+	 * <p>Each entry is a tab-separated line with the following columns:
+	 * <pre>
+	 * TYPE    PATH                        SIZE        MD5          SYMLINK_TARGET
+	 * FILE    data/sample.fastq           123456      md5:<hex>    -
+	 * SYMLINK data/link.fastq             123456      md5:<hex>            data/sample.fastq
+	 * </pre>
+	 *
+	 * <p>Entries are sorted by normalized relative path before writing.
+	 *
+	 * @param textWriter    writer for the manifest file (will be closed by this method)
+	 * @param tarFileHeader absolute path of the source directory (used as the relativization root)
+	 * @param isIncludedContentsFile true for contents file, false for excluded contents file
+	 * @param subList       list of {@link File} objects to include in the manifest
+	 * @return {@code true} if the manifest was written successfully
+	 * @throws IOException            on I/O error
+	 * @throws DmeSyncMappingException on any other failure while building the manifest
+	 */
+	public static boolean writeToTarContentsFile(BufferedWriter textWriter, String tarFileHeader, boolean isIncludedContentsFile,  List<File> subList)
 			throws IOException, DmeSyncMappingException {
-		
+
 		try {
 			logger.info("Writing Files list to TarContents file Started {}", tarFileHeader);
-			textWriter.write("Tar File: " + tarFileHeader + "\n");
+
+			Path sourcePath = new File(tarFileHeader).toPath();
+
+			// Build all manifest rows first so we can sort them.
+			List<String[]> rows = new ArrayList<>();
 			for (File fileName : subList) {
-				if (fileName != null) {
-					Path filePath = fileName.toPath();
-					File sourceDir = new File(tarFileHeader);
-					Path sourcePath = sourceDir.toPath();
-					if (Files.isSymbolicLink(filePath)) {
-						// file is a symlink
-						Path target = Files.readSymbolicLink(filePath);
-						// Get the relative path from sourceDir to the file
-						Path relativePath = sourcePath.relativize(filePath);
-						Path symlinkTarget = filePath.getParent().resolve(target).normalize();
-						textWriter.write(relativePath + " ->  " + symlinkTarget + "\n");
-					} else {
-
-						// Get the relative path from sourceDir to the file
-						Path relativePath = sourcePath.relativize(filePath);
-
-						textWriter.write(relativePath + "\n");
+				if (fileName == null) {
+					continue;
+				}
+				Path filePath = fileName.toPath();
+				// Normalize: relativize (when possible), then convert separators to '/' for portability.
+ 				String normalizedRelPath;
+ 				try {
+ 					Path relativePath = sourcePath.relativize(filePath);
+ 					normalizedRelPath = relativePath.toString().replace(File.separatorChar, '/');
+ 				} catch (IllegalArgumentException e) {
+ 					// File is outside the source tree (can happen with dereferenced symlinks); record an absolute path.
+ 					normalizedRelPath = filePath.toAbsolutePath().normalize().toString().replace(File.separatorChar, '/');
+ 				}
+				
+				if (Files.isSymbolicLink(filePath)) {
+					Path target = Files.readSymbolicLink(filePath);
+					Path resolvedTarget = filePath.getParent().resolve(target).normalize();
+					
+					// Express the symlink target relative to the source dir when possible.
+					String targetStr;
+					try {
+						targetStr = sourcePath.relativize(resolvedTarget).toString().replace(File.separatorChar, '/');
+					} catch (IllegalArgumentException e) {
+						// Target is outside the source tree; record the absolute path.
+						targetStr = resolvedTarget.toString().replace(File.separatorChar, '/');
 					}
+					if(!isIncludedContentsFile) {
+					      rows.add(new String[]{"SYMLINK", normalizedRelPath, "-" , "-" , resolvedTarget.toString()});
+					}else {
+					String md5 = computeMd5(filePath.toFile());
+					rows.add(new String[]{"SYMLINK", normalizedRelPath, String.valueOf(Files.size(filePath)), "md5:" + md5, targetStr});
+					}
+				} else if (fileName.isDirectory()) {
+					rows.add(new String[]{"DIR", normalizedRelPath, "-", "-", "-"});
+				} else {
+					long size = fileName.length();
+					String md5 = computeMd5(fileName);
+					rows.add(new String[]{"FILE", normalizedRelPath, String.valueOf(size), "md5:" + md5, "-"});
 				}
 			}
-		textWriter.write("\n");
-        logger.info("Writing Files list to TarContents file Completed {}" , tarFileHeader);
-        
-        textWriter.close();
-        return true;
 
-	}catch ( IOException e) {
-        textWriter.close();
-		logger.error("Error writing data to the contents file {}", tarFileHeader);
-		throw new DmeSyncMappingException("Error writing data to the contents file ", e);
-	}
+			// Sort rows by the normalized relative path (column index 1) for consistent ordering.
+			rows.sort((a, b) -> a[1].compareTo(b[1]));
+
+			// Write header and rows.
+			textWriter.write("Tar File: " + tarFileHeader + "\n");
+			textWriter.write(HEADER_ROW + "\n");
+			for (String[] row : rows) {
+				textWriter.write(String.join("\t", row) + "\n");
+			}
+			textWriter.write("\n");
+
+			logger.info("Writing Files list to TarContents file Completed {}", tarFileHeader);
+			return true;
+
+		} finally {
+			textWriter.close();
+		}
 	}
 
+	/**
+	 * Computes the MD5 hex digest of {@code file} using Guava
+	 * @param file the file to hash
+	 * @return lower-case hex string of the MD5 digest
+	 * @throws IOException if the file cannot be read
+	 */
+	@SuppressWarnings("deprecation")
+	private static String computeMd5(File file) throws IOException {
+		return com.google.common.io.Files.hash(file, Hashing.md5()).toString();
+	}
+	
 }

@@ -1,27 +1,24 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
 import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO;
-import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 
 /**
  * SCAF DME Path and Meta-data Processor Implementation
@@ -40,18 +37,10 @@ public class SCAFNewFormatPathMetadataProcessorImpl extends AbstractPathMetadata
 	public static final String ANALYSIS = "Analysis";
 	public static final String FASTQ = "FASTQ";
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	private String sourceDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 
 		// Example source path -
@@ -62,12 +51,12 @@ public class SCAFNewFormatPathMetadataProcessorImpl extends AbstractPathMetadata
 		if (StringUtils.isBlank(sampleSubFolder)) {
 			retieveAnalysisMetadataFilePath(object.getOriginalFilePath());
 			String piCollectionName = getPiCollectionName(object);
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_"
 					+ getProjectCollectionName(object) + "/Analysis" + fileName;
 
 		} else {
 			retrieveMetadataFromFile(object.getOriginalFilePath());
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object) + "/Sample_" + getSampleName(object) + "/" + sampleSubFolder +"/"
 					+ fileName;
 
@@ -81,16 +70,17 @@ public class SCAFNewFormatPathMetadataProcessorImpl extends AbstractPathMetadata
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 		String sampleSubFolder = getSampleSubFolder(object);
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 
 		String piCollectionName = getPiCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 		String metadataFileKey = "Sample";
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
