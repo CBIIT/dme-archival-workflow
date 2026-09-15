@@ -84,12 +84,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 
   @Value("${dmesync.db.access:local}")
   private String access;
-  
-  @Value("${dmesync.run.once.and.shutdown:false}")
-  private boolean shutDownFlag;
-
-  @Value("${dmesync.run.once.run_id:}")
-  private String oneTimeRunId;
 
   @Value("${dmesync.file.noArchive.exist:}")
   private String checkNoArchiveExistsFile;
@@ -160,20 +154,11 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       return;
     }
     
-    runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
+    runId = "Run_" + timestampFormat.format(new Date());
     
     WorkflowRunInfo workflowRunInfo=insertWorkflowRunInfo(config, runId);
 	  logger.info(
 		        "[Scheduler] Workflow Run Information is inserted {}", workflowRunInfo);
-
-    if (shutDownFlag) {
-      //check if the one time run has already occurred
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(oneTimeRunId, config.getDocName());
-      //If it has been called already, return
-      if (!CollectionUtils.isEmpty(statusInfo)) {
-        return;
-      }
-    }
 
     MDC.put("doc", config.getDocName());
     MDC.put("run.id", runId);
@@ -244,10 +229,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
           } catch (IllegalArgumentException e) {
             logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, config.getDocName(), e);
           }
-		if (shutDownFlag) {
-			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
-			DmeSyncApplication.shutdown();
-		}
+
         MDC.clear();
         WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
 	  	runInfo.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
@@ -327,10 +309,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
             } catch (IllegalArgumentException e) {
               logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, config.getDocName(), e);
             }
-		if (shutDownFlag) {
-			logger.info("[Scheduler] No files/folders found. Shutting down the application.");
-			DmeSyncApplication.shutdown();
-		}
       } else {
     	  WorkflowRunInfo runInfo = dmeSyncWorkflowRunLogService.findFirstByRunIdAndUserId(runId, config.getDocName());
     	  runInfo.setStatus(WorkflowConstants.RunStatus.RUNNING.toString());
@@ -356,16 +334,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   private void findFilesToMove(DocConfig config) {
   
     DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
-    String runId = shutDownFlag ? oneTimeRunId : "Run_" + timestampFormat.format(new Date());
-
-    if (shutDownFlag) {
-      //check if the one time run has already occurred
-      List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(oneTimeRunId, config.getDocName());
-      //If it has been called already, return
-      if (!CollectionUtils.isEmpty(statusInfo)) {
-        return;
-      }
-    }
+    String runId = "Run_" + timestampFormat.format(new Date());
 
     MDC.put("doc", config.getDocName());
     MDC.put("run.id", runId);
@@ -971,37 +940,27 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			|| WorkflowConstants.RunStatus.CANCELLED.toString().equals(runInfo.getStatus())))
 		continue;
 
-    String currentRunId = null;
-    if (shutDownFlag) {
-      currentRunId = oneTimeRunId;
-      //Check if we have already started the run
-      List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, config.getDocName());
-      if(CollectionUtils.isEmpty(currentRun)) {
-    	  // check if there are any records for Run_Ignored
-			List<StatusInfo> currentRunIgnored = dmeSyncWorkflowService.getService(access)
-					.findStatusInfoByRunIdAndDoc(currentRunId + WorkflowConstants.IGNORED_RUN_SUFFIX, config.getDocName());
-			if (CollectionUtils.isEmpty(currentRunIgnored))
-				return;
-			else {
-				// There are records in Ignored Run, no records to upload send email
-				String emailBody = "There were no files/folders found for processing"
-						+ (!StringUtils.isEmpty(sourceRule.sourceBaseDirFolders) ? " in " + sourceRule.sourceBaseDirFolders + " folders" : "")
-						+ ".";
-				dmeSyncMailServiceFactory.getService(config.getDocName())
-						.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody, config);
-				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
-				try {
-		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, config, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
-		            } catch (IllegalArgumentException e) {
-		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", currentRunId, config.getDocName(), e);
-		            }
-				DmeSyncApplication.shutdown();
-			}
-	    
-      }     
-	 } else {
-	  currentRunId = runInfo.getRunId();
-    }
+    String currentRunId = runInfo.getRunId();
+
+	// check if there are any records for Run_Ignored
+	List<StatusInfo> currentRunIgnored = dmeSyncWorkflowService.getService(access)
+			.findStatusInfoByRunIdAndDoc(currentRunId + WorkflowConstants.IGNORED_RUN_SUFFIX, config.getDocName());
+	List<StatusInfo> currentRunRecords = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, config.getDocName());
+	if (!CollectionUtils.isEmpty(currentRunIgnored) && CollectionUtils.isEmpty(currentRunRecords) ) {
+		// All records are in Ignored Run, no records to upload send email
+		String emailBody = "There were no files/folders found for processing"
+				+ (!StringUtils.isEmpty(sourceRule.sourceBaseDirFolders) ? " in " + sourceRule.sourceBaseDirFolders + " folders" : "")
+				+ ".";
+		dmeSyncMailServiceFactory.getService(config.getDocName())
+				.sendMail("HPCDME Auto Archival Result for " + config.getDocName() + " - Base Path: " + sourceConfig.sourceBaseDir, emailBody, config);
+		logger.info("[Scheduler] No files/folders found.");
+		try {
+              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, config, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+        } catch (IllegalArgumentException e) {
+              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", currentRunId, config.getDocName(), e);
+        }
+		continue;
+	}
     
     MDC.put("run.id", currentRunId);
     
@@ -1021,15 +980,9 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         String docQueueName = queueNameResolver.resolve(config);
         logger.info("checking if scheduler is completed with queue {} count {} and active threads completed {} ", docQueueName, sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
         dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
-
-        if (shutDownFlag) {
-          logger.info("checking if scheduler is completed with queue {} count {} and active threads completed {} ", docQueueName, sender.getQueueCount(docQueueName), consumer.isAllThreadsCompleted(config.getDocName()));
-          logger.info("[Scheduler] Queue is empty. Shutting down the application.");
-          DmeSyncApplication.shutdown();
-        }
       }
     }
-  }
+   }
   }
 
   @Scheduled(cron = "0 0/1 * * * ?")
@@ -1047,20 +1000,13 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	
 	boolean completedFlag = true;
     String currentRunId = null;
-    if (shutDownFlag) {
-      currentRunId = oneTimeRunId;
-      //Check if we have already started the run
-      List<StatusInfo> currentRun = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(currentRunId, config.getDocName());
-      if(CollectionUtils.isEmpty(currentRun))
-        return;
-    } else {
-      StatusInfo latest = null;
-      //Add base path also to distinguish multiple docs running the workflow.
-      latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(config.getDocName(), sourceConfig.sourceBaseDir);
 
-      if(latest != null)
-        currentRunId = latest.getRunId();
-    }
+    StatusInfo latest = null;
+    //Add base path also to distinguish multiple docs running the workflow.
+    latest = dmeSyncWorkflowService.getService(access).findTopStatusInfoByDocAndOriginalFilePathStartsWithOrderByStartTimestampDesc(config.getDocName(), sourceConfig.sourceBaseDir);
+
+    if(latest != null)
+      currentRunId = latest.getRunId();
 
     MDC.put("run.id", currentRunId);
     
@@ -1089,11 +1035,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
         //Export and send email for completed run
         if(completedFlag)
         	dmeSyncMailServiceFactory.getService(config.getDocName()).sendResult(currentRunId, config);
-
-        if (shutDownFlag && completedFlag) {
-          logger.info("[Scheduler] Queue is empty. Shutting down the application.");
-          DmeSyncApplication.shutdown();
-        }
       }
     }
    }
