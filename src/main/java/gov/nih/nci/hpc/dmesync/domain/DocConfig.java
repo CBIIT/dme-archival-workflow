@@ -118,6 +118,7 @@ public class DocConfig {
             this.aws = aws;
             this.version = version;
         }
+        public String getIncludePattern() { return includePattern; }
     }
     public static class PreprocessingConfig {
         public final boolean tar;

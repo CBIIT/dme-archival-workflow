@@ -142,7 +142,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     }
 
     String includePattern = buildRollingThreeMonthIncludePattern(currentDate);
-    if (StringUtils.equals(sourceRule.includePattern, includePattern)) {
+    if (StringUtils.equals(sourceRule.getIncludePattern(), includePattern)) {
       logger.info("[Scheduler][CSBIncludePattern] Include pattern already current for doc '{}': {}", CSB_DOC_NAME, includePattern);
       return;
     }
