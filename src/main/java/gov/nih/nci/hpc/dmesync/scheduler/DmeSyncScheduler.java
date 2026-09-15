@@ -130,7 +130,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   private void refreshCsbMonthlyIncludePattern(LocalDate currentDate) {
     Optional<DocConfig> configOptional = configService.getDocConfigByName(CSB_DOC_NAME);
     if (configOptional.isEmpty()) {
-      logger.warn("[Scheduler][CSBIncludePattern] Missing enabled config for doc '{}'", CSB_DOC_NAME);
+      logger.warn("[Scheduler][CSBIncludePattern] Config lookup returned no result for doc '{}'", CSB_DOC_NAME);
       return;
     }
 

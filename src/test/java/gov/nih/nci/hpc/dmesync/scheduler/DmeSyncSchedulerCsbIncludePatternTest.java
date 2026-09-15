@@ -78,6 +78,29 @@ class DmeSyncSchedulerCsbIncludePatternTest {
   }
 
   @Test
+  void refreshCsbMonthlyIncludePatternStopsWhenUpdateFails() {
+    DmeSyncScheduler scheduler = new DmeSyncScheduler();
+    DocConfigService configService = mock(DocConfigService.class);
+    ReflectionTestUtils.setField(scheduler, "configService", configService);
+
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(
+        null, "old/**", null, null, null, false, false, null, null, false, null, false, false, false, 1);
+    DocConfig config = new DocConfig(
+        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
+        null, sourceRule, null, null, null, null);
+
+    when(configService.getDocConfigByName("csb")).thenReturn(Optional.of(config));
+    when(configService.updateSourceIncludePattern(42L, "jul/**,aug/**,sep/**")).thenReturn(false);
+
+    ReflectionTestUtils.invokeMethod(
+        scheduler,
+        "refreshCsbMonthlyIncludePattern",
+        LocalDate.of(2026, 9, 10));
+
+    verify(configService).updateSourceIncludePattern(42L, "jul/**,aug/**,sep/**");
+  }
+
+  @Test
   void refreshCsbMonthlyIncludePatternSkipsWhenConfigMissing() {
     DmeSyncScheduler scheduler = new DmeSyncScheduler();
     DocConfigService configService = mock(DocConfigService.class);
