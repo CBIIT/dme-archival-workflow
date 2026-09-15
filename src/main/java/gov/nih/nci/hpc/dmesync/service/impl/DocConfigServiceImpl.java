@@ -6,6 +6,7 @@ import gov.nih.nci.hpc.dmesync.service.DocConfigService;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,5 +49,15 @@ public class DocConfigServiceImpl implements DocConfigService {
     @Override
     public Optional<DocConfig> getDocConfigById(Long id) {
         return Optional.ofNullable(docsById.get(id));
+    }
+
+    @Override
+    @Transactional
+    public synchronized boolean updateSourceIncludePattern(Long docId, String includePattern) {
+        boolean updated = configDao.updateIncludePattern(docId, includePattern);
+        if (updated) {
+            refresh();
+        }
+        return updated;
     }
 }

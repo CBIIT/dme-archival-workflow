@@ -11,11 +11,14 @@ import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -66,6 +69,7 @@ import gov.nih.nci.hpc.dmesync.service.DocConfigService;
 public class DmeSyncScheduler implements DocWorkflowExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(DmeSyncScheduler.class);
+  private static final String CSB_DOC_NAME = "csb";
 
   private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
   private final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -116,6 +120,46 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   public boolean init() {
 	dmeSyncWorkflowRunLogService.resetWorkflowRunInfo();
     return true;
+  }
+
+  @Scheduled(cron = "0 0 0 1 * ?")
+  public void refreshCsbMonthlyIncludePattern() {
+    refreshCsbMonthlyIncludePattern(LocalDate.now());
+  }
+
+  private void refreshCsbMonthlyIncludePattern(LocalDate currentDate) {
+    Optional<DocConfig> configOptional = configService.getDocConfigByName(CSB_DOC_NAME);
+    if (configOptional.isEmpty()) {
+      logger.warn("[Scheduler][CSBIncludePattern] Missing enabled config for doc '{}'", CSB_DOC_NAME);
+      return;
+    }
+
+    DocConfig config = configOptional.get();
+    DocConfig.SourceRule sourceRule = config.getSourceRule();
+    if (sourceRule == null) {
+      logger.warn("[Scheduler][CSBIncludePattern] Missing source rule for doc '{}'", CSB_DOC_NAME);
+      return;
+    }
+
+    String includePattern = buildRollingThreeMonthIncludePattern(currentDate);
+    if (StringUtils.equals(sourceRule.includePattern, includePattern)) {
+      logger.info("[Scheduler][CSBIncludePattern] Include pattern already current for doc '{}': {}", CSB_DOC_NAME, includePattern);
+      return;
+    }
+
+    boolean updated = configService.updateSourceIncludePattern(config.getId(), includePattern);
+    if (!updated) {
+      logger.warn("[Scheduler][CSBIncludePattern] Failed to update include pattern for doc '{}'", CSB_DOC_NAME);
+      return;
+    }
+
+    logger.info("[Scheduler][CSBIncludePattern] Updated include pattern for doc '{}' to {}", CSB_DOC_NAME, includePattern);
+  }
+
+  private String buildRollingThreeMonthIncludePattern(LocalDate currentDate) {
+    return Stream.of(currentDate.minusMonths(2), currentDate.minusMonths(1), currentDate)
+        .map(date -> date.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toLowerCase(Locale.ENGLISH) + "/**")
+        .collect(Collectors.joining(","));
   }
   
   /**

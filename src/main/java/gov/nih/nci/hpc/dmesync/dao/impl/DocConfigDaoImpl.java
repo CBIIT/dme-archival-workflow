@@ -41,6 +41,26 @@ public class DocConfigDaoImpl implements DocConfigDao {
         return findById(ids.get(0));
     }
 
+    @Override
+    public boolean updateIncludePattern(Long docId, String includePattern) {
+        String sql = """
+            UPDATE DOC_SOURCE_RULE
+               SET INCLUDE_PATTERN = ?,
+                   UPDATED_AT = SYSTIMESTAMP
+             WHERE ID = (
+                 SELECT ID
+                   FROM (
+                       SELECT ID
+                         FROM DOC_SOURCE_RULE
+                        WHERE DOC_ID = ?
+                        ORDER BY VERSION DESC
+                   )
+                  WHERE ROWNUM = 1
+             )
+            """;
+        return jdbcTemplate.update(sql, includePattern, docId) == 1;
+    }
+
     private Optional<DocConfig> findById(Long docId) {
         // Aggregate all config sections for the given docId
         // 1. DOC_CONFIG

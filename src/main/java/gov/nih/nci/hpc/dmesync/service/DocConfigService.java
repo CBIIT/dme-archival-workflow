@@ -9,6 +9,7 @@ public interface DocConfigService {
     List<DocConfig> getEnabledDocConfigs();
     Optional<DocConfig> getDocConfigByName(String docName);
     Optional<DocConfig> getDocConfigById(Long id);
+    boolean updateSourceIncludePattern(Long docId, String includePattern);
     void refresh();
 
     default java.util.List<DocConfig> getEnabledDocs() {
