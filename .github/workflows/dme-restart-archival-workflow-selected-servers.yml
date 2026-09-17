@@ -1,4 +1,4 @@
-name: Deploy DME Archival Workflow to Selected Servers
+name: Restart DME Archival Workflow to Selected Servers
 
 permissions:
   contents: read
@@ -14,11 +14,14 @@ on:
         default: prod
         options:
           - prod
-      build_run_number:
-        description: "Build workflow run number that produced dme-archival-workflow-artifacts"
-        required: false
-        type: string
-        default: "latest"
+      action:
+        description: "Action to perform on the servers"
+        required: true
+        type: choice
+        options:
+          - restart
+          - stop
+          - start
       fsdmel_wflow02p_ncifcrf_gov:
         description: "Deploy to fsdmel-wflow02p.ncifcrf.gov"
         required: false
@@ -45,7 +48,7 @@ on:
         type: boolean
         default: false
 
-run-name: "Deploy DME Archival Workflow from build #${{ inputs.build_run_number || 'latest' }} to ${{ inputs.environment }}"
+run-name: "${{ inputs.action == 'start' && 'Start' || inputs.action == 'restart' && 'Restart' || 'Stop' }} (DME ARCHIVAL WORKFLOW ${{ inputs.environment }})"
 
 jobs:
   prepare:
@@ -57,24 +60,8 @@ jobs:
       labels: [prod-org-runner]
     outputs:
       matrix: ${{ steps.selected_servers.outputs.matrix }}
-      use_specific_run: ${{ steps.check_build.outputs.use_specific_run }}
-    steps:
-      - name: Check build run number input
-        id: check_build
-        shell: bash
-        run: |
-          set -euo pipefail
 
-          input="${{ inputs.build_run_number }}"
-
-          if [ -z "$input" ] || [ "$input" = "latest" ]; then
-            echo "No specific build_run_number provided; the download step will use the most recent successful build-dme-archival-workflow.yml run automatically."
-            echo "use_specific_run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Using explicitly provided build_run_number: ${input}"
-            echo "use_specific_run=true" >> "$GITHUB_OUTPUT"
-          fi
-
+    steps:  
       - name: Build selected server matrix
         id: selected_servers
         shell: bash
@@ -119,8 +106,8 @@ jobs:
           echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
           echo "Selected server matrix: ${matrix}"
 
-  deploy:
-    name: Deploy to ${{ matrix.name }}
+  control_actions:        
+    name: ${{ inputs.action == 'start' && 'Start' || inputs.action == 'restart' && 'Restart' || 'Stop' }} DME ARCHIVAL WORKFLOW on ${{ matrix.name }} 
     needs: prepare
     runs-on:
       group: cbiit-global-runners
@@ -132,67 +119,10 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
-      APP_NAME: dme-sync
       SERVICE_NAME: archival-workflow.service
-      DEPLOY_DIR: /opt/hpcdm_workflows/deployments
       SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
       RUNNER_SSH_USER: githubuser
     steps:
-      - name: Download build artifact ((latest successful build)
-        if: needs.prepare.outputs.use_specific_run == 'false'
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: build-dme-archival-workflow.yml
-          workflow_conclusion: success
-          name: dme-archival-workflow-artifacts
-          path: artifacts
-
-      - name: Download build artifact ((specific run)
-        if: needs.prepare.outputs.use_specific_run == 'true'
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: build-dme-archival-workflow.yml
-          run_number: ${{ inputs.build_run_number }}
-          name: dme-archival-workflow-artifacts
-          path: artifacts    
-
-      - name: List downloaded artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Downloaded artifacts:"
-          find artifacts -maxdepth 5 -type f | sort
-
-      - name: Set jar file environment
-        id: jar
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mapfile -t jars < <(find artifacts -maxdepth 5 -type f -name 'dme-sync-*.jar' | sort)
-
-          if [ "${#jars[@]}" -eq 0 ]; then
-            echo "No dme-sync-*.jar artifact found." >&2
-            exit 1
-          fi
-
-          if [ "${#jars[@]}" -gt 1 ]; then
-            echo "More than one dme-sync-*.jar artifact found; refusing to guess." >&2
-            printf '%s\n' "${jars[@]}" >&2
-            exit 1
-          fi
-
-          jar_path="${jars[0]}"
-          jar_name="$(basename "$jar_path")"
-
-          echo "JAR_PATH=${jar_path}" >> "$GITHUB_ENV"
-          echo "JAR_NAME=${jar_name}" >> "$GITHUB_ENV"
-          echo "jar_path=${jar_path}" >> "$GITHUB_OUTPUT"
-          echo "jar_name=${jar_name}" >> "$GITHUB_OUTPUT"
-
-          echo "JAR_PATH=${jar_path}"
-          echo "JAR_NAME=${jar_name}"
-
       - name: Set up SSH
         shell: bash
         run: |
@@ -230,7 +160,8 @@ jobs:
             #hpcdm-wf-svc@fsdmel-wflow05p.ncifcrf.gov \
             #"echo SSH connection OK"
 
-      - name: Stop service, back up old jar, and remove current symlink
+      - name: Stop service
+        if: inputs.action == 'stop' || inputs.action == 'restart'
         shell: bash
         run: |
           set -euo pipefail
@@ -238,26 +169,10 @@ jobs:
           target_host="${{ matrix.host }}"
 
           sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
-            "set -e; sudo systemctl stop ${SERVICE_NAME}; cd ${DEPLOY_DIR}; find . -maxdepth 1 -type f -name '${APP_NAME}-*.jar' -exec mv {} {}_backup_\$(date +%Y%m%d.%H%M) \; || exit \$?; rm -f ${APP_NAME}.jar"
+            "set -e; sudo systemctl stop ${SERVICE_NAME}; echo "Service stopped on ${target_host}."
 
-      - name: Copy new jar to deployment directory
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          target_host="${{ matrix.host }}"
-          local_jar="/tmp/${GITHUB_RUN_ID}-${target_host}-${JAR_NAME}"
-          trap 'sudo rm -f "$local_jar"' EXIT
-
-          sudo cp "$JAR_PATH" "$local_jar"
-          sudo chown "$RUNNER_SSH_USER" "$local_jar"
-          sudo chmod 600 "$local_jar"
-
-          sudo -iu "$RUNNER_SSH_USER" scp -o IdentitiesOnly=yes -p \
-            "$local_jar" \
-            "${SSH_USER}@${target_host}:${DEPLOY_DIR}/${JAR_NAME}"
-
-      - name: Create symlink and start service
+      - name: Start service
+        if: inputs.action == 'start' || inputs.action == 'restart'
         shell: bash
         run: |
           set -euo pipefail
@@ -265,14 +180,4 @@ jobs:
           target_host="${{ matrix.host }}"
 
           sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
-            "set -e; cd ${DEPLOY_DIR}; ln -sfn ${JAR_NAME} ${APP_NAME}.jar; sudo systemctl start ${SERVICE_NAME}"
-
-      - name: Verify service process
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          target_host="${{ matrix.host }}"
-
-          sudo -iu "$RUNNER_SSH_USER" ssh -o IdentitiesOnly=yes "${SSH_USER}@${target_host}" \
-            "set -e; echo 'Process check:'; ps -ef | grep -E '[d]me-sync|[a]rchival-workflow|${JAR_NAME}' || true; echo 'Service status:'; sudo systemctl status ${SERVICE_NAME} || true"
+            "set -e; sudo systemctl start ${SERVICE_NAME}; echo 'Process check:'; ps -ef | grep -E '[d]me-sync|[a]rchival-workflow' || true; echo 'Service status:'; sudo systemctl status ${SERVICE_NAME} || true"
