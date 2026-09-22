@@ -222,6 +222,8 @@ public class DmeSyncScheduler {
   private boolean retryPriorRunFailures;
   
   private String runId;
+  
+  private volatile boolean scanInProgress = false;
 
   /**
    * Main scheduler method to crawl the file system and find files to enqueue
@@ -229,8 +231,10 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
 	  
-		 
-	  dmeMetadataBuilder.evictMetadataMap();
+	
+	scanInProgress = true;
+
+	dmeMetadataBuilder.evictMetadataMap();
 
 	if (moveProcessedFiles) {
 		findFilesToMove();
@@ -425,6 +429,8 @@ public class DmeSyncScheduler {
     } finally {
       MDC.clear();
       runId = null;
+      scanInProgress = false;
+
     }
   }
 
@@ -1027,9 +1033,11 @@ public class DmeSyncScheduler {
 			if (CollectionUtils.isEmpty(currentRunIgnored))
 				return;
 			else {
+				if( !scanInProgress &&  sender.getQueueCount("inbound.queue") == 0
+				        && consumer.isAllThreadsCompleted()) {
 				// There are records in Ignored Run, no records to upload send email
 				String emailBody = "There were no files/folders found for processing"
-						+ (!StringUtils.isEmpty(syncBaseDirFolders) ? " in " + syncBaseDirFolders + " folders" : "")
+						+ (!StringUtils.isEmpty(syncBaseDirFolders) ? " in " + syncBaseDirFolders + " folders" : "" )
 						+ ".";
 				dmeSyncMailServiceFactory.getService(doc)
 						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
@@ -1040,6 +1048,7 @@ public class DmeSyncScheduler {
 		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
 		            }
 				DmeSyncApplication.shutdown();
+				}
 			}
 	    
       }     
