@@ -232,7 +232,7 @@ public class DmeSyncScheduler {
   public void findFilesToPush() {
 	  
 	
-	scanInProgress = true;
+	
 
 	dmeMetadataBuilder.evictMetadataMap();
 
@@ -304,6 +304,7 @@ public class DmeSyncScheduler {
     // If not, then it inserts the data and sends the details to the message queue for processing.
 
     try {
+      scanInProgress = true;
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
     	  paths = queryDataObjectsForSoftlinkCreation();
@@ -428,8 +429,8 @@ public class DmeSyncScheduler {
 				e.getMessage() + "\n\n" + e.getCause().getMessage());
     } finally {
       MDC.clear();
-      runId = null;
       scanInProgress = false;
+      runId = null;
 
     }
   }
