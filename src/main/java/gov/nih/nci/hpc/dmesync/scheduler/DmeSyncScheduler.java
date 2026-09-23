@@ -1044,7 +1044,7 @@ public class DmeSyncScheduler {
 						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 				try {
-		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
 		            } catch (IllegalArgumentException e) {
 		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
 		            }
