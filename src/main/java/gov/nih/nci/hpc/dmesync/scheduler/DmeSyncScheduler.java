@@ -222,6 +222,8 @@ public class DmeSyncScheduler {
   private boolean retryPriorRunFailures;
   
   private String runId;
+  
+  private volatile boolean scanInProgress = false;
 
   /**
    * Main scheduler method to crawl the file system and find files to enqueue
@@ -229,8 +231,10 @@ public class DmeSyncScheduler {
   @Scheduled(cron = "${dmesync.cron.expression}")
   public void findFilesToPush() {
 	  
-		 
-	  dmeMetadataBuilder.evictMetadataMap();
+	
+	
+
+	dmeMetadataBuilder.evictMetadataMap();
 
 	if (moveProcessedFiles) {
 		findFilesToMove();
@@ -300,6 +304,7 @@ public class DmeSyncScheduler {
     // If not, then it inserts the data and sends the details to the message queue for processing.
 
     try {
+      scanInProgress = true;
       List<HpcPathAttributes> paths = null;
       if(createSoftlink) {
     	  paths = queryDataObjectsForSoftlinkCreation();
@@ -424,7 +429,9 @@ public class DmeSyncScheduler {
 				e.getMessage() + "\n\n" + e.getCause().getMessage());
     } finally {
       MDC.clear();
+      scanInProgress = false;
       runId = null;
+
     }
   }
 
@@ -1027,19 +1034,22 @@ public class DmeSyncScheduler {
 			if (CollectionUtils.isEmpty(currentRunIgnored))
 				return;
 			else {
+				if( !scanInProgress &&  sender.getQueueCount("inbound.queue") == 0
+				        && consumer.isAllThreadsCompleted()) {
 				// There are records in Ignored Run, no records to upload send email
 				String emailBody = "There were no files/folders found for processing"
-						+ (!StringUtils.isEmpty(syncBaseDirFolders) ? " in " + syncBaseDirFolders + " folders" : "")
+						+ (!StringUtils.isEmpty(syncBaseDirFolders) ? " in " + syncBaseDirFolders + " folders" : "" )
 						+ ".";
 				dmeSyncMailServiceFactory.getService(doc)
 						.sendMail("HPCDME Auto Archival Result for " + doc + " - Base Path: " + syncBaseDir, emailBody);
 				logger.info("[Scheduler] No files/folders found. Shutting down the application.");
 				try {
-		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(runId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
+		              dmeSyncWorkflowRunLogService.updateWorkflowRunEnd(currentRunId, doc, WorkflowConstants.RunStatus.SKIPPED.toString(),null);
 		            } catch (IllegalArgumentException e) {
 		              logger.warn("[Scheduler] Workflow run not found when updating run end to SKIPPED for runId: {}, doc: {}", runId, doc, e);
 		            }
 				DmeSyncApplication.shutdown();
+				}
 			}
 	    
       }     
