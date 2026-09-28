@@ -3,11 +3,13 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -26,34 +28,29 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     implements DmeSyncPathMetadataProcessor {
 
   // Metadata template version 12 of DME path construction and meta data creation
-
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String sourceDir;
     
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] Metadata template getArchivePath called");
 
+    metadataMap = ExcelUtil.parseMetadataTemplateEntries(sourceRule.metadataFile);
+    
     // Example source path -
     // /mnt/lgcp_images/HudsonAlpha_3680/H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
     String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
     String archivePath = null;
     
     archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
-            + getPiCollectionName(object)
+            + getPiCollectionName(object, config)
             + "/Project_"
-            + getProjectCollectionName(object)
+            + getProjectCollectionName(object, config)
             + "/Sample_"
-            + getSampleId(object)
+            + getSampleId(object, config)
             + "/"
             + fileName;
 
@@ -66,9 +63,10 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -77,8 +75,8 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     // key = pi_name, value = Adam Sowalsky (supplied)
     // key = pi_lab, value = LGCP, CCR (supplied)
 
-    String piCollectionName = getPiCollectionName(object);
-    String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+    String piCollectionName = getPiCollectionName(object, config);
+    String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
     pathEntriesPI.setPath(piCollectionPath);
@@ -106,7 +104,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     // collaborators key = Collaborators (Optional)
     
 
-    String projectCollectionName = getProjectCollectionName(object);
+    String projectCollectionName = getProjectCollectionName(object, config);
     String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
     projectCollectionPath = projectCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
@@ -125,7 +123,7 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     // method key = Type pf project
     // sample_type key = ?
     String fileName = Paths.get(object.getOriginalFilePath()).toFile().getName();
-    String sampleId = getSampleId(object);
+    String sampleId = getSampleId(object, config);
     String sampleCollectionPath = projectCollectionPath + "/Sample_" + sampleId;
     sampleCollectionPath = sampleCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesSample = new HpcBulkMetadataEntry();
@@ -174,30 +172,32 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
     return null;
   }
 
-  private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getPiCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+	SourceConfig sourceConfig = config.getSourceConfig();
     String piCollectionName = null;
     // Example: If originalFilePath is
     // /mnt/lgcp_images/HudsonAlpha_3680/H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
     // then return the mapped PI from /mnt/lgcp_images
-    piCollectionName = getCollectionMappingValue(sourceDir, "PI_Lab", "template");
+    piCollectionName = getCollectionMappingValue(sourceConfig.sourceBaseDir, "PI_Lab", "template");
 
     logger.info("PI Collection Name: {}", piCollectionName);
     return piCollectionName;
   }
 
-  private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getProjectCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+	SourceConfig sourceConfig = config.getSourceConfig();
     String projectCollectionName = null;
     // Example: If originalFilePath is
     // /mnt/lgcp_images/HudsonAlpha_3680/H7C3KCCXX_s1_1_GSLv3-7_28_SL112746.fastq.gz
     // then return the mapped Project from HudsonAlpha_3680
-    String parentName = Paths.get(sourceDir).getFileName().toString();
+    String parentName = Paths.get(sourceConfig.sourceBaseDir).getFileName().toString();
     projectCollectionName = getCollectionNameFromParent(object, parentName);
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
   }
 
-  private String getSampleId(StatusInfo object) throws DmeSyncMappingException {
+  private String getSampleId(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 	  String path = Paths.get(object.getOriginalFilePath()).toString();
 	  String fileName = Paths.get(object.getOriginalFilePath()).getFileName().toString();
 	  String sampleId = null;
@@ -213,15 +213,9 @@ public class TemplatePathMetadataProcessorImpl extends AbstractPathMetadataProce
 	else if (path.contains("HudsonAlpha_")) {
 	  sampleId = StringUtils.substringBefore(StringUtils.substringAfterLast(fileName, "_"),".");
 	} else {
-	  sampleId = getProjectCollectionName(object);
+	  sampleId = getProjectCollectionName(object, config);
 	}
 	return "CL0106_T1";
   }
   
-  @PostConstruct
-  private void init() throws DmeSyncMappingException {
-	if("template".equalsIgnoreCase(doc)) {
-		metadataMap = ExcelUtil.parseMetadataTemplateEntries(metadataFile);
-	}
-  }
 }

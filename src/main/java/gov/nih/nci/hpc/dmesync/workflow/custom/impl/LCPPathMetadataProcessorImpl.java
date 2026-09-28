@@ -5,11 +5,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.UploadConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -28,26 +31,20 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     implements DmeSyncPathMetadataProcessor {
 
   // LCP DME path construction and meta data creation
-
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-  
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.source.base.dir}")
-  private String sourceDir;
-  
-  @Value("${dmesync.create.softlink:false}")
-  private boolean createSoftlink;
   
   Map<String, Map<String, String>> sampleNameMap = null;
   
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
+	UploadConfig upload = config.getUploadConfig();
     logger.info("[PathMetadataTask] LCP getArchivePath called");
 
+    metadataMap = ExcelUtil.parseBulkMetadataEntries(sourceRule.metadataFile, "Sample ID", "Application Type");
+	sampleNameMap = ExcelUtil.parseBulkMetadataEntries(sourceRule.metadataFile, "Sample Name", "Application Type");
+	
     // Example source path -
     // /data/LCP_Omics/pilot_project/rawdata/exome_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
     // /FNL_SF_Archive/PI_Lab_Xin_Wang/Project_XinWang_CS025208_241RNA_241RNA_080219/Flowcell_HKY7MDMXX/Sample_100_LCP0088_Bx1/100_LCP0088_Bx1_S78_R1_001.fastq.gz
@@ -58,11 +55,11 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     String archivePath = null;
 
     archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/DataOwner_"
             + getDataOwnerCollectionName(object)
             + "/Project_"
-            + getProjectCollectionName(object)
+            + getProjectCollectionName(object, config)
             + "/Application_Type_"
             + getApplicationTypeCollecionName(object)
             + "/Study_Site_"
@@ -71,7 +68,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
             + getSampleId(object)
             + "/"
             + (isAnalysis(object) ? "Analysis/" : "") 
-            + (createSoftlink ? "Raw/" : "")
+            + (upload.softlink ? "Raw/" : "")
     		+ fileName);
 
     // replace spaces with underscore
@@ -83,9 +80,12 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	UploadConfig upload = config.getUploadConfig();
+		
     // Add to HpcBulkMetadataEntries for path attributes
     HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -95,7 +95,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     // key = data_owner_affiliation, value = Laboratory of Human Carcinogenesis (supplied)
 
     String dataOwnerCollectionName = getDataOwnerCollectionName(object);
-    String dataOwnerCollectionPath = destinationBaseDir + "/DataOwner_" + dataOwnerCollectionName;
+    String dataOwnerCollectionPath = sourceConfig.destinationBaseDir + "/DataOwner_" + dataOwnerCollectionName;
     HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
     pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
     pathEntriesPI.setPath(dataOwnerCollectionPath);
@@ -104,7 +104,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
         .add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", dataOwnerCollectionName, "lcp"));
 
     // Add path metadata entries for "Project_XXX" collection
-    String projectCollectionName = getProjectCollectionName(object);
+    String projectCollectionName = getProjectCollectionName(object, config);
     String projectCollectionPath = dataOwnerCollectionPath + "/Project_" + projectCollectionName;
     projectCollectionPath = projectCollectionPath.replace(" ", "_");
     HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
@@ -184,7 +184,7 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	        hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesAnalysis);
 	    }
 	    
-	    if (createSoftlink) {
+	    if (upload.softlink) {
 	    	// Add path metadata entries for "Raw" collection
 	        String rawCollectionPath = isAnalysis(object) ? sampleCollectionPath + "/Analysis/Raw" : sampleCollectionPath + "/Raw";
 	        HpcBulkMetadataEntry pathEntriesRaw = new HpcBulkMetadataEntry();
@@ -242,14 +242,15 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     return dataOwnerCollectionName;
   }
 
-  private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+  private String getProjectCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+	SourceConfig sourceConfig = config.getSourceConfig();
     String projectCollectionName = null;
     // Example: If originalFilePath is
     // /data/LCP_Omics/pilot_project/rawdata/exome_seq/fastq/LCP0051_Bx1PT1_ZN_A.R1.fastq.gz
     // then return the mapped Project for pilot_project
     // else if data/LCP_Omics/frozen_crc/pipeliner/rna/qc
     // then return the mapped Project for frozen_crc
-    projectCollectionName = getCollectionMappingValue(getCollectionNameFromParent(sourceDir, "LCP_Omics"), "Project", "lcp");
+    projectCollectionName = getCollectionMappingValue(getCollectionNameFromParent(sourceConfig.sourceBaseDir, "LCP_Omics"), "Project", "lcp");
 
     logger.info("projectCollectionName: {}", projectCollectionName);
     return projectCollectionName;
@@ -359,11 +360,4 @@ public class LCPPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			&& !object.getOriginalFilePath().contains(".bam") && !object.getOriginalFilePath().contains(".bai");
   }
   
-  @PostConstruct
-  private void init() throws DmeSyncMappingException {
-	if("lcp".equalsIgnoreCase(doc)) {
-		metadataMap = ExcelUtil.parseBulkMetadataEntries(metadataFile, "Sample ID", "Application Type");
-		sampleNameMap = ExcelUtil.parseBulkMetadataEntries(metadataFile, "Sample Name", "Application Type");
-	}
-  }
 }

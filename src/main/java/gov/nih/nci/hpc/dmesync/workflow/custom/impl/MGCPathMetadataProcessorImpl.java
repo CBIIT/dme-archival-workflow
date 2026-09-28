@@ -3,9 +3,12 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -24,22 +27,15 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	// MicrobiomeCore DME path construction and meta data creation
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	private String sourceDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 		logger.info("[PathMetadataTask] MicrobiomeCore getArchivePath called");
 
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "project_id"));
+		threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "project_id"));
 
 		// Example source path -
 		// /data/MicrobiomeCore/runs/M03213_20220712/ASAM06_20220629-357138108/RN205d24B4_S303_L001_R1_001.fastq.gz
@@ -52,8 +48,8 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 		String archivePath = null;
 
-		archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
-				+ getProjectCollectionName(object) + "/Sample_" + getSampleId(object) + "/" + fileName;
+		archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object, config) + "/Project_"
+				+ getProjectCollectionName(object, config) + "/Sample_" + getSampleId(object) + "/" + fileName;
 
 		// replace spaces with underscore
 		archivePath = archivePath.replace(" ", "_");
@@ -64,9 +60,10 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 
@@ -75,9 +72,9 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// key = data_owner, value = (derived)
 		// key = data_owner_affiliation, (derived)
 
-		String piCollectionName = getPiCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
-		String projectCollectionName = getProjectCollectionName(object);
+		String piCollectionName = getPiCollectionName(object, config);
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
+		String projectCollectionName = getProjectCollectionName(object, config);
 		String projectId = getProjectId(projectCollectionName);
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
@@ -112,11 +109,11 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.setPath(projectCollectionPath);
-		String instrumentId = getInstrumentId(object);
+		String instrumentId = getInstrumentId(object, config);
 		String instrumentName = getInstrumentName(instrumentId);
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("instrument_id", instrumentId));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("instrument_name", instrumentName));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object), "yyyyMMdd"));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("run_date", getRunDate(object, config), "yyyyMMdd"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectId));
 		if (StringUtils.isNotBlank(getAttrValueWithKey(projectId, "project_title")))
 			pathEntriesProject.getPathMetadataEntries()
@@ -195,32 +192,34 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	private String getPiCollectionName(StatusInfo object) throws DmeSyncMappingException {
+	private String getPiCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		String piCollectionName = null;
-		piCollectionName = getAttrValueWithKey(getProjectId(getProjectCollectionName(object)), "data_owner");
+		piCollectionName = getAttrValueWithKey(getProjectId(getProjectCollectionName(object, config)), "data_owner");
 		piCollectionName = piCollectionName.replace(" ", "_");
 		logger.info("PI Collection Name: {}", piCollectionName);
 		return piCollectionName;
 	}
 
-	private String getInstrumentId(StatusInfo object) throws DmeSyncMappingException {
+	private String getInstrumentId(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		SourceConfig sourceConfig = config.getSourceConfig();
 		String instrumentId = null;
 		// Example: If originalFilePath is
 		// data/MicrobiomeCore/runs/M03213_20220712/ASAM06_20220629-357138108/RN205d24B4_S303_L001_R1_001.fastq.gz
 		// then return the machine id
-		String parentName = Paths.get(sourceDir).getFileName().toString();
+		String parentName = Paths.get(sourceConfig.sourceBaseDir).getFileName().toString();
 		instrumentId = StringUtils.substringBefore(getCollectionNameFromParent(object, parentName), "_");
 
 		logger.info("instrumentCollectionName: {}", instrumentId);
 		return instrumentId;
 	}
 
-	private String getRunDate(StatusInfo object) throws DmeSyncMappingException {
+	private String getRunDate(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		SourceConfig sourceConfig = config.getSourceConfig();
 		String instrumentId = null;
 		// Example: If originalFilePath is
 		// data/MicrobiomeCore/runs/M03213_20220712/ASAM06_20220629-357138108/RN205d24B4_S303_L001_R1_001.fastq.gz
 		// then return the machine id
-		String parentName = Paths.get(sourceDir).getFileName().toString();
+		String parentName = Paths.get(sourceConfig.sourceBaseDir).getFileName().toString();
 		instrumentId = StringUtils.substringAfter(getCollectionNameFromParent(object, parentName), "_");
 
 		logger.info("instrumentCollectionName: {}", instrumentId);
@@ -241,12 +240,13 @@ public class MGCPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return instrumentName;
 	}
 
-	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
+	private String getProjectCollectionName(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+		SourceConfig sourceConfig = config.getSourceConfig();
 		String projectCollectionName = null;
 		// Example: If originalFilePath is
 		// data/MicrobiomeCore/runs/M03213_20220712/ASAM06_20220629-357138108/RN205d24B4_S303_L001_R1_001.fastq.gz
 		// then return the project id ASAM06_20220629-357138108
-		String parentName = Paths.get(sourceDir).getFileName().toString();
+		String parentName = Paths.get(sourceConfig.sourceBaseDir).getFileName().toString();
 		projectCollectionName = getCollectionNameFromParent(object, getCollectionNameFromParent(object, parentName));
 
 		logger.info("projectCollectionName: {}", projectCollectionName);

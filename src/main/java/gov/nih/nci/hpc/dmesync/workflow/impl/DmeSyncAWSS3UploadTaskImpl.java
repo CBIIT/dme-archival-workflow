@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -41,9 +42,6 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 	private RestTemplateFactory restTemplateFactory;
 	@Autowired
 	private ObjectMapper objectMapper;
-
-	@Value("${hpc.server.url}")
-	private String serverUrl;
 
 	@Value("${auth.token}")
 	private String authToken;
@@ -67,13 +65,13 @@ public class DmeSyncAWSS3UploadTaskImpl extends AbstractDmeSyncTask implements D
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+	public StatusInfo process(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		object.setUploadStartTimestamp(new Date());
 
 		try {
 			// Call dataObjectRegistration API
-			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 					.path("/v2/dataObject".concat(object.getFullDestinationPath())).build().encode().toUri();
 
 			HttpHeaders header = new HttpHeaders();

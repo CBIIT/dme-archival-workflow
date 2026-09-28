@@ -7,7 +7,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -28,8 +31,9 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   //CCR LCB SubramaniamLab Custom logic for DME path construction and meta data creation
 
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     logger.info("[PathMetadataTask] LCBgetArchivePath called");
 
     //extract the user name from the source Path
@@ -41,7 +45,7 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     //Extract the Project value from the Path
 
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName()
             + "/"
@@ -59,8 +63,9 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	  SourceConfig sourceConfig = config.getSourceConfig();
 	  //Add to HpcBulkMetadataEntries for path attributes
 	  HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
 	  
@@ -70,7 +75,7 @@ public class LCBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	  //key = pi_name, value = Sriram Subramaniam (supplied)
 
       String piCollectionName = getPiCollectionName();
-      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.setPath(piCollectionPath);

@@ -10,9 +10,12 @@ import java.util.Comparator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -32,16 +35,12 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.source.base.dir}")
-	private String syncBaseDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 		logger.info("[PathMetadataTask] DTB getArchivePath called");
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		
 		String sourcePath = object.getOriginalFilePath();
 		String fileName = object.getSourceFileName();
 		String archivePath = null;
@@ -55,18 +54,18 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 																			// Fastq_combined
 
 			if ("Analysis_Combined".equalsIgnoreCase(subdir)) {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 						+ "/Run_" + runId + "/" + subdir + "/" + fileName;
 			} else if ("Fastq_Combined".equalsIgnoreCase(subdir)) {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 						+ "/Run_" + runId + "/" + subdir + "/" + fileName;
 			} else if ("Raw_Pod5".equalsIgnoreCase(subdir)) {
 				String podType = getCollectionNameFromParent(fullPath, "Raw_pod5");
 				if (StringUtils.containsIgnoreCase(podType, "CV")) {
-					archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+					archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 							+ "/Run_" + runId + "/" + subdir + "/Control_Version_" + podType + "/" + fileName;
 				} else if (StringUtils.containsIgnoreCase(podType, "BSC")) {
-					archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+					archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 							+ "/Run_" + runId + "/" + subdir + "/BaseCalling_Model_" + podType + "/" + fileName;
 				}
 			}
@@ -75,10 +74,10 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String subdir = getCollectionNameFromParent(fullPath, runId); // movies or process
 
 			if ("Movies".equalsIgnoreCase(subdir)) {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 						+ "/Run_" + runId + "/" + subdir + "/" + fileName;
 			} else if ("process".equalsIgnoreCase(subdir)) {
-				archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName
 						+ "/Run_" + runId + "/" + subdir + "/" + fileName;
 			}
 		}
@@ -86,7 +85,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		else if (StringUtils.equalsIgnoreCase(projectcollectionName, "Xtal")) {
 			String runDate = getCollectionNameFromParent(fullPath, "Xtal");
 			String subdir = getCollectionNameFromParent(fullPath, runDate);
-			archivePath = destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/Run_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Project_" + projectcollectionName + "/Run_"
 					+ runDate + "/" + subdir + "/" + fileName;
 
 		}
@@ -106,9 +105,12 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 
@@ -119,12 +121,12 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			String projectCollectionName = getProjectcollectionName(fullPath);
 			String metadataFilePathKey = getPathForMetadata(fullPath);
 
-			String metadataFileName = resolveMetadataFile(syncBaseDir,metadataFile );
+			String metadataFileName = resolveMetadataFile(sourceConfig.sourceBaseDir, sourceRule.metadataFile);
 			// load the user metadata from the externally placed excel
 			metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFileName, "Path");
 
 
-			logger.info("MetadatafileName {} with metadataFileKey {} with pattern {} ",metadataFileName, metadataFilePathKey, metadataFile);
+			logger.info("MetadatafileName {} with metadataFileKey {} with pattern {} ",metadataFileName, metadataFilePathKey, sourceRule.metadataFile);
 			
 			// Add to HpcBulkMetadataEntries for path attributes
 			HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
@@ -138,7 +140,7 @@ public class DTBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			// affiliation, email
 			// data_generator, affiliation, email
 
-			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+			String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);

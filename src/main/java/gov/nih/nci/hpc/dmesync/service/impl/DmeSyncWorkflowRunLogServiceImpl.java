@@ -8,12 +8,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import gov.nih.nci.hpc.dmesync.dao.StatusInfoDao;
 import gov.nih.nci.hpc.dmesync.dao.WorkflowRunInfoDao;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,7 +32,7 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 	@Autowired
 	protected WorkflowRunInfoDao<WorkflowRunInfo> workflowRunInfoDao;
-
+	
 	@Autowired
 	protected StatusInfoDao<StatusInfo> statusInfoDao;
 
@@ -44,15 +47,20 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 	}
 
 	@Override
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId) {
+		return workflowRunInfoDao.findFirstByDocIdOrderByRunStartTimestampDesc(docId);
+	}
+	
+	@Override
 	public void logWorkflowRunStartHeartbeat(Long id) {
 	}
 
 	@Override
-	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage) {
+	public void updateWorkflowRunEnd(String runId, DocConfig config, String finalStatus, String errorMessage) {
 		
 		logger.info("Updating the Workflow run Information");
 		
-		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndDoc(runId, doc);
+		WorkflowRunInfo workflowRunInfo = workflowRunInfoDao.findFirstByRunIdAndDoc(runId, config.getDocName());
 
 		if (workflowRunInfo != null) {
 			
@@ -62,10 +70,20 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 
 			// Compute Uploaded Size
 
-			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, doc);
+			List<StatusInfo> runIdRows = statusInfoDao.findByRunIdAndDoc(runId, config.getDocName());
 
+			long completedRows = runIdRows.stream()
+										.filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
+										.count();
+			
 			long totalSize = runIdRows.stream().filter(f -> WorkflowConstants.isCompletedStatus(f.getStatus()))
 					.map(StatusInfo::getFilesize).filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+			
+			double completionPercentage = runIdRows.isEmpty() ? 0.0
+										: BigDecimal.valueOf(completedRows)
+ 										.multiply(BigDecimal.valueOf(100))
+ 										.divide(BigDecimal.valueOf(runIdRows.size()), 2, RoundingMode.HALF_UP)
+ 										.doubleValue();;
 
 			Long durationMinutes = mins;
 			workflowRunInfo.setRunLastHeartbeatTimestamp(Timestamp.from(Instant.now()));
@@ -74,11 +92,18 @@ public class DmeSyncWorkflowRunLogServiceImpl implements DmeSyncWorkflowRunLogSe
 			workflowRunInfo.setStatus(finalStatus);
 			workflowRunInfo.setErrorMessage(errorMessage);
 			workflowRunInfo.setUploadedSize(ExcelUtil.humanReadableByteCount(Long.valueOf(totalSize), true));
+			workflowRunInfo.setCompletionPercentage(completionPercentage);
+			workflowRunInfo.setDocId(config.getId());
 			workflowRunInfoDao.save(workflowRunInfo);
 			logger.info("Completed updating the Workflow run Information for workflow " + workflowRunInfo.getRunId());
 		}else {
-			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + doc);
+			throw new IllegalArgumentException("Workflow Run not found for: " + runId + " " + config.getDocName());
 		}
+	}
+	
+	@Override
+	public void resetWorkflowRunInfo() {
+		workflowRunInfoDao.resetWorkflowRunInfo();
 	}
 
 }

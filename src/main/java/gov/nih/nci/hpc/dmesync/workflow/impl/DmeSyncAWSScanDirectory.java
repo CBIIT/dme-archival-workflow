@@ -9,6 +9,7 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.domain.datatransfer.HpcFileLocation;
 import gov.nih.nci.hpc.domain.datatransfer.HpcS3Account;
@@ -49,9 +50,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public class DmeSyncAWSScanDirectory {
 
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 
@@ -66,15 +64,6 @@ public class DmeSyncAWSScanDirectory {
 
 	@Value("${dmesync.source.aws.region:}")
 	private String awsRegion;
-
-	@Value("${dmesync.exclude.pattern:}")
-	private String excludePattern;
-
-	@Value("${dmesync.include.pattern:}")
-	private String includePattern;
-
-	@Value("${dmesync.destination.base.dir}")
-	protected String destinationBaseDir;
 
 	@Autowired
 	private RestTemplateFactory restTemplateFactory;
@@ -96,14 +85,14 @@ public class DmeSyncAWSScanDirectory {
 	 * @return The list of HpcPathAttributes
 	 * @throws HpcException The exception
 	 */
-	public List<HpcPathAttributes> getPathAttributes(String path) throws HpcException {
+	public List<HpcPathAttributes> getPathAttributes(String path, DocConfig config) throws HpcException {
 		List<HpcPathAttributes> pathAttributes = new ArrayList<>();
 
 		try {
 			logger.debug("getPathAttributes: fileId: {}", path);
-			HpcBulkDataObjectRegistrationResponseDTO dto = registerBulkDatafiles(path);
+			HpcBulkDataObjectRegistrationResponseDTO dto = registerBulkDatafiles(path, config);
 
-			getPathAttributes(pathAttributes, dto.getDataObjectRegistrationItems());
+			getPathAttributes(pathAttributes, dto.getDataObjectRegistrationItems(), config);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			throw new HpcException("Failed to get path attributes: " + path, HpcErrorType.DATA_TRANSFER_ERROR, e);
@@ -119,8 +108,9 @@ public class DmeSyncAWSScanDirectory {
 	 * @param list       The data object to check.
 	 * @throws HpcException The exception
 	 */
-	private void getPathAttributes(List<HpcPathAttributes> attributes, List<HpcDataObjectRegistrationItemDTO> list) {
+	private void getPathAttributes(List<HpcPathAttributes> attributes, List<HpcDataObjectRegistrationItemDTO> list, DocConfig config) {
 
+		String destinationBaseDir = config.getSourceConfig().destinationBaseDir;
 		if (list != null) {
 			for (HpcDataObjectRegistrationItemDTO dataObject : list) {
 				HpcPathAttributes pathAttributes = new HpcPathAttributes();
@@ -145,9 +135,10 @@ public class DmeSyncAWSScanDirectory {
 	 * @throws HpcException         The exception
 	 * @throws IOException
 	 */
-	private HpcBulkDataObjectRegistrationResponseDTO registerBulkDatafiles(String path)
+	private HpcBulkDataObjectRegistrationResponseDTO registerBulkDatafiles(String path, DocConfig config)
 			throws JsonParseException, JsonMappingException, IOException {
 
+		String destinationBaseDir = config.getSourceConfig().destinationBaseDir;
 		HpcBulkDataObjectRegistrationRequestDTO dto = new HpcBulkDataObjectRegistrationRequestDTO();
 		dto.setDryRun(true);
 
@@ -173,7 +164,7 @@ public class DmeSyncAWSScanDirectory {
 
 		// Call queryAllDataObjectsInPath API
 		HpcBulkDataObjectRegistrationResponseDTO results = null;
-		final URI bulkRegistrationURL = UriComponentsBuilder.fromHttpUrl(serverUrl).path("/v2/registration").build()
+		final URI bulkRegistrationURL = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl()).path("/v2/registration").build()
 				.encode().toUri();
 
 		HttpHeaders header = new HttpHeaders();

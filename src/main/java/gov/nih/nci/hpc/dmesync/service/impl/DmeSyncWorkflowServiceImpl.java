@@ -56,7 +56,7 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 		}
     statusInfoDao.saveAndFlush(info);
   }
-	
+
 
   @Override
   public StatusInfo findFirstStatusInfoByOriginalFilePathAndStatusIn(
@@ -270,5 +270,10 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   @Override
   public List<StatusInfo> findStatusInfoByDocAndStatus(String doc, String status) {
 	return statusInfoDao.findStatusInfoByDocAndStatus(doc, status);
+  }
+  
+  @Override
+  public long countByDocAndRunIdAndStatus(String doc, String runId, String status) {
+	  return statusInfoDao.countByDocAndRunIdAndStatus(doc, runId, status);
   }
 }

@@ -11,7 +11,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -32,12 +36,12 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
   @Autowired private DbGapMetadataMapper mapper;
 
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
+	
     logger.info("[PathMetadataTask] dbGap getArchivePath called");
 
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
@@ -48,11 +52,11 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
         
     if(dataType.equals("SRA_Read")) {
       // load the user metadata from the externally placed excel
-      threadLocalMap.set(loadMetadataFile(metadataFile, "Run"));
+      threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Run"));
       String runId = getRunId(fileName);
 
       archivePath =
-        destinationBaseDir
+        sourceConfig.destinationBaseDir
             + "/Database_DbGap"
             + "/Study_"
             + getProjectCollectionName(runId)
@@ -66,7 +70,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
             + fileName;
     } else {
       archivePath =
-          destinationBaseDir
+    	sourceConfig.destinationBaseDir
               + "/Database_DbGap"
               + "/Study_"
               + getCollectionMappingValue("refseq", "Project", "dbgap")
@@ -87,9 +91,11 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	  
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
         new HpcDataObjectRegistrationRequestDTO();
     try {
@@ -102,7 +108,7 @@ public class DbGapPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       //Add path metadata entries for "Database_DbGap" collection
       //key = database_type, value = dbGaP (fixed)
 
-      String dbCollectionPath = destinationBaseDir + "/Database_DbGap";
+      String dbCollectionPath = sourceConfig.destinationBaseDir + "/Database_DbGap";
       HpcBulkMetadataEntry pathEntriesDB = new HpcBulkMetadataEntry();
       pathEntriesDB.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Database"));
       pathEntriesDB.getPathMetadataEntries().add(createPathEntry("database_type", "dbGaP"));

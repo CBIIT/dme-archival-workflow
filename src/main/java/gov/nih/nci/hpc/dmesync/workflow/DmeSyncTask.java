@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
@@ -23,6 +24,6 @@ public interface DmeSyncTask {
    * @throws DmeSyncWorkflowException on workflow error
  * @throws DmeSyncStorageException 
    */
-  StatusInfo processTask(StatusInfo statusInfo)
+  StatusInfo processTask(StatusInfo statusInfo, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException, DmeSyncVerificationException, DmeSyncStorageException;
 }

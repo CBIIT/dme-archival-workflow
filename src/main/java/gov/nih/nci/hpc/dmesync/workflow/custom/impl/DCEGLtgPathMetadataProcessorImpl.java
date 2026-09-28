@@ -5,10 +5,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.PreprocessingConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -28,15 +31,13 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 
 	// DCEG LTG Custom logic for DME path construction and meta data creation
 
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-	
-	@Value("${dmesync.tar:false}")
-	private boolean tar;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		PreprocessingConfig pre = config.getPreprocessingConfig();
+		
 		logger.info("[PathMetadataTask] DCEG LTG getArchivePath called");
 		
 		// Get all the metadata and projectIds, FlowcellIds from excel sheet
@@ -44,20 +45,20 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String archivePath;
 		// load the user metadata from the externally placed excel
-		threadLocalMap.set(loadMetadataFile(metadataFile, "Path"));
+		threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "Path"));
 
 		if (StringUtils.containsIgnoreCase(object.getSourceFileName(), "Analysis_Data") ||
 				StringUtils.containsIgnoreCase(object.getSourceFileName(), "Aligned_Data")	) {
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object, object.getOriginalFilePath()+"/") + "/Aligned_Data" + "/" + fileName;
 		} else {
-			if (!tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+			if (!pre.tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
 				String samplePath = getSampleParentPath(object, "Sample") + "/";
-				archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 						+ getProjectCollectionName(object, samplePath) + "/Flowcell_" + getFlowCellId(object, samplePath) + "/Sample_" + getSampleId(object) + "/" + fileName;
 			} else {
 				String path= object.getOriginalFilePath()+"/";
-				archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(object) + "/Project_"
 						+ getProjectCollectionName(object, path) + "/Flowcell_" + getFlowCellId(object, path) + "/" + fileName;
 			}
 
@@ -72,9 +73,11 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
+		PreprocessingConfig pre = config.getPreprocessingConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 		try {
 			
@@ -98,7 +101,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			// key = poc_name, value = ? (supplied)
 
 			String piCollectionName = getPiCollectionName(object);
-			String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+			String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 			HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 			pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 			pathEntriesPI.setPath(piCollectionPath);
@@ -184,7 +187,7 @@ public class DCEGLtgPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				pathEntriesFlowcell.getPathMetadataEntries().add(createPathEntry("flowcell_id", flowcellId));
 				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesFlowcell);
 
-				if (!tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
+				if (!pre.tar && StringUtils.containsIgnoreCase(object.getSourceFilePath(), "Sample")) {
 					String sampleId = getSampleId(object);
 					String sampleCollectionPath = flowcellCollectionPath + "/" + "Sample_" + sampleId;
 					HpcBulkMetadataEntry pathEntriesSampleData = new HpcBulkMetadataEntry();

@@ -8,7 +8,10 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -27,9 +30,15 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 
   // LRBGE Custom logic for DME path construction and meta data creation
   
-  @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  // For testability: allow overriding directory stream logic
+  protected DirectoryStream<Path> getDirectoryStream(Path dir, java.nio.file.DirectoryStream.Filter<Path> filter) throws IOException {
+    return Files.newDirectoryStream(dir, filter);
+  }
 
+  @Override
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
+
+	SourceConfig sourceConfig = config.getSourceConfig();
     logger.info("[PathMetadataTask] LRBGE getArchivePath called");
 
     // Example source path -
@@ -41,7 +50,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     
     // extract the derived metadata from the excel that exists in the folder (assuming one excel)
     String metadataFile;
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(filePath.getParent(), path -> path.toString().endsWith(".xlsx"))) {
+    try (DirectoryStream<Path> stream = getDirectoryStream(filePath.getParent(), path -> path.toString().endsWith(".xlsx"))) {
       Iterator<Path> it = stream.iterator();
       if(it.hasNext()) {
         metadataFile = it.next().toString();
@@ -66,7 +75,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     // Example - image_name - FLIM-ModuloAlongC.ome.tiff, attrValue - MyGelSoakedInHormones25 - Run_MyGelSoakedInHormones25
     try {
       archivePath =
-          destinationBaseDir
+          sourceConfig.destinationBaseDir
               + "/PI_"
               + getPiCollectionName(fileName)
               + "/User_"
@@ -91,9 +100,10 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   }
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO =
         new HpcDataObjectRegistrationRequestDTO();
     try {
@@ -107,7 +117,7 @@ public class LRBGEPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       // key = affiliation, value = CCR/LRBGE/HAO (supplied)
   
       String piCollectionName = getPiCollectionName(fileName);
-      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
       pathEntriesPI.getPathMetadataEntries().add(createPathEntry("data_owner", getAttrValueWithKey(fileName, "pi_name")));

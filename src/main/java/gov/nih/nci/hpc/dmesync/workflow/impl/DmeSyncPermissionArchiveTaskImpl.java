@@ -15,6 +15,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
@@ -31,9 +32,6 @@ import gov.nih.nci.hpc.dto.error.HpcExceptionDTO;
 @Component
 public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implements DmeSyncTask {
 
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 
@@ -49,14 +47,14 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 	}
 
 	@Override
-	public StatusInfo process(StatusInfo object) throws DmeSyncWorkflowException {
+	public StatusInfo process(StatusInfo object, DocConfig config) throws DmeSyncWorkflowException {
 
 		if (object.getArchivePermissionsRequestDTO() != null) {
 			try {
 
 				// Get owner, group and permissions from the
 				// ArchivePermissionsRequestDTO
-				setPermissions(object);
+				setPermissions(object, config);
 				
 			} catch (Exception e) {
 				logger.error("[{}] Error occured during set archive permission task {}", super.getTaskName(), e.getMessage(), e);
@@ -67,13 +65,13 @@ public class DmeSyncPermissionArchiveTaskImpl extends AbstractDmeSyncTask implem
 		return object;
 	}
 
-	private void setPermissions(StatusInfo object) throws DmeSyncWorkflowException, IOException {
+	private void setPermissions(StatusInfo object, DocConfig config) throws DmeSyncWorkflowException, IOException {
 		// Call set archive permission API
 		HpcArchivePermissionsRequestDTO dto = object.getArchivePermissionsRequestDTO();
 		dto.setSetArchivePermissionsFromSource(false);
 		dto.setSetDataManagementPermissions(true);
 
-		final URI permissionArchiveUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+		final URI permissionArchiveUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 				.path("/dataObject/{path}/acl/archive").buildAndExpand(object.getFullDestinationPath()).encode()
 				.toUri();
 
