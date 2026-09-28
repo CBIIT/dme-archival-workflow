@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,9 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	
+
+	private static final Pattern PATIENT_ID = Pattern.compile("^(P\\d+)");
+
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 
@@ -54,41 +58,36 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 
 		String metadataFileKey = getMetadataFileKey(object);
 
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		Path filePath = Paths.get(object.getSourceFilePath());
+		String fileName = filePath.toFile().getName();
+		String parentName = filePath.getParent().getFileName().toString();
+		String patientId = extractPatientId(fileName);
+
 		String collectionName = getCollectionName(object);
 		String archivePath = null;
 		if (collectionName != null) {
-			if (StringUtils.equalsIgnoreCase("hla_custom_refs", collectionName)) {
+
+			 if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
 				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-						+ getProjectCollectionName(object, metadataFileKey) + "/Reference/" + fileName;
-			} else if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
-				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-						+ getProjectCollectionName(object, metadataFileKey) + "/PGXI/";
+						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_"+ patientId +"/PGXI/";
 				String folderName = getCollectionNameFromParent(object.getOriginalFilePath(), collectionName);
 				if (folderName != null && StringUtils.equalsIgnoreCase("Shared", folderName)) {
-					archivePath += "Shared/" + fileName;
-				} else {
 					archivePath += fileName;
+				} else {
+					archivePath = null;
 				}
 
 			} else if (StringUtils.equalsIgnoreCase("Validation", collectionName)) {
+
 				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-						+ getProjectCollectionName(object, metadataFileKey) + "/Validation/" + fileName;
+						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_"+ patientId + "/Validation/"  + fileName;
 			} else if (StringUtils.equalsIgnoreCase("Pre-Validation Analysis", collectionName)) {
-				String batchName = getCollectionNameFromParent(object.getOriginalFilePath(), collectionName);
-				String parentName = getCollectionNameFromParent(object.getOriginalFilePath(), batchName);
-				if (StringUtils.equalsIgnoreCase("cram", parentName)) {
 					archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-							+ getProjectCollectionName(object, metadataFileKey) + "/Pre_Validation_Analysis/"
-							+ batchName + "/" + parentName + "/" + fileName;
-				} else {
-					archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-							+ getProjectCollectionName(object, metadataFileKey) + "/Pre_Validation_Analysis/"
-							+ batchName + "/" + fileName;
-				}
+							+ getProjectCollectionName(object, metadataFileKey) +  "/Patient_"+ patientId + "/Pre_Validation_Analysis/"
+						    + fileName;
 			}
 		}
-
+		
 		if (archivePath == null) {
 			String msg = messageService.get("VALIDATION_001");
 			logger.error(
@@ -113,7 +112,10 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
-		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
+		Path filePath = Paths.get(object.getSourceFilePath());
+		String fileName = filePath.toFile().getName();
+		String parentName = filePath.getParent().getFileName().toString();
+		String patientId = extractPatientId(fileName);
 		String metadataFileKey = getMetadataFileKey(object);
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
@@ -129,22 +131,27 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 				metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
+		// Add path metadata entries for Patient Collection
+		
+		String patientCollectionPath = projectCollectionPath + "/Patient_" + patientId;
+		HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
+		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Batch"));
+		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_id", patientId));
+		pathEntriesPatient.setPath(patientCollectionPath.replace(" ", "_"));
+		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPatient);
+		
 		// Add path metadata entries for folder
 		String collectionName = getCollectionName(object);
-		String collectionPath = projectCollectionPath + "/";
+		String collectionPath = null ;
 		HpcBulkMetadataEntry pathEntriesCollection = new HpcBulkMetadataEntry();
 		if (collectionName != null) {
 
-			if (StringUtils.equalsIgnoreCase("hla_custom_refs", collectionName)) {
-				collectionPath = projectCollectionPath + "/Reference";
+			if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
+				collectionPath = patientCollectionPath + "/PGXI";
 				pathEntriesCollection.getPathMetadataEntries()
-						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Reference"));
-			} else if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
-				collectionPath = projectCollectionPath + "/PGXI";
-				pathEntriesCollection.getPathMetadataEntries()
-						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Processed_Data"));
+						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Report"));
 			} else if (StringUtils.equalsIgnoreCase("Validation", collectionName)) {
-				collectionPath = projectCollectionPath + "/Validation";
+				collectionPath = patientCollectionPath + "/Validation";
 				pathEntriesCollection.getPathMetadataEntries()
 						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Results"));
 			} else if (StringUtils.equalsIgnoreCase("Pre-Validation Analysis", collectionName)) {
@@ -156,36 +163,6 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			pathEntriesCollection.setPath(collectionPath.replace(" ", "_"));
 			hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCollection);
 
-			// Add path metadata entries for PGXI Shared folder if it exists
-			if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
-				String folderName = getCollectionNameFromParent(object.getOriginalFilePath(), collectionName);
-				if (folderName != null && StringUtils.equalsIgnoreCase("Shared", folderName)) {
-					HpcBulkMetadataEntry pathEntriesPgxi = new HpcBulkMetadataEntry();
-					String pgxiCollectionPath = collectionPath + "/Shared";
-					pathEntriesPgxi.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Folder"));
-					pathEntriesPgxi.setPath(pgxiCollectionPath.replace(" ", "_"));
-					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPgxi);
-				}
-			}
-
-			// Add path metadata entries for Pre-Validation Analysis Batch and CRAM folders if they exist
-			else if (StringUtils.equalsIgnoreCase("Pre-Validation Analysis", collectionName)) {
-				String batchName = getCollectionNameFromParent(object.getOriginalFilePath(), collectionName);
-				String parentName = getCollectionNameFromParent(object.getOriginalFilePath(), batchName);
-				HpcBulkMetadataEntry pathEntriesParent = new HpcBulkMetadataEntry();
-				String batchCollectionPath = collectionPath + "/" + batchName;
-				pathEntriesParent.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Batch"));
-				pathEntriesParent.getPathMetadataEntries().add(createPathEntry("batch_id", batchName));
-				pathEntriesParent.setPath(batchCollectionPath.replace(" ", "_"));
-				hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesParent);
-				if (StringUtils.equalsIgnoreCase("cram", parentName)) {
-					HpcBulkMetadataEntry pathEntriesCram = new HpcBulkMetadataEntry();
-					String cramCollectionPath = batchCollectionPath + "/" + parentName;
-					pathEntriesCram.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "CRAM"));
-					pathEntriesCram.setPath(cramCollectionPath.replace(" ", "_"));
-					hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesCram);
-				}
-			}
 		}
 
 		// Set it to dataObjectRegistrationRequestDTO
@@ -198,7 +175,8 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
-		return dataObjectRegistrationRequestDTO;
+		return dataObjectRegistrationRequestDTO; 
+		
 	}
 
 	private String getCollectionNameFromParent(String path, String parentName) {
@@ -248,5 +226,11 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		logger.info("Metadata FileKey = {}", metadataFileKey);
 		return metadataFileKey;
 	}
+
+
+    public static String extractPatientId(String filename) {
+        Matcher matcher = PATIENT_ID.matcher(filename);
+        return matcher.find() ? matcher.group(1) : null;
+    }
 
 }
