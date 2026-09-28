@@ -23,10 +23,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
+import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeSyncMessageDto;
+import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncStorageException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncVerificationException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -34,6 +35,7 @@ import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
+import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
 
 /**
@@ -50,6 +52,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	@Autowired
 	private DocQueueNameResolver queueNameResolver;
 	
+	@Autowired 
+	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
+	
 	@PostConstruct
 	public boolean init() {
 		super.setTaskName("ProcessMultipleTarsTask");
@@ -57,9 +62,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		return true;
 	}
 
-	@Override
-	public StatusInfo process(StatusInfo object, DocConfig config)
-			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException {
+	
+	public StatusInfo process(StatusInfo object)
+			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException, DmeSyncMappingException {
+
 
 		/**
 		 * This task is only applicable for some folders in Dataset so below
@@ -73,8 +79,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-		if (TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , sourceDirLeafNode )) {
 
+		
+		  if (TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsFolders , sourceDirLeafNode )) {
+			  if (metadataTask.isMetadataAvailable(object)) { 
 			try {
 
 				Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
@@ -124,9 +132,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					}
 					
 					Arrays.sort(files, Comparator.comparing(File::lastModified));
+
 					if (preRule.multipleTarsBatchFolders) {
-						
-						object = processGroupedFolderTarsRequests (object, files, tarWorkDir, notesWriter, config );
+							object = processGroupedFolderTarsRequests(object, files, tarWorkDir, notesWriter , config);
 					}else {
 					List<File> fileList = new ArrayList<>(Arrays.asList(files));
 					int expectedTarRequests = (fileList.size() + preRule.multipleTarsFilesCount - 1) / preRule.multipleTarsFilesCount;
@@ -362,7 +370,17 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 				logger.error("[{}] error {}", super.getTaskName(), e.getMessage(), e);
 				throw new DmeSyncStorageException("Error occurred during batch tarring. " + e.getMessage(), e);
 			}
-		}return object;
+		} 
+	else {
+		logger.info("No need to upload folder : {}", object.getOriginalFilePath());
+		object.setStatus(WorkflowConstants.FAILED);
+		object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
+		object.setEndWorkflow(true);
+		object.setError("No need to upload yet");
+		object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+	   } 
+	}
+		return object;
 
 	}
 
@@ -437,12 +455,15 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	
 	
 	private StatusInfo processGroupedFolderTarsRequests(StatusInfo object, File[] files, String tarWorkDir,
+
 			BufferedWriter notesWriter, DocConfig config) throws IOException, DmeSyncVerificationException {
 		
 		DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 		DocConfig.UploadConfig upload = config.getUploadConfig();
 		logger.info("[{}] Grouping enabled: delimiter='{}', level={}", super.getTaskName(), preRule.multipleTarsBatchFolderDelimiter,
 				preRule.multipleTarsBatchFolderLevel);
+
+			
 
 		// Only directories (site folders)
 		List<File> siteFolders = Arrays.stream(files).filter(File::isDirectory)
