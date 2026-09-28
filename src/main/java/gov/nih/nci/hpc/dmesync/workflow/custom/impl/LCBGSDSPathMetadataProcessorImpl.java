@@ -6,7 +6,6 @@ import java.nio.file.Paths;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
@@ -37,7 +36,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	private DmeMetadataBuilder dmeMetadataBuilder;
 	
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	public String getArchivePath(StatusInfo object ,  DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 
 		SourceConfig sourceConfig = config.getSourceConfig();
@@ -192,10 +191,11 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+    public boolean isMetadataAvailable(StatusInfo object , DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 		
 		 // load the user metadata from the externally placed excel
-	        metadataMap = dmeMetadataBuilder.getMetadataMap(sourceConfig.metadataFile, "path");
+		    SourceRule sourceRule = config.getSourceRule();
+	        metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "path");
 		   // Check if this project is in the metadata spreadsheet
 			String experimentName = getExpCollectionName(object);
 			String path = getPath(object);

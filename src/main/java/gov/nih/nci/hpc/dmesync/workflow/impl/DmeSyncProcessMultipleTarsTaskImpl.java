@@ -21,7 +21,6 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.DmeSyncPathMetadataProcessorFactory;
@@ -63,7 +62,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	}
 
 	
-	public StatusInfo process(StatusInfo object)
+	public StatusInfo process(StatusInfo object ,  DocConfig config)
 			throws DmeSyncVerificationException, DmeSyncWorkflowException, DmeSyncStorageException, DmeSyncMappingException {
 
 
@@ -79,10 +78,10 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		String sourceDirLeafNode = object.getSourceFilePath() != null
 				? ((Paths.get(object.getSourceFilePath())).getFileName()).toString()
 				: null;
-
+		DmeSyncPathMetadataProcessor metadataTask = metadataProcessorFactory.getService(config.getDocName());
 		
-		  if (TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsFolders , sourceDirLeafNode )) {
-			  if (metadataTask.isMetadataAvailable(object)) { 
+		if (TarUtil.matchesAnyMultipleTarFolder( preRule.multipleTarsDirFolders , sourceDirLeafNode )) {
+			  if (metadataTask.isMetadataAvailable(object , config)) { 
 			try {
 
 				Path baseDirPath = Paths.get(sourceConfig.sourceBaseDir).toRealPath();
@@ -581,5 +580,8 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 		return object;
 	}
+
+
+	
 
 }
