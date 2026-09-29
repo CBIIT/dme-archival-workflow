@@ -162,7 +162,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
                        *   check if there is already record inserted in Db: If yes check the indexes, if not reuse the row from Db record.
                        */
 						
-						if ("local".equals(upload.verifyPrevUpload)) {
+						if (upload.verifyPrevUpload) {
 							
 						  // This  block executes when  dmesync.verify.prev.upload=local
 							StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
@@ -251,7 +251,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 							}
 							
 						} else {
-							// If verifyPrevUpload value is none. This means doesn't check the database for uploads then add new row in status info table for tar, send the new row Id to JMS queue
+							// If s value is none. This means doesn't check the database for uploads then add new row in status info table for tar, send the new row Id to JMS queue
 							StatusInfo newTarRequest = insertNewRowforTar(object, tarFileName, true, start, end, null , tarContentsCount);
 							logger.info("[{}]Enqueuing the new tar request {}", super.getTaskName(),
 									newTarRequest.getId());
@@ -267,7 +267,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 					
 					logger.info("[{}] Started Multiple tar requests Verification  in {}", super.getTaskName());
 					List<StatusInfo> totalRequestsForFolder;
-					if ("local".equals(upload.verifyPrevUpload)) {
+					if (upload.verifyPrevUpload) {
 						// If local, get the query based on original file Path movies
 						totalRequestsForFolder = dmeSyncWorkflowService.getService(access)
 								.findAllByDocAndLikeOriginalFilePath(config.getDocName(), object.getOriginalFilePath());
@@ -311,7 +311,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 						
 						
-						if ("local".equals(upload.verifyPrevUpload) && checkForUploadedContentsFile!=null) {
+						if (upload.verifyPrevUpload && checkForUploadedContentsFile!=null) {
 							
 						   if( StringUtils.equalsIgnoreCase("COMPLETED", checkForUploadedContentsFile.getStatus())) {
 							   // Tar contents file request have already uplaoded in previous run
@@ -400,6 +400,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		} else {
 			statusInfo.setSourceFilePath(sourceFile.getAbsolutePath());
 			statusInfo.setFilesize(sourceFile.length());
+			statusInfo.setStatus(WorkflowConstants.FAILED);
 		}
 		
 		statusInfo.setTarContentsCount(tarContentsCount);
@@ -521,7 +522,7 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 
 			int tarContentsCount = foldersInGroup.size();
 			
-			if ("local".equals(upload.verifyPrevUpload)) {
+			if (upload.verifyPrevUpload) {
 
 				StatusInfo recordForUploadedTar = dmeSyncWorkflowService.getService(access)
 						.findFirstStatusInfoByOriginalFilePathAndSourceFileNameAndStatus(object.getOriginalFilePath(),
