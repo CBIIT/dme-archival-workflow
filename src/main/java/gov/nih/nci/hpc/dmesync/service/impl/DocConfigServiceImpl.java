@@ -42,6 +42,11 @@ public class DocConfigServiceImpl implements DocConfigService {
     }
 
     @Override
+    public List<DocConfig> getDocConfigsWithIncludePatternAutoUpdate() {
+        return configDao.findDocsWithIncludePatternAutoUpdate();
+    }
+
+    @Override
     public Optional<DocConfig> getDocConfigByName(String docName) {
         return Optional.ofNullable(docsByName.get(docName));
     }

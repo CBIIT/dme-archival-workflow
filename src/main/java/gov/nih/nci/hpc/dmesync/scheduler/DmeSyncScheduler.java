@@ -12,17 +12,15 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.TextStyle;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -58,6 +56,9 @@ import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternGenerator;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternGeneratorRegistry;
+import gov.nih.nci.hpc.dmesync.service.ScheduledJobLockService;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -69,7 +70,7 @@ import gov.nih.nci.hpc.dmesync.service.DocConfigService;
 public class DmeSyncScheduler implements DocWorkflowExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(DmeSyncScheduler.class);
-  private static final String CSB_DOC_NAME = "csb";
+  private static final String INCLUDE_PATTERN_REFRESH_JOB_NAME = "include-pattern-refresh";
 
   private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
   private final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -85,6 +86,8 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
   @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
   @Autowired private DocConfigService configService;
+  @Autowired private IncludePatternGeneratorRegistry includePatternGeneratorRegistry;
+  @Autowired private ScheduledJobLockService scheduledJobLockService;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -122,44 +125,57 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     return true;
   }
 
-  @Scheduled(cron = "0 0 0 1 * ?")
-  public void refreshCsbMonthlyIncludePattern() {
-    refreshCsbMonthlyIncludePattern(LocalDate.now());
+  @Scheduled(cron = "${app.include-pattern.refresh.cron:0 0 0 1 * ?}")
+  public void refreshMonthlyIncludePatterns() {
+    refreshMonthlyIncludePatterns(LocalDate.now());
   }
 
-  private void refreshCsbMonthlyIncludePattern(LocalDate currentDate) {
-    Optional<DocConfig> configOptional = configService.getDocConfigByName(CSB_DOC_NAME);
-    if (configOptional.isEmpty()) {
-      logger.warn("[Scheduler][CSBIncludePattern] Config lookup returned no result for doc '{}'", CSB_DOC_NAME);
+  private void refreshMonthlyIncludePatterns(LocalDate currentDate) {
+    String runKey = YearMonth.from(currentDate).toString();
+    if (!scheduledJobLockService.tryAcquire(INCLUDE_PATTERN_REFRESH_JOB_NAME, runKey)) {
+      logger.info("[Scheduler][IncludePatternRefresh] Skipping monthly refresh because another server already claimed job '{}' for {}", INCLUDE_PATTERN_REFRESH_JOB_NAME, runKey);
       return;
     }
 
-    DocConfig config = configOptional.get();
+    boolean success = false;
+    try {
+      for (DocConfig config : configService.getDocConfigsWithIncludePatternAutoUpdate()) {
+        refreshMonthlyIncludePattern(config, currentDate);
+      }
+      success = true;
+    } finally {
+      scheduledJobLockService.markCompleted(INCLUDE_PATTERN_REFRESH_JOB_NAME, runKey, success);
+    }
+  }
+
+  private void refreshMonthlyIncludePattern(DocConfig config, LocalDate currentDate) {
     DocConfig.SourceRule sourceRule = config.getSourceRule();
     if (sourceRule == null) {
-      logger.warn("[Scheduler][CSBIncludePattern] Missing source rule for doc '{}'", CSB_DOC_NAME);
+      logger.warn("[Scheduler][IncludePatternRefresh] Missing source rule for doc '{}'", config.getDocName());
       return;
     }
 
-    String includePattern = buildRollingThreeMonthIncludePattern(currentDate);
+    Optional<IncludePatternGenerator> generatorOptional =
+        includePatternGeneratorRegistry.find(sourceRule.getIncludePatternAutoUpdateStrategy());
+    if (generatorOptional.isEmpty()) {
+      logger.warn("[Scheduler][IncludePatternRefresh] No generator configured for doc '{}' strategy '{}'",
+          config.getDocName(), sourceRule.getIncludePatternAutoUpdateStrategy());
+      return;
+    }
+
+    String includePattern = generatorOptional.get().generate(currentDate);
     if (StringUtils.equals(sourceRule.getIncludePattern(), includePattern)) {
-      logger.info("[Scheduler][CSBIncludePattern] Include pattern already current for doc '{}': {}", CSB_DOC_NAME, includePattern);
+      logger.info("[Scheduler][IncludePatternRefresh] Include pattern already current for doc '{}': {}", config.getDocName(), includePattern);
       return;
     }
 
     boolean updated = configService.updateSourceIncludePattern(config.getId(), includePattern);
     if (!updated) {
-      logger.warn("[Scheduler][CSBIncludePattern] Failed to update include pattern for doc '{}'", CSB_DOC_NAME);
+      logger.warn("[Scheduler][IncludePatternRefresh] Failed to update include pattern for doc '{}'", config.getDocName());
       return;
     }
 
-    logger.info("[Scheduler][CSBIncludePattern] Updated include pattern for doc '{}' to {}", CSB_DOC_NAME, includePattern);
-  }
-
-  private String buildRollingThreeMonthIncludePattern(LocalDate currentDate) {
-    return Stream.of(currentDate.minusMonths(2), currentDate.minusMonths(1), currentDate)
-        .map(date -> date.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toLowerCase(Locale.ENGLISH) + "/**")
-        .collect(Collectors.joining(","));
+    logger.info("[Scheduler][IncludePatternRefresh] Updated include pattern for doc '{}' to {}", config.getDocName(), includePattern);
   }
   
   /**

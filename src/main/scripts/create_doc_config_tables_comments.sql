@@ -44,6 +44,8 @@ COMMENT ON COLUMN DOC_SOURCE_RULE.ID IS 'Primary key for DOC_SOURCE_RULE.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.DOC_ID IS 'Foreign key reference to DOC_CONFIG.ID.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.SOURCE_BASE_DIR_FOLDERS IS 'Source base directory folders to include or process.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.INCLUDE_PATTERN IS 'File or folder include pattern. Comma-separated multiple patterns can be specified.';
+COMMENT ON COLUMN DOC_SOURCE_RULE.INCLUDE_PATTERN_AUTO_UPDATE IS 'Indicates whether the framework should refresh INCLUDE_PATTERN automatically on the monthly scheduler. 1 = yes, 0 = no.';
+COMMENT ON COLUMN DOC_SOURCE_RULE.INCLUDE_PATTERN_AUTO_UPDATE_STRATEGY IS 'Named strategy used by the framework to build the monthly INCLUDE_PATTERN value.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.EXCLUDE_PATTERN IS 'File or folder exclude pattern. If both include and exclude pattern is applicable for a file/folder, the file/folder will be excluded as the exclusion takes precedence.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.METADATA_FILE IS 'Metadata file name or path. If specified, application will load the custom metadata excel file supplied by the user.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.PI_METADATA_FILE IS 'PI metadata file name or path. If specified, application will load the custom data owner PI metadata excel file supplied by the user.';
@@ -59,6 +61,19 @@ COMMENT ON COLUMN DOC_SOURCE_RULE.AWS IS 'Indicates whether AWS-based source han
 COMMENT ON COLUMN DOC_SOURCE_RULE.VERSION IS 'Configuration version number.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.CREATED_AT IS 'Timestamp when the record was created.';
 COMMENT ON COLUMN DOC_SOURCE_RULE.UPDATED_AT IS 'Timestamp when the record was last updated.';
+
+--------------------------------------------------------------------------------
+-- Table: SCHEDULED_JOB_LOCK
+--------------------------------------------------------------------------------
+COMMENT ON TABLE SCHEDULED_JOB_LOCK IS 'Coordinates single-server execution of framework-level scheduled jobs across the deployment.';
+
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.JOB_NAME IS 'Unique job identifier.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.RUN_KEY IS 'Unique execution key for the job run, such as a year-month token.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.LOCKED_BY IS 'Server id that claimed the current run.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.STATUS IS 'Execution status for the current run.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.LOCKED_AT IS 'Timestamp when the current run was claimed.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.COMPLETED_AT IS 'Timestamp when the current run finished.';
+COMMENT ON COLUMN SCHEDULED_JOB_LOCK.UPDATED_AT IS 'Timestamp when the row was last updated.';
 
 --------------------------------------------------------------------------------
 -- Table: DOC_PREPROCESSING_CONFIG

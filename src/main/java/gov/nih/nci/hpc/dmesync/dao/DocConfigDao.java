@@ -15,6 +15,7 @@ public interface DocConfigDao {
      * @return a list of enabled DOC configurations; empty if none are enabled
      */
     List<DocConfig> findEnabledDocs();
+    List<DocConfig> findDocsWithIncludePatternAutoUpdate();
 
     /**
      * Finds a DOC configuration by its DOC name.

@@ -51,6 +51,8 @@ CREATE TABLE DOC_SOURCE_RULE (
     DOC_ID                                NUMBER NOT NULL REFERENCES DOC_CONFIG(ID) ON DELETE CASCADE,
     SOURCE_BASE_DIR_FOLDERS               VARCHAR2(512),
     INCLUDE_PATTERN                       VARCHAR2(512),
+    INCLUDE_PATTERN_AUTO_UPDATE           CHAR(1) DEFAULT '0',
+    INCLUDE_PATTERN_AUTO_UPDATE_STRATEGY  VARCHAR2(128),
     EXCLUDE_PATTERN                       VARCHAR2(512),
     METADATA_FILE                         VARCHAR2(512),
     PI_METADATA_FILE                      VARCHAR2(512),
@@ -66,6 +68,19 @@ CREATE TABLE DOC_SOURCE_RULE (
     VERSION                               NUMBER DEFAULT 1 NOT NULL,
     CREATED_AT                            TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
     UPDATED_AT                            TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
+);
+
+--------------------------------------------------------------------------------
+-- Table: SCHEDULED_JOB_LOCK
+--------------------------------------------------------------------------------
+CREATE TABLE SCHEDULED_JOB_LOCK (
+    JOB_NAME          VARCHAR2(128) PRIMARY KEY,
+    RUN_KEY           VARCHAR2(32),
+    LOCKED_BY         VARCHAR2(128),
+    STATUS            VARCHAR2(32) NOT NULL,
+    LOCKED_AT         TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    COMPLETED_AT      TIMESTAMP,
+    UPDATED_AT        TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
 );
 
 --------------------------------------------------------------------------------
@@ -167,4 +182,3 @@ CREATE TABLE DOC_CONFIG_AUDIT (
     ACTION_BY         VARCHAR2(128),
     ACTION_AT         TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
 );
-
