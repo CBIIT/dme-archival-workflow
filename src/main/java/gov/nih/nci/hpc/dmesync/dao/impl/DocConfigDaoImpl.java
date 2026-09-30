@@ -34,36 +34,6 @@ public class DocConfigDaoImpl implements DocConfigDao {
     }
 
     @Override
-    public List<DocConfig> findDocsWithIncludePatternAutoUpdate() {
-        String sql = """
-            SELECT c.ID
-              FROM DOC_CONFIG c
-             WHERE c.ENABLED = 1
-               AND EXISTS (
-                   SELECT 1
-                     FROM DOC_SOURCE_RULE r
-                    WHERE r.ID = (
-                        SELECT ID
-                          FROM (
-                              SELECT ID
-                                FROM DOC_SOURCE_RULE
-                               WHERE DOC_ID = c.ID
-                               ORDER BY VERSION DESC
-                          )
-                         WHERE ROWNUM = 1
-                    )
-                      AND r.INCLUDE_PATTERN_AUTO_UPDATE = '1'
-               )
-            """;
-        List<Long> docIds = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getLong("ID"));
-        List<DocConfig> configs = new ArrayList<>();
-        for (Long docId : docIds) {
-            findById(docId).ifPresent(configs::add);
-        }
-        return configs;
-    }
-
-    @Override
     public Optional<DocConfig> findByName(String docName) {
         String sql = "SELECT ID FROM DOC_CONFIG WHERE DOC_NAME = ? AND ENABLED = 1 AND SERVER_ID = ?";
         List<Long> ids = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getLong("ID"), docName, serverId);

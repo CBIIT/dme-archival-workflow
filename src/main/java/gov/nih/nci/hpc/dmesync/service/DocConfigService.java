@@ -7,7 +7,6 @@ import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 
 public interface DocConfigService {
     List<DocConfig> getEnabledDocConfigs();
-    List<DocConfig> getDocConfigsWithIncludePatternAutoUpdate();
     Optional<DocConfig> getDocConfigByName(String docName);
     Optional<DocConfig> getDocConfigById(Long id);
     boolean updateSourceIncludePattern(Long docId, String includePattern);

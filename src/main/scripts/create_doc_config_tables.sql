@@ -71,19 +71,6 @@ CREATE TABLE DOC_SOURCE_RULE (
 );
 
 --------------------------------------------------------------------------------
--- Table: SCHEDULED_JOB_LOCK
---------------------------------------------------------------------------------
-CREATE TABLE SCHEDULED_JOB_LOCK (
-    JOB_NAME          VARCHAR2(128) PRIMARY KEY,
-    RUN_KEY           VARCHAR2(32),
-    LOCKED_BY         VARCHAR2(128),
-    STATUS            VARCHAR2(32) NOT NULL,
-    LOCKED_AT         TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
-    COMPLETED_AT      TIMESTAMP,
-    UPDATED_AT        TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
-);
-
---------------------------------------------------------------------------------
 -- Table: DOC_PREPROCESSING_CONFIG
 --------------------------------------------------------------------------------
 CREATE TABLE DOC_PREPROCESSING_CONFIG (
