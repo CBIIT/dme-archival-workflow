@@ -60,7 +60,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// Extract the Experiment value from the Path
 
 		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName() + "/Researcher_"
-				+ getResearcherCollectionName(userId) + "/Project_" + getProjectCollectionName(object) + "/Experiment_"
+				+ getResearcherCollectionName(object) + "/Project_" + getProjectCollectionName(object) + "/Experiment_"
 				+ getExpCollectionName(object) + "/" + fileName;
 
 		// replace spaces with underscore
@@ -96,14 +96,14 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// Example row: collectionType - Researcher, collectionName -
 		// Researcher_James_Cornwell
 		HpcBulkMetadataEntry pathEntriesResearcher = new HpcBulkMetadataEntry();
-		String researcherCollectionName = getResearcherCollectionName(userId);
+		String researcherCollectionName = getResearcherCollectionName(object);
 		String researcherPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_"
 				+ researcherCollectionName;
 		pathEntriesResearcher
 				.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_" + researcherCollectionName);
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Researcher"));
-		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher", getAttrValueWithKey(path, "researcher")));
-		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher_email", getAttrValueWithKey(path, "researcher_email")));
+		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher", getAttrValueWithExactKeyFromMetadataMap(path, "researcher")));
+		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher_email", getAttrValueWithExactKeyFromMetadataMap(path, "researcher_email")));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesResearcher);
 
 		// Add path metadata entries for "Project_XXX" collection
@@ -112,21 +112,21 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String projectPath = researcherPath + "/Project_" + projectCollectionName;
 		pathEntriesProject.setPath(projectPath.replace(" ", "_"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithKey(path, "project_title")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithKey(path, "project_description")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithKey(path, "project_start_date"), "yyyy_MM_dd"));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithKey(path, "researcher")));
-		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", getAttrValueWithKey(path, "researcher_email")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_title", getAttrValueWithExactKeyFromMetadataMap(path, "project_title")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_description", getAttrValueWithExactKeyFromMetadataMap(path, "project_description")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_start_date", getAttrValueWithExactKeyFromMetadataMap(path, "project_start_date"), "yyyy_MM_dd"));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc", getAttrValueWithExactKeyFromMetadataMap(path, "researcher")));
+		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_email", getAttrValueWithExactKeyFromMetadataMap(path, "researcher_email")));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_poc_affiliation", "LCBG SDS"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("data_generating_facility", "LCBG SDS"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("access", "Closed Access"));
 		
-		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "key_collaborator")))
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator", getAttrValueWithKey(path, "key_collaborator")));
-		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "key_collaborator_affiliation")))
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation", getAttrValueWithKey(path, "key_collaborator_affiliation")));
-		if (StringUtils.isNotBlank(getAttrValueWithKey(path, "key_collaborator_email")))
-			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_email", getAttrValueWithKey(path, "key_collaborator_email")));		
+		if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator", getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator_affiliation")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_affiliation", getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator_affiliation")));
+		if (StringUtils.isNotBlank(getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator_email")))
+			pathEntriesProject.getPathMetadataEntries().add(createPathEntry("key_collaborator_email", getAttrValueWithExactKeyFromMetadataMap(path, "key_collaborator_email")));		
 
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
@@ -227,8 +227,8 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		return getCollectionMappingValue("Cappell-Section", "DataOwner_Lab", "lcbg-sds");
 	}
 
-	private String getResearcherCollectionName(String userId) throws DmeSyncMappingException {
-		return getCollectionMappingValue(userId, "Researcher", "lcbg-sds");
+	private String getResearcherCollectionName(StatusInfo object) throws DmeSyncMappingException {
+		return getAttrValueWithExactKeyFromMetadataMap(getPath(object), "researcher");
 	}
 
 	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
