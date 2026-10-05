@@ -1,11 +1,16 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +24,8 @@ import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
+import gov.nih.nci.hpc.dmesync.util.Hl7Util;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -34,7 +41,6 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-
 	private static final Pattern PATIENT_ID = Pattern.compile("^(P\\d+)");
 
 	@Autowired
@@ -47,29 +53,58 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 		logger.info("[PathMetadataTask] DOC CRTP CMDL getArchivePath called");
+
 		SourceConfig sourceConfig = config.getSourceConfig();
 		SourceRule sourceRule = config.getSourceRule();
+		String patientsReportsPath = sourceConfig.sourceBaseDir + "/PGXI/Shared/FinalReports";
+		Path filePath = Paths.get(object.getSourceFilePath());
+		// load the user metadata from the externally placed excel
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "path");
+
+		// load the doc metadata model from the DME
+		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
+		String fileName = filePath.toFile().getName();
+		String patientId = extractPatientId(fileName);
+
+		Optional<Path> reportFile = findPatientFile(Path.of(patientsReportsPath), patientId);
+		if (reportFile.isPresent()) {
+			Path file = reportFile.get();
+			Instant lastModified = Files.getLastModifiedTime(file).toInstant();
+			Instant twoWeeksAgo = Instant.now().minus(14, ChronoUnit.DAYS);
+
+			boolean olderThanTwoWeeks = lastModified.isBefore(twoWeeksAgo);
+
+			if (!olderThanTwoWeeks) {
+				logger.info("No need to upload file  : {}", object.getOriginalFilePath());
+
+				object.setStatus(WorkflowConstants.FAILED);
+				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
+				object.setEndWorkflow(true);
+				object.setError("No need to upload yet");
+				// object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+			}
+		} else {
+			logger.info("Patient report file not found for {} ", patientId);
+			throw new DmeSyncMappingException("Patient report file not found for  " + patientId);
+		}
 
 		// load the user metadata from the externally placed excel
 		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "project");
 
-		// load the doc metadata  model from the DME 
+		// load the doc metadata model from the DME
 		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
 
 		String metadataFileKey = getMetadataFileKey(object);
 
-		Path filePath = Paths.get(object.getSourceFilePath());
-		String fileName = filePath.toFile().getName();
 		String parentName = filePath.getParent().getFileName().toString();
-		String patientId = extractPatientId(fileName);
 
 		String collectionName = getCollectionName(object);
 		String archivePath = null;
 		if (collectionName != null) {
 
-			 if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
+			if (StringUtils.equalsIgnoreCase("PGXI", collectionName)) {
 				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_"+ patientId +"/PGXI/";
+						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_" + patientId + "/PGXI/";
 				String folderName = getCollectionNameFromParent(object.getOriginalFilePath(), collectionName);
 				if (folderName != null && StringUtils.equalsIgnoreCase("Shared", folderName)) {
 					archivePath += fileName;
@@ -80,14 +115,15 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			} else if (StringUtils.equalsIgnoreCase("Validation", collectionName)) {
 
 				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_"+ patientId + "/Validation/"  + fileName;
+						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_" + patientId + "/Validation/"
+						+ fileName;
 			} else if (StringUtils.equalsIgnoreCase("Pre-Validation Analysis", collectionName)) {
-					archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
-							+ getProjectCollectionName(object, metadataFileKey) +  "/Patient_"+ patientId + "/Pre_Validation_Analysis/"
-						    + fileName;
+				archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+						+ getProjectCollectionName(object, metadataFileKey) + "/Patient_" + patientId
+						+ "/Pre_Validation_Analysis/" + fileName;
 			}
 		}
-		
+
 		if (archivePath == null) {
 			String msg = messageService.get("VALIDATION_001");
 			logger.error(
@@ -117,6 +153,30 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		String parentName = filePath.getParent().getFileName().toString();
 		String patientId = extractPatientId(fileName);
 		String metadataFileKey = getMetadataFileKey(object);
+
+		String hl7OrdersPath = sourceConfig.sourceBaseDir + "/PGXI/Shared/HL7Orders";
+		String hl7 = null;
+		Optional<Path> orderFile = java.util.Optional.empty();
+
+		try {
+			orderFile = findPatientFile(Path.of(hl7OrdersPath), patientId);
+			if (orderFile.isEmpty()) {
+				logger.error("Patient hl7 order file not found for {}", patientId);
+				throw new DmeSyncMappingException("Patient hl7 order file not found for " + patientId);
+			}
+			hl7 = Files.readString(Path.of(orderFile.get().toString()));
+			String sex = Hl7Util.getSex(hl7);
+			String sequencingCenter = Hl7Util.getSequencingCenter(hl7);
+			String originalSequencingDate = Hl7Util.getOriginalSequencingDate(hl7);
+
+			System.out.println("Sex: " + sex);
+			System.out.println("Sequencing Center: " + sequencingCenter);
+			System.out.println("Original Sequencing Date: " + originalSequencingDate);
+		} catch (IOException e) {
+			logger.error("Error while extracting  Patient hl7 order file for {}", patientId);
+			throw new DmeSyncMappingException("Error while extracting  Patient hl7 order file for " + patientId);
+		}
+
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object, metadataFileKey);
@@ -132,17 +192,25 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
 		// Add path metadata entries for Patient Collection
-		
+
 		String patientCollectionPath = projectCollectionPath + "/Patient_" + patientId;
 		HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
-		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Batch"));
+		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Patient"));
 		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_id", patientId));
+		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("sex", Hl7Util.getSex(hl7)));
+		pathEntriesPatient.getPathMetadataEntries()
+				.add(createPathEntry("sequencing_center", Hl7Util.getSequencingCenter(hl7)));
+		pathEntriesPatient.getPathMetadataEntries()
+				.add(createPathEntry("sequencing_date", Hl7Util.getOriginalSequencingDate(hl7)));
+		pathEntriesPatient.getPathMetadataEntries()
+				.add(createPathEntry("run_date", Hl7Util.getOriginalSequencingDate(hl7)));
+
 		pathEntriesPatient.setPath(patientCollectionPath.replace(" ", "_"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPatient);
-		
+
 		// Add path metadata entries for folder
 		String collectionName = getCollectionName(object);
-		String collectionPath = null ;
+		String collectionPath = null;
 		HpcBulkMetadataEntry pathEntriesCollection = new HpcBulkMetadataEntry();
 		if (collectionName != null) {
 
@@ -175,8 +243,8 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		dataObjectRegistrationRequestDTO.getMetadataEntries()
 				.add(createPathEntry("source_path", object.getOriginalFilePath()));
 
-		return dataObjectRegistrationRequestDTO; 
-		
+		return dataObjectRegistrationRequestDTO;
+
 	}
 
 	private String getCollectionNameFromParent(String path, String parentName) {
@@ -205,13 +273,10 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 			throws DmeSyncMappingException {
 		String projectId = getAttrValueWithExactKeyFromMetadataMap(metadataFilePathKey, "project_id");
 		if (StringUtils.isBlank(projectId)) {
-			String msg = messageService.get("VALIDATION_003",
-					metadataFilePathKey,
-			        Locale.getDefault()
-			    );
+			String msg = messageService.get("VALIDATION_003", metadataFilePathKey, Locale.getDefault());
 			logger.info(msg);
- 			throw new DmeSyncMappingException(msg);
- 		}
+			throw new DmeSyncMappingException(msg);
+		}
 		logger.info("Project Id = {}", projectId);
 		return projectId;
 	}
@@ -227,10 +292,19 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		return metadataFileKey;
 	}
 
+	public static String extractPatientId(String filename) {
+		filename = filename.trim();
+		Matcher matcher = PATIENT_ID.matcher(filename);
+		return matcher.find() ? matcher.group(1) : "";
+	}
 
-    public static String extractPatientId(String filename) {
-        Matcher matcher = PATIENT_ID.matcher(filename);
-        return matcher.find() ? matcher.group(1) : null;
-    }
+	public static Optional<Path> findPatientFile(Path hl7OrdersDir, String patientId) throws IOException {
+
+		try (Stream<Path> files = Files.walk(hl7OrdersDir)) {
+			return files.filter(Files::isRegularFile).filter(path -> path.getFileName().toString().contains(patientId))
+					.findFirst();
+		}
+
+	}
 
 }
