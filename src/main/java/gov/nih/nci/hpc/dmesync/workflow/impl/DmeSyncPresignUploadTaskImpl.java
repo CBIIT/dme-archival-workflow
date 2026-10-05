@@ -340,10 +340,23 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
       
       if (!StringUtils.isEmpty(checksum)) httpConnection.addRequestProperty("content-md5", checksum);
       
+      try {
+    	         logger.info("[{}] Starting upload to url={}, file={}, size={}, checksum={}",
+    	             super.getTaskName(), urlStr, file.getAbsolutePath(), file.length(), checksum);
+    	  
+    	          IOUtils.copyLarge(inputStream, httpConnection.getOutputStream());
+    	  
+    	          logger.info("[{}] Finished writing request body to server for file={}",
+    	              super.getTaskName(), file.getAbsolutePath());
+    	        } catch (Exception e) {
+    	          logger.error("[{}] Error writing request body to server. url={}, file={}, size={}, checksum={}",
+    	              super.getTaskName(), urlStr, file.getAbsolutePath(), file.length(), checksum, e);
+    	          throw e;
+    	        }
       // Copy data from source to destination.
-      IOUtils.copyLarge(
+      /*IOUtils.copyLarge(
               inputStream,
-              httpConnection.getOutputStream());
+              httpConnection.getOutputStream()); */
 
       int responseCode = httpConnection.getResponseCode();
       logger.info("[{}] responseCode {}", super.getTaskName(), responseCode);
