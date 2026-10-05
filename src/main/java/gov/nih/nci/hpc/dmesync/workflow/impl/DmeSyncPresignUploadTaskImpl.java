@@ -346,8 +346,24 @@ public class DmeSyncPresignUploadTaskImpl extends AbstractDmeSyncTask implements
               httpConnection.getOutputStream());
 
       int responseCode = httpConnection.getResponseCode();
-      logger.debug("[{}] responseCode {}", super.getTaskName(), responseCode);
+      logger.info("[{}] responseCode {}", super.getTaskName(), responseCode);
 
+      
+		if (responseCode != 200) {
+			String errorBody = null;
+			try (InputStream errorStream = httpConnection.getErrorStream()) {
+				if (errorStream != null) {
+					errorBody = IOUtils.toString(errorStream, java.nio.charset.StandardCharsets.UTF_8);
+				}
+			} catch (Exception ex) {
+				logger.error("[{}] Failed to read error stream for url={}", super.getTaskName(), urlStr, ex);
+			}
+			logger.error("[{}] Upload failed. url={}, file={}, responseCode={}, checksum={}, errorBody={}",
+					super.getTaskName(), urlStr, file.getAbsolutePath(), responseCode, checksum, errorBody);
+
+			throw new DmeSyncWorkflowException(
+					"Upload failed with response code " + responseCode + (errorBody != null ? " - " + errorBody : ""));
+		}
       // Close the URL connections.
       httpConnection.disconnect();
 
