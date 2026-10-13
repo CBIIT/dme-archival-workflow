@@ -25,6 +25,7 @@ import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
 import gov.nih.nci.hpc.dmesync.util.Hl7Util;
+import gov.nih.nci.hpc.dmesync.util.Hl7Util.Hl7Metadata;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
@@ -42,9 +43,13 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		implements DmeSyncPathMetadataProcessor {
 
 	private static final Pattern PATIENT_ID = Pattern.compile("^(P\\d+)");
+	
+	@Value("${dmesync.db.access:local}")
+	protected String access;
 
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
+	
 
 	// DOC CRTP CMDL logic for DME path construction and meta data creation
 
@@ -81,7 +86,9 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 				object.setRunId(WorkflowConstants.toIgnoredRunId(object.getRunId()));
 				object.setEndWorkflow(true);
 				object.setError("No need to upload yet");
-				// object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+			    object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+			    logger.info("Patient report file not older than 2 weeks for {} ", patientId);
+				throw new DmeSyncMappingException("Patient report file not older than 2 weeks  " + patientId);
 			}
 		} else {
 			logger.info("Patient report file not found for {} ", patientId);
@@ -155,7 +162,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		String metadataFileKey = getMetadataFileKey(object);
 
 		String hl7OrdersPath = sourceConfig.sourceBaseDir + "/PGXI/Shared/HL7Orders";
-		String hl7 = null;
+		Hl7Metadata hl7Metadata = null;
 		Optional<Path> orderFile = java.util.Optional.empty();
 
 		try {
@@ -164,14 +171,10 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 				logger.error("Patient hl7 order file not found for {}", patientId);
 				throw new DmeSyncMappingException("Patient hl7 order file not found for " + patientId);
 			}
-			hl7 = Files.readString(Path.of(orderFile.get().toString()));
-			String sex = Hl7Util.getSex(hl7);
-			String sequencingCenter = Hl7Util.getSequencingCenter(hl7);
-			String originalSequencingDate = Hl7Util.getOriginalSequencingDate(hl7);
+			String hl7 = Files.readString(Path.of(orderFile.get().toString()));
+			 hl7Metadata =
+			        Hl7Util.parse(hl7);
 
-			System.out.println("Sex: " + sex);
-			System.out.println("Sequencing Center: " + sequencingCenter);
-			System.out.println("Original Sequencing Date: " + originalSequencingDate);
 		} catch (IOException e) {
 			logger.error("Error while extracting  Patient hl7 order file for {}", patientId);
 			throw new DmeSyncMappingException("Error while extracting  Patient hl7 order file for " + patientId);
@@ -197,13 +200,17 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		HpcBulkMetadataEntry pathEntriesPatient = new HpcBulkMetadataEntry();
 		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Patient"));
 		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("patient_id", patientId));
-		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("sex", Hl7Util.getSex(hl7)));
+		pathEntriesPatient.getPathMetadataEntries().add(createPathEntry("sex", hl7Metadata.sex()));
 		pathEntriesPatient.getPathMetadataEntries()
-				.add(createPathEntry("sequencing_center", Hl7Util.getSequencingCenter(hl7)));
+				.add(createPathEntry("sequencing_center", hl7Metadata.sequencingCenter()));
 		pathEntriesPatient.getPathMetadataEntries()
-				.add(createPathEntry("sequencing_date", Hl7Util.getOriginalSequencingDate(hl7)));
+				.add(createPathEntry("sequencing_date", hl7Metadata.originalSequencingDate()));
 		pathEntriesPatient.getPathMetadataEntries()
-				.add(createPathEntry("run_date", Hl7Util.getOriginalSequencingDate(hl7)));
+				.add(createPathEntry("order_number", hl7Metadata.orderNumber()));
+		pathEntriesPatient.getPathMetadataEntries()
+		.add(createPathEntry("specimen_type", hl7Metadata.specimenSource()));
+		pathEntriesPatient.getPathMetadataEntries()
+		.add(createPathEntry("age", hl7Metadata.age()!=null?hl7Metadata.age().toString():""));
 
 		pathEntriesPatient.setPath(patientCollectionPath.replace(" ", "_"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPatient);
