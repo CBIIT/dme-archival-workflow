@@ -149,6 +149,7 @@ public class DmeSyncCleanupTaskImpl extends AbstractDmeSyncTask implements DmeSy
 								super.getTaskName(), recordForContentsfile.getSourceFileName(),
 								recordForContentsfile.getId());
 						recordForContentsfile.setError(null);
+						recordForContentsfile.setStatus(null);
 						recordForContentsfile = dmeSyncWorkflowService.getService(access).saveStatusInfo(recordForContentsfile);
 						// Send the Tar contents file record to the message queue for processing
 						DmeSyncMessageDto message = new DmeSyncMessageDto();

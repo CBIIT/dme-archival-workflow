@@ -99,8 +99,9 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		String researcherCollectionName = getResearcherCollectionName(object);
 		String researcherPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_"
 				+ researcherCollectionName;
+		
 		pathEntriesResearcher
-				.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_" + researcherCollectionName);
+				.setPath(researcherPath.replace(" ", "_"));
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Researcher"));
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher", getAttrValueWithExactKeyFromMetadataMap(path, "researcher")));
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher_email", getAttrValueWithExactKeyFromMetadataMap(path, "researcher_email")));
