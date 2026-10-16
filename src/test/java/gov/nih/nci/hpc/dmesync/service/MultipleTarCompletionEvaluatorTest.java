@@ -90,6 +90,19 @@ class MultipleTarCompletionEvaluatorTest {
                 contents("/source/movies", null)), List.of(generated("/source/movies")), config).isComplete());
     }
 
+    @Test
+    void alreadyArchivedIgnoredTarDoesNotBlockContentsUpload() {
+        StatusInfo contents = contents("/source/movies", null);
+        List<StatusInfo> records = List.of(tar("/source/movies", "IGNORED"), contents);
+        MultipleTarCompletionEvaluator.Evaluation result = evaluator.evaluate(
+                records, List.of(generated("/source/movies")), config);
+        assertFalse(result.isComplete());
+        assertSame(contents, result.getReportRecords().get(1));
+        assertNull(contents.getStatus());
+        contents.setStatus("COMPLETED");
+        assertTrue(evaluator.evaluate(records, List.of(generated("/source/movies")), config).isComplete());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"COMPLETED", "FAILED"})
     void successfulTarsFinishWhenContentsIsTerminal(String contentsStatus) {

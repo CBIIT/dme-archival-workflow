@@ -301,6 +301,12 @@ explanation. This is a report-only status: the database row remains unchanged fo
 later retries. Multiple-TAR report rows remain separate rather than being merged
 into the single-TAR contents-file summary.
 
+TARs marked `IGNORED` because they are already archived are not dependency
+failures: their batch still waits for the contents-file outcome. Report-only
+blocked rows are not selected by failed-status-only retry queries; use the
+folder-scan rerun path to regenerate/reassociate the batch and its pending
+contents file.
+
 Every batch and any ordinary uploads in the same run must finish before the
 consolidated report is sent. Ordinary runs retain their existing completion
 rules. Missing generation markers keep a batch pending; this evaluator does not

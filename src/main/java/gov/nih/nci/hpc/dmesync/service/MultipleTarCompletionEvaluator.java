@@ -61,7 +61,7 @@ public class MultipleTarCompletionEvaluator {
             }
 
             boolean failed = generationFailed || rows.stream().filter(this::isTar)
-                    .anyMatch(row -> !WorkflowConstants.isCompletedStatus(row.getStatus()));
+                    .anyMatch(row -> WorkflowConstants.isFailedStatus(row.getStatus()));
             for (StatusInfo row : rows) {
                 if (isContentsFile(row) && !isTerminal(row)) {
                     if (failed && row.getStatus() == null) {
