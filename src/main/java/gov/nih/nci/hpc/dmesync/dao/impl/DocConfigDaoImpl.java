@@ -68,7 +68,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
                 "1".equals(rs.getString("NOSCAN_RERUN")),
                 "1".equals(rs.getString("FILE_EXIST_UNDER_BASEDIR")),
                 rs.getInt("FILE_EXIST_UNDER_BASEDIR_DEPTH"),
-                rs.getInt("LAST_MODIFIED_DAYS"),
+                rs.getObject("LAST_MODIFIED_DAYS", Integer.class),
                 "1".equals(rs.getString("LAST_MODIFIED_UNDER_BASE_DIR")),
                 rs.getInt("LAST_MODIFIED_UNDER_BASE_DIR_DEPTH"),
                 "1".equals(rs.getString("SELECTIVE_SCAN")),

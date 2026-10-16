@@ -11,6 +11,7 @@ public class WorkflowConstants {
 	public static final String COMPLETED ="COMPLETED";
 	public static final String FAILED ="FAILED";
 	public static final String IGNORED ="IGNORED";
+	public static final String PENDING ="PENDING";
 	public static final String IGNORED_RUN_SUFFIX="_IGNORED";
 	public enum RunStatus {
 		  STARTED, RUNNING, SUCCEEDED, FAILED, SKIPPED, CANCELLED
