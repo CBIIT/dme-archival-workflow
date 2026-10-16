@@ -229,7 +229,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	private String getResearcherCollectionName(StatusInfo object) throws DmeSyncMappingException {
-		return getAttrValueWithExactKeyFromMetadataMap(getPath(object), "researcher");
+		return StringUtils.replace(getAttrValueWithExactKeyFromMetadataMap(getPath(object), "researcher"), " ", "_");
 	}
 
 	private String getProjectCollectionName(StatusInfo object) throws DmeSyncMappingException {
