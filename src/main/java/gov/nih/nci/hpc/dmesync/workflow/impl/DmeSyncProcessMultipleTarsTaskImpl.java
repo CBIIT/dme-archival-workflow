@@ -444,6 +444,11 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	}
 	
 	private void enqueueRequestToJms(StatusInfo object, DocConfig config) {
+		if (StringUtils.endsWith(object.getSourceFileName(), WorkflowConstants.tarContentsFileEndswith)) {
+			object.setStatus(null);
+			object.setError("");
+			object = dmeSyncWorkflowService.getService(access).saveStatusInfo(object);
+		}
 		DmeSyncMessageDto message = new DmeSyncMessageDto();
 		message.setObjectId(object.getId());
 		message.setDocConfigId(config.getId());
