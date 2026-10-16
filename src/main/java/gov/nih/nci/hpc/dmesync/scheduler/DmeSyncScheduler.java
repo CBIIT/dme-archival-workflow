@@ -724,7 +724,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       }
       
       //If file has been modified with in days specified, skip
-      if (!sourceRule.lastModifiedUnderBaseDir && sourceRule.lastModifiedDays != 0
+      if (!sourceRule.lastModifiedUnderBaseDir && sourceRule.lastModifiedDays != null
           && daysBetween(file.getUpdatedDate(), new Date()) <= sourceRule.lastModifiedDays) {
         logger.info(
             "[Scheduler] Skipping: {} File/folder has been modified within the last {} days. Last modified date: {}.",

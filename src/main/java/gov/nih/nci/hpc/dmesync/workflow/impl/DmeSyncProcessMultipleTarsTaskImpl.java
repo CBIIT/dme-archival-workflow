@@ -36,6 +36,7 @@ import gov.nih.nci.hpc.dmesync.util.TarUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncTask;
+import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 
 /**
  * DME Sync Process Multiple Tar Task Implementation
@@ -53,6 +54,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 	
 	@Autowired 
 	private DmeSyncPathMetadataProcessorFactory metadataProcessorFactory;
+	
+	@Autowired 
+	private MessageService messageService;
 	
 	@PostConstruct
 	public boolean init() {
@@ -400,7 +404,9 @@ public class DmeSyncProcessMultipleTarsTaskImpl extends AbstractDmeSyncTask impl
 		} else {
 			statusInfo.setSourceFilePath(sourceFile.getAbsolutePath());
 			statusInfo.setFilesize(sourceFile.length());
-			statusInfo.setStatus(WorkflowConstants.FAILED);
+			// Set the status to pending for the contents file upload request. This will be changed to completed after the contents file is uploaded to DME.
+			statusInfo.setStatus(WorkflowConstants.PENDING);
+			statusInfo.setError(messageService.get("CONTENTS_FILE_PENDING_MSG"));
 		}
 		
 		statusInfo.setTarContentsCount(tarContentsCount);
