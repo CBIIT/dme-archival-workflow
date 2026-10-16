@@ -285,6 +285,27 @@ http://localhost:8888/export
 http://localhost:8888/export/{runId}
 ```
 
+### Multiple-TAR run completion
+
+For `processMultipleTars`, the existing completion scheduler evaluates each configured
+multiple-TAR folder separately. It waits for request generation to finish and for
+all TAR requests to reach a terminal outcome, including exhausted retries. A
+successfully generated folder is identified by its completed, workflow-ended
+folder record in the run's `_IGNORED` records; the cleanup counter is not used to
+decide completion.
+
+If all TARs succeed, reporting waits for the contents-file upload to complete or
+fail. If a TAR or batch generation fails, reporting waits for the remaining TARs
+to finish, then shows an unqueued contents file as `FAILED` with a `Blocked:`
+explanation. This is a report-only status: the database row remains unchanged for
+later retries. Multiple-TAR report rows remain separate rather than being merged
+into the single-TAR contents-file summary.
+
+Every batch and any ordinary uploads in the same run must finish before the
+consolidated report is sent. Ordinary runs retain their existing completion
+rules. Missing generation markers keep a batch pending; this evaluator does not
+recover lost messages or dispatch contents-file uploads in place of cleanup.
+
 ## Built With
 
 * [Spring Boot](https://spring.io/projects/spring-boot) - Framework used

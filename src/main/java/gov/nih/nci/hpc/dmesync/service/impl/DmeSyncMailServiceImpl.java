@@ -32,6 +32,7 @@ import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.dto.DmeCSBMailBodyDto;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
+import gov.nih.nci.hpc.dmesync.service.MultipleTarCompletionEvaluator;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
@@ -40,6 +41,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
+  @Autowired private MultipleTarCompletionEvaluator multipleTarCompletionEvaluator;
 
 
   @Value("${dmesync.db.access:local}")
@@ -108,9 +110,25 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, config.getDocName());
+      if (preRule.processMultipleTars) {
+          List<StatusInfo> ignoredRecords = dmeSyncWorkflowService.getService(access)
+                  .findStatusInfoByRunIdAndDoc(WorkflowConstants.toIgnoredRunId(runId), config.getDocName());
+          statusInfo = multipleTarCompletionEvaluator.evaluate(statusInfo, ignoredRecords, config).getReportRecords();
+      }
      
       if(preRule.tarContentsFile) {
-    	  statusInfo=generateAggregrateRecords(statusInfo, config);
+          if (preRule.processMultipleTars) {
+              List<StatusInfo> ordinaryRecords = statusInfo.stream()
+                      .filter(row -> !multipleTarCompletionEvaluator.isBatchRecord(row, config))
+                      .collect(Collectors.toList());
+              List<StatusInfo> batchRecords = statusInfo.stream()
+                      .filter(row -> multipleTarCompletionEvaluator.isBatchRecord(row, config))
+                      .collect(Collectors.toList());
+              statusInfo = generateAggregrateRecords(ordinaryRecords, config);
+              statusInfo.addAll(batchRecords);
+          } else {
+              statusInfo=generateAggregrateRecords(statusInfo, config);
+          }
       }
       List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
       // Sort in-place ascending (A->Z), nulls last
@@ -199,9 +217,10 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					DmeCSBMailBodyDto folder = new DmeCSBMailBodyDto();
 					File directory = new File(name);
 					File[] files = directory.listFiles();
-					int expectedTars = (files.length + preRule.multipleTarsFilesCount - 1) / preRule.multipleTarsFilesCount;
+					int fileCount = files != null ? files.length : 0;
+					int expectedTars = (fileCount + preRule.multipleTarsFilesCount - 1) / preRule.multipleTarsFilesCount;
 					folder.setFolderName(name);
-					folder.setFilesCount(files.length);
+					folder.setFilesCount(fileCount);
 					// adding + 1 to include tarMapping notes,movies folder statusInfo rows
 					folder.setExpectedTars(expectedTars );
 					folder.setCreatedTars(allUploads.size());

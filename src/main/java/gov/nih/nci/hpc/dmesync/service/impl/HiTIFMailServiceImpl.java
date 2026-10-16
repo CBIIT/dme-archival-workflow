@@ -28,6 +28,7 @@ import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncMailService;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
+import gov.nih.nci.hpc.dmesync.service.MultipleTarCompletionEvaluator;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
 import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 
@@ -36,6 +37,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   @Autowired private JavaMailSender sender;
   @Autowired private DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
+  @Autowired private MultipleTarCompletionEvaluator multipleTarCompletionEvaluator;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -114,6 +116,11 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, config.getDocName());
+      if (config.getPreprocessingRule().processMultipleTars) {
+          List<StatusInfo> ignoredRecords = dmeSyncWorkflowService.getService(access)
+                  .findStatusInfoByRunIdAndDoc(WorkflowConstants.toIgnoredRunId(runId), config.getDocName());
+          statusInfo = multipleTarCompletionEvaluator.evaluate(statusInfo, ignoredRecords, config).getReportRecords();
+      }
       if (CollectionUtils.isNotEmpty(statusInfo)) {
         List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
         Path path = Paths.get(logFile);

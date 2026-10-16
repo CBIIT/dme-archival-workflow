@@ -55,6 +55,7 @@ import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
+import gov.nih.nci.hpc.dmesync.service.MultipleTarCompletionEvaluator;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -81,6 +82,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
   @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
   @Autowired private DocConfigService configService;
+  @Autowired private MultipleTarCompletionEvaluator multipleTarCompletionEvaluator;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -966,9 +968,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
     
 
     //Check to make sure scheduler is completed, run has occurred and all files have been processed.
-    Long incompleteCount = dmeSyncWorkflowService.getService(access).countByDocAndRunIdAndStatus(config.getDocName(), currentRunId, null);
-    
-    if (incompleteCount == 0) {
+    boolean completed = config.getPreprocessingRule().processMultipleTars
+            ? multipleTarCompletionEvaluator.evaluate(currentRunRecords, currentRunIgnored, config).isComplete()
+            : dmeSyncWorkflowService.getService(access)
+                    .countByDocAndRunIdAndStatus(config.getDocName(), currentRunId, null) == 0;
+
+    if (completed) {
     	
 
       //check if the latest export file is generated in log directory
