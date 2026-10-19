@@ -28,7 +28,7 @@ public class WorkflowRunInfoDaoCustomImpl implements WorkflowRunInfoDaoCustom {
     	String sql = """
                 UPDATE WORKFLOW_RUN_INFO
                 SET STATUS = 'CANCELLED'
-                WHERE SERVER_ID = ?
+                WHERE SERVER_ID = ? AND DOC_ID IS NOT NULL
                   AND STATUS in ('STARTED', 'RUNNING')
                 """;
         jdbcTemplate.update(sql, serverId);
