@@ -4,9 +4,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
@@ -26,22 +29,21 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
   //NICE Custom logic for DME path construction and meta data creation
 
-  @Value("${dmesync.additional.metadata.excel:}")
-  private String metadataFile;
-	
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
+	SourceRule sourceRule = config.getSourceRule();
     logger.info("[PathMetadataTask] NICEgetArchivePath called");
       
     //Get the PI collection name from the PI column from metadata file using path
     String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
    
     // load the user metadata from the externally placed excel
-    threadLocalMap.set(loadMetadataFile(metadataFile, "path"));
+    threadLocalMap.set(loadMetadataFile(sourceRule.metadataFile, "path"));
   
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName(object)
             + "/Project_"
@@ -61,9 +63,9 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
-
+	  SourceConfig sourceConfig = config.getSourceConfig();
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {
 		  String path = FilenameUtils.separatorsToUnix(object.getOriginalFilePath());
@@ -80,7 +82,7 @@ public class NICEPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = poc_name, value = ? (supplied)
 	     
 	      String piCollectionName = getPiCollectionName(object);
-	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+	      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);

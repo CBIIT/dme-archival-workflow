@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.util;
 
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.domain.metadata.HpcMetadataValidationRule;
@@ -44,9 +46,6 @@ public class DmeMetadataBuilder {
 
 	protected Logger logger = LoggerFactory.getLogger(this.getClass());
 	
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 
@@ -58,7 +57,7 @@ public class DmeMetadataBuilder {
 
 	@Cacheable(value = "metadata", key = "'dmeMetadata'", sync = true)
 	public Map<String, Map<String, String>> getMetadataMap(String metadataFile, String key)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("Parsing the Metadata Spreadsheet and creating Metadata Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
@@ -66,7 +65,7 @@ public class DmeMetadataBuilder {
 
 	@CachePut(value = "metadata", key = "'dmeMetadata'")
 	public Map<String, Map<String, String>> updateMetadataMap(String metadataFile, String key)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("Updating the Metadata Spreadsheet and creating Metadata Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
@@ -74,21 +73,21 @@ public class DmeMetadataBuilder {
 
 	@Cacheable(value = "metadata", key = "'piMetadata'", sync = true)
 	public Map<String, Map<String, String>> getPIMetadataMap(String metadataFile, String key)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 		logger.info("Parsing the PI Metadata Spreadsheet and creating Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
 	}
 
 	@CachePut(value = "metadata", key = "'piMetadata'")
 	public Map<String, Map<String, String>> updatePIMetadataMap(String metadataFile, String key)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 		logger.info("Updating the PI Metadata Spreadsheet and creating Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key);
 	}
 	
 	@Cacheable(value = "metadata", key = "'dmeMetadataTwoKeys'", sync = true)
 	public Map<String, Map<String, String>> getMetadataMapWithTwoKeys(String metadataFile, String key1, String key2)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("Parsing the Metadata Spreadsheet and creating Metadata Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
@@ -96,7 +95,7 @@ public class DmeMetadataBuilder {
 
 	@CachePut(value = "metadata", key = "'dmeMetadataTwoKeys'")
 	public Map<String, Map<String, String>> updateMetadataMapWithTwoKeys(String metadataFile, String key1, String key2)
-			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("Updating the Metadata Spreadsheet and creating Metadata Map");
 		return ExcelUtil.parseBulkMetadataEntries(metadataFile, key1, key2);
@@ -109,11 +108,11 @@ public class DmeMetadataBuilder {
 	 * @throws DmeSyncWorkflowException
 	 */
 	@Cacheable(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir", sync = true)
-	public List<HpcMetadataValidationRule> getDMEMetadataModel(String destinationBaseDir)
+	public List<HpcMetadataValidationRule> getDMEMetadataModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 
 		logger.info("Retrieving metadata model from DME for path {}", destinationBaseDir);
-		return fetchMetadataDMEModel(destinationBaseDir);
+		return fetchMetadataDMEModel(destinationBaseDir, config);
 	}
 
 	/**
@@ -123,11 +122,11 @@ public class DmeMetadataBuilder {
 	 * @throws DmeSyncWorkflowException
 	 */
 	@CachePut(value = "metadata", key = "'dmeMetadataModel_' + #destinationBaseDir")
-	public List<HpcMetadataValidationRule> updateDMEMetadataModel(String destinationBaseDir)
+	public List<HpcMetadataValidationRule> updateDMEMetadataModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 
 		logger.info("Updating metadata model from DME for path {}", destinationBaseDir);
-		return fetchMetadataDMEModel(destinationBaseDir);
+		return fetchMetadataDMEModel(destinationBaseDir, config);
 	}
 	
 	
@@ -143,10 +142,10 @@ public class DmeMetadataBuilder {
 	 * @return List of HpcMetadataValidationRules
 	 * @throws DmeSyncWorkflowException
 	 */
-	private List<HpcMetadataValidationRule> fetchMetadataDMEModel(String destinationBaseDir)
+	private List<HpcMetadataValidationRule> fetchMetadataDMEModel(String destinationBaseDir, DocConfig config)
 			throws DmeSyncWorkflowException {
 		try {
-			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(serverUrl)
+			final URI dataObjectUrl = UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
 					.path("/dm/model/".concat(destinationBaseDir))
 					.build()
 					.encode()

@@ -3,6 +3,9 @@ package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -25,8 +28,9 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   //HiTIF Custom logic for DME path construction and meta data creation
 
   @Override
-  public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+  public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     logger.info("[PathMetadataTask] HiTIF getArchivePath called");
 
     //extract the user name from the Path
@@ -41,7 +45,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
     //Extract the Experiment value from the Path
 
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName(userId)
             + "/User_"
@@ -64,8 +68,9 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+	  SourceConfig sourceConfig = config.getSourceConfig();
 	  String userId = getUserId(object);
 	  
 	  //Add to HpcBulkMetadataEntries for path attributes
@@ -85,7 +90,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  //key = lab, value = CCR
       HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
       String piCollectionName = getPiCollectionName(userId);
-      pathEntriesPI.setPath(destinationBaseDir + "/PI_" + piCollectionName);
+      pathEntriesPI.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
     		  populateStoredMetadataEntries(pathEntriesPI, "PI_Lab", piCollectionName, "hitif"));
       
@@ -97,7 +102,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
 	  //key = comment, value = Test
       HpcBulkMetadataEntry pathEntriesUser = new HpcBulkMetadataEntry();
       String userCollectionName = getUserCollectionName(userId);
-      pathEntriesUser.setPath(destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName);
+      pathEntriesUser.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName);
       hpcBulkMetadataEntries.getPathsMetadataEntries().add(
     		  populateStoredMetadataEntries(pathEntriesUser, "User", userCollectionName, "hitif"));
       
@@ -106,7 +111,7 @@ public class HiTIFPathMetadataProcessorImpl extends AbstractPathMetadataProcesso
       //Extract the Experiment value from the Path
       String expCollectionName = getExpCollectionName(object);
       logger.debug("exp_collection_name = {}", expCollectionName);
-      String expPath = destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName + "/Exp_" + expCollectionName;
+      String expPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/User_" + userCollectionName + "/Exp_" + expCollectionName;
       expPath = expPath.replace("select", "Select");
       pathEntriesExp.setPath(expPath.replace(" ", "_"));
       pathEntriesExp.getPathMetadataEntries().add(createPathEntry("experiment_name", expCollectionName));

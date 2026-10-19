@@ -13,7 +13,7 @@ public class WorkflowConstants {
 	public static final String IGNORED ="IGNORED";
 	public static final String IGNORED_RUN_SUFFIX="_IGNORED";
 	public enum RunStatus {
-		  RUNNING, SUCCEEDED, FAILED, SKIPPED, CANCELLED
+		  STARTED, RUNNING, SUCCEEDED, FAILED, SKIPPED, CANCELLED
 		}
 
 	public static boolean isCompletedStatus(String status) {

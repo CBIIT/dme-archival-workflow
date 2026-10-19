@@ -5,14 +5,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.ExcelUtil;
@@ -30,18 +28,10 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	private String sourceDir;
-	
-	@Value("${dmesync.work.base.dir}")
-	private String workDir;
-
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		logger.info("CDSL custom DmeSyncPathMetadataProcessor start process for object {}", object.getId());
 
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
@@ -54,12 +44,12 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		// Build path based on Analysis or Raw_Data
 		if (isSequencingData(object))
 		{
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
 					+ projectName + "/"
 					+ sampleName + "/Run_"
 					+ getRunInstrumentName(filePath, sampleName) + "/" + "Sequencing_data/" + fileName;
 		} else {
-			archivePath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
+			archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner") + "/"
 					+ projectName + "/"
 					+ sampleName + "/Run_"
 					+ getRunInstrumentName(filePath, sampleName) + "/" + "Processed_data/" + fileName;
@@ -72,9 +62,10 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException , IOException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 
 		// Add to HpcBulkMetadataEntries for path attributes
@@ -94,7 +85,7 @@ public class CDSLPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				.toString() + "/sample_metadata.csv";
 	    
 		// Add path metadata entries for DataOwner_Lab collection
-		String piCollectionPath = destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner");
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName(filePath, "DataOwner");
 		piCollectionPath = piCollectionPath.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));

@@ -48,12 +48,6 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   @Value("${dmesync.db.access:local}")
   private String access;
   
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.destination.base.dir}")
-  protected String destinationBaseDir;
-  
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
   @Autowired
@@ -377,6 +371,19 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 	    return (metadataMapWithTwoKeys.get(key1 + "_" + key2) == null? null : metadataMapWithTwoKeys.get(key1 + "_" + key2).get(attrKey));
    }
    
+   public boolean isArchiveReady(String key) {
+	   
+	   if (metadataMap == null || !metadataMap.containsKey(key)) {
+ 		   return false;
+ 	   }
+	   String archiveStatus = getAttrValueWithExactKeyFromMetadataMap(key, "Archive");
+		
+	   if (StringUtils.isBlank(archiveStatus)) {
+ 		   return true;
+ 	   }
+ 	   return archiveStatus.trim().matches("(?i)^(archive|archived|yes|y|true|1)\\s*\\.?$");
+   }
+  
    /**
     * Adds metadata entries to the provided HpcBulkMetadataEntry based on the given validation rules and collection type.
     * @param bulkMetadataEntry
