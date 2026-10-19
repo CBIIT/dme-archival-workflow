@@ -5,9 +5,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -27,21 +30,15 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     implements DmeSyncPathMetadataProcessor {
 
   //NCEF Custom logic for DME path construction and meta data creation
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
-
-	@Value("${dmesync.additional.pi.metadata.excel:}")
-	private String piMetadataFile;
-	
 	
 	@Autowired
-	private DmeMetadataBuilder dmeMetadataBuilder;
+	DmeMetadataBuilder dmeMetadataBuilder;
 	
 
 	@Override
-    public String getArchivePath(StatusInfo object) throws DmeSyncMappingException {
+    public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
 
+	SourceConfig sourceConfig = config.getSourceConfig();
     logger.info("[PathMetadataTask] NCEFgetArchivePath called");
 
     //extract the user name from the source Path
@@ -53,7 +50,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
     //Extract the Project value from the Path
 
     String archivePath =
-        destinationBaseDir
+    	sourceConfig.destinationBaseDir
             + "/PI_"
             + getPiCollectionName(object)
             + "/Project_"
@@ -73,10 +70,11 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
   
 
   @Override
-  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+  public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 
-	  
+	  SourceConfig sourceConfig = config.getSourceConfig();
+	  SourceRule sourceRule = config.getSourceRule();
       HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
 	  try {
 		  String path = object.getOriginalFilePath();
@@ -91,10 +89,10 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		  //key = pi_name, value = Ronen Marmorstein (supplied)
 		  //key = affiliation, value = UPENN (supplied)
 		  // load the PI metadata from the externally placed excel
-		  piMetadataMap = dmeMetadataBuilder.getPIMetadataMap(piMetadataFile, "pi_collection_name");
+		  piMetadataMap = dmeMetadataBuilder.getPIMetadataMap(sourceRule.piMetadataFile, "pi_collection_name");
 
 	      String piCollectionName = getPiCollectionName(object);
-	      String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName;
+	      String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
 	      HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 	      pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
 	      pathEntriesPI.setPath(piCollectionPath);
@@ -131,7 +129,7 @@ public class NCEFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	      //key = organism, value = (supplied)
 	     
 		  // load the user metadata from the externally placed excel
-		  metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
+		  metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "path");
 
 	      String projectCollectionName = getProjectCollectionName(object);
 	      String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;

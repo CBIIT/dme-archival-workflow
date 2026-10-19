@@ -3,6 +3,8 @@ package gov.nih.nci.hpc.dmesync.workflow;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
@@ -26,7 +28,7 @@ public interface DmeSyncPathMetadataProcessor {
    * @throws IOException on IO Error
  * @throws DmeSyncWorkflowException 
    */
-  String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException, DmeSyncWorkflowException;
+  String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, IOException, DmeSyncWorkflowException;
 
   /**
    * Gets the collection and data object meta-data
@@ -37,7 +39,7 @@ public interface DmeSyncPathMetadataProcessor {
    * @throws DmeSyncWorkflowException on system error
    * @throws IOException on IO Error
    */
-  HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+  HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
       throws DmeSyncMappingException, DmeSyncWorkflowException, IOException;
 
   /**
@@ -70,7 +72,7 @@ public interface DmeSyncPathMetadataProcessor {
    * @throws DmeSyncWorkflowException
    * 
    */
-	default boolean isMetadataAvailable(StatusInfo object)
+	default boolean isMetadataAvailable(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 		return true;
 	}

@@ -6,7 +6,11 @@ import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -25,14 +29,6 @@ import gov.nih.nci.hpc.dto.datamanagement.v2.HpcDataObjectRegistrationRequestDTO
 public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		implements DmeSyncPathMetadataProcessor {
 
-	@Value("${dmesync.doc.name}")
-	private String doc;
-
-	@Value("${dmesync.source.base.dir}")
-	protected String sourceBaseDir;
-
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 	
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
@@ -40,23 +36,25 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	// DOC DCTB BBRB logic for DME path construction and meta data creation
 
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	public String getArchivePath(StatusInfo object, DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
 		logger.info("[PathMetadataTask] DOC DCTB BBRB getArchivePath called");
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
 
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "project");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "project");
 		
-		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(destinationBaseDir);
+		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
 		
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
 		String caseId=getCaseId(object);
 		String archivePath =null;
 		if(caseId !=null) {
-		 archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+		 archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 				+ getProjectCollectionName(object)  + "/" + getCaseId(object) + "/" + fileName;
 		}else {
-		  archivePath = destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
+		  archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPICollectionName(object) + "/Project_"
 					+ getProjectCollectionName(object)  + "/"  + fileName;
 		}
 		// replace spaces with underscore
@@ -67,11 +65,11 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
 		logger.info("[PathMetadataTask] DOC DCTB BBRB getMetaDataJson called");
-
+		SourceConfig sourceConfig = config.getSourceConfig();
 		
 		  
 		HpcDataObjectRegistrationRequestDTO dataObjectRegistrationRequestDTO = new HpcDataObjectRegistrationRequestDTO();
@@ -82,7 +80,7 @@ public class DctbBBRBPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object);
-		String piCollectionPath = destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
 		HpcBulkMetadataEntry pathEntriesPI = buildPathEntries(piCollectionPath, "DataOwner_Lab", projectCollectionName , metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 

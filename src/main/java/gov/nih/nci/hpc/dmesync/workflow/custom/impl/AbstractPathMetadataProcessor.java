@@ -48,12 +48,6 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
   @Value("${dmesync.db.access:local}")
   private String access;
   
-  @Value("${dmesync.doc.name}")
-  private String doc;
-  
-  @Value("${dmesync.destination.base.dir}")
-  protected String destinationBaseDir;
-  
   @Autowired DmeSyncWorkflowServiceFactory dmeSyncWorkflowService;
   
   @Autowired

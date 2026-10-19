@@ -10,6 +10,7 @@ package gov.nih.nci.hpc.dmesync.workflow.impl;
 
 import gov.nih.nci.hpc.dmesync.RestTemplateFactory;
 import gov.nih.nci.hpc.dmesync.RestTemplateResponseErrorHandler;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.util.HpcPathAttributes;
 import gov.nih.nci.hpc.domain.error.HpcErrorType;
 import gov.nih.nci.hpc.dto.datamanagement.HpcDataObjectListDTO;
@@ -39,9 +40,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public class DmeSyncDataObjectListQuery {
 
-	@Value("${hpc.server.url}")
-	private String serverUrl;
-
 	@Value("${auth.token}")
 	private String authToken;
 	
@@ -63,12 +61,12 @@ public class DmeSyncDataObjectListQuery {
 	 * @return The list of HpcPathAttributes
 	 * @throws HpcException The exception
 	 */
-	public List<HpcPathAttributes> getPathAttributes(String collectionPath) throws HpcException {
+	public List<HpcPathAttributes> getPathAttributes(String collectionPath, DocConfig config) throws HpcException {
 		List<HpcPathAttributes> pathAttributes = new ArrayList<>();
 
 		try {
 		    logger.debug("getPathAttributes: fileLocation: {}", collectionPath);
-		    List<HpcDataObjectDTO> dataObjects = listDataObjects(collectionPath);
+		    List<HpcDataObjectDTO> dataObjects = listDataObjects(collectionPath, config);
 			getPathAttributes(pathAttributes, dataObjects);
 		} catch (Exception e) {
 		  logger.error(e.getMessage(), e);
@@ -109,13 +107,13 @@ public class DmeSyncDataObjectListQuery {
    * @throws HpcException The exception
    * @throws IOException 
    */
-  public List<HpcDataObjectDTO> listDataObjects(String collectionPath) throws HpcException, IOException {
+  public List<HpcDataObjectDTO> listDataObjects(String collectionPath, DocConfig config) throws HpcException, IOException {
 
 	  List<HpcDataObjectDTO> results = new ArrayList<>();
 	  
     //Call queryAllDataObjectsInPath API
     final URI dataObjectUrl =
-        UriComponentsBuilder.fromHttpUrl(serverUrl)
+        UriComponentsBuilder.fromHttpUrl(config.getDmeServerUrl())
             .path("/dataObject/query/all/".concat(collectionPath))
             .queryParam("page", 1)
             .queryParam("pageSize", 10000)

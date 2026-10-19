@@ -6,9 +6,12 @@ import java.nio.file.Paths;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceConfig;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
@@ -28,19 +31,20 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		implements DmeSyncPathMetadataProcessor {
 
 	// LCBG SDS Custom logic for DME path construction and meta data creation
-	@Value("${dmesync.additional.metadata.excel:}")
-	private String metadataFile;
 	
 	@Autowired
 	private DmeMetadataBuilder dmeMetadataBuilder;
 	
 	@Override
-	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
+	public String getArchivePath(StatusInfo object ,  DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
 
+
+		SourceConfig sourceConfig = config.getSourceConfig();
+		SourceRule sourceRule = config.getSourceRule();
+		
 		logger.info("[PathMetadataTask] LCBG SDS getArchivePath called");
 
-		
-		
+
 				
 		// extract the user name from the Path
 		// Example path - /Cappell-Section/Adrijana/AC053_AXXAi_Gem_CDK2_sibTRCP/Raw/*
@@ -55,7 +59,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// Adrijana_Crncec
 		// Extract the Experiment value from the Path
 
-		String archivePath = destinationBaseDir + "/PI_" + getPiCollectionName() + "/Researcher_"
+		String archivePath = sourceConfig.destinationBaseDir + "/PI_" + getPiCollectionName() + "/Researcher_"
 				+ getResearcherCollectionName(userId) + "/Project_" + getProjectCollectionName(object) + "/Experiment_"
 				+ getExpCollectionName(object) + "/" + fileName;
 
@@ -68,9 +72,10 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
+	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object, DocConfig config)
 			throws DmeSyncMappingException, DmeSyncWorkflowException {
 
+		SourceConfig sourceConfig = config.getSourceConfig();
 		String userId = getUserId(object);
 		String path = getPath(object);
 		String fileName = Paths.get(object.getSourceFilePath()).toFile().getName();
@@ -82,7 +87,7 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// PI_Steven_Cappell,
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		String piCollectionName = getPiCollectionName();
-		pathEntriesPI.setPath(destinationBaseDir + "/PI_" + piCollectionName);
+		pathEntriesPI.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName);
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "DataOwner_Lab"));
 		hpcBulkMetadataEntries.getPathsMetadataEntries()
 				.add(populateStoredMetadataEntries(pathEntriesPI, "DataOwner_Lab", piCollectionName, "lcbg-sds"));
@@ -92,10 +97,10 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		// Researcher_James_Cornwell
 		HpcBulkMetadataEntry pathEntriesResearcher = new HpcBulkMetadataEntry();
 		String researcherCollectionName = getResearcherCollectionName(userId);
-		String researcherPath = destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_"
+		String researcherPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_"
 				+ researcherCollectionName;
 		pathEntriesResearcher
-				.setPath(destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_" + researcherCollectionName);
+				.setPath(sourceConfig.destinationBaseDir + "/PI_" + piCollectionName + "/Researcher_" + researcherCollectionName);
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Researcher"));
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher", getAttrValueWithKey(path, "researcher")));
 		pathEntriesResearcher.getPathMetadataEntries().add(createPathEntry("researcher_email", getAttrValueWithKey(path, "researcher_email")));
@@ -186,10 +191,11 @@ public class LCBGSDSPathMetadataProcessorImpl extends AbstractPathMetadataProces
 	}
 
 	@Override
-    public boolean isMetadataAvailable(StatusInfo object) throws DmeSyncMappingException, DmeSyncWorkflowException {
+    public boolean isMetadataAvailable(StatusInfo object , DocConfig config) throws DmeSyncMappingException, DmeSyncWorkflowException {
 		
 		 // load the user metadata from the externally placed excel
-	        metadataMap = dmeMetadataBuilder.getMetadataMap(metadataFile, "path");
+		    SourceRule sourceRule = config.getSourceRule();
+	        metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "path");
 		   // Check if this project is in the metadata spreadsheet
 			String experimentName = getExpCollectionName(object);
 			String path = getPath(object);

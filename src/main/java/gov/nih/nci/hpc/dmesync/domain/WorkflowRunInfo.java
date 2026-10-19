@@ -61,6 +61,9 @@ public class WorkflowRunInfo {
 	@Column(name = "COMPLETION_PERCENTAGE")
 	private Double completionPercentage;
 
+	@Column(name = "DOC_ID")
+	private Long docId;
+
 	public Long getId() {
 		return id;
 	}
@@ -195,6 +198,14 @@ public class WorkflowRunInfo {
 
 	public void setCompletionPercentage(Double completionPercentage) {
 		this.completionPercentage = completionPercentage;
+	}
+	
+	public Long getDocId() {
+		return docId;
+	}
+
+	public void setDocId(Long docId) {
+		this.docId = docId;
 	}
 	
 	

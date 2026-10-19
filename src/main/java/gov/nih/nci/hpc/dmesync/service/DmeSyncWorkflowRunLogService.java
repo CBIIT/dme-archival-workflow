@@ -1,5 +1,6 @@
 package gov.nih.nci.hpc.dmesync.service;
 
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.WorkflowRunInfo;
 
 /**
@@ -21,6 +22,14 @@ public interface DmeSyncWorkflowRunLogService {
 	public WorkflowRunInfo findFirstByRunIdAndUserId(String runId, String doc);
 
 	/**
+	 * findFirstByDocIdOrderByRunStartTimestampDesc : retrive the latest workflow run
+	 * 
+	 * @param docId	doc id
+	 * @return WorkflowRunInfo information
+	 */
+	public WorkflowRunInfo findFirstByDocIdOrderByRunStartTimestampDesc(Long docId);
+	
+	/**
 	 * update Only the Heartbeat : *
 	 * 
 	 * @param Id WorkflowRunInfo_id
@@ -34,12 +43,12 @@ public interface DmeSyncWorkflowRunLogService {
 	 * status, error message, and uploaded size.
 	 * 
 	 * @param runId        workflow run identifier
-	 * @param doc          document name or user identifier associated with the run
+	 * @param config       doc configuration associated with the run
 	 * @param finalStatus  final status of the workflow run
 	 * @param errorMessage error message associated with the workflow run, if any
 	 */
 
-	public void updateWorkflowRunEnd(String runId, String doc, String finalStatus, String errorMessage);
+	public void updateWorkflowRunEnd(String runId, DocConfig config, String finalStatus, String errorMessage);
 
 	/**
 	 * Save workflow Run Info information*
@@ -48,4 +57,11 @@ public interface DmeSyncWorkflowRunLogService {
 	 * @return updated WorkflowRunInfo information
 	 */
 	public WorkflowRunInfo saveWorkflowRunInfo(WorkflowRunInfo WorkflowRunInfo);
+	
+	/**
+	 * Reset workflow Run Info if anything was running before application shutdown
+	 * 
+	 */
+	public void resetWorkflowRunInfo();
+	
 }
