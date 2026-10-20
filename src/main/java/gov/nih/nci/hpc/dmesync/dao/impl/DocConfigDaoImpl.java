@@ -68,7 +68,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
                 "1".equals(rs.getString("NOSCAN_RERUN")),
                 "1".equals(rs.getString("FILE_EXIST_UNDER_BASEDIR")),
                 rs.getInt("FILE_EXIST_UNDER_BASEDIR_DEPTH"),
-                rs.getObject("LAST_MODIFIED_DAYS", Integer.class),
+                getNullableInt(rs, "LAST_MODIFIED_DAYS"),
                 "1".equals(rs.getString("LAST_MODIFIED_UNDER_BASE_DIR")),
                 rs.getInt("LAST_MODIFIED_UNDER_BASE_DIR_DEPTH"),
                 "1".equals(rs.getString("SELECTIVE_SCAN")),
@@ -180,5 +180,11 @@ public class DocConfigDaoImpl implements DocConfigDao {
             rs.getTimestamp("UPDATED_AT").toInstant(),
             null, null, null, null, null, null // Will be filled in by findById
         );
+    }
+    
+    private static Integer getNullableInt(java.sql.ResultSet rs, String column)
+            throws java.sql.SQLException {
+        int value = rs.getInt(column);
+        return rs.wasNull() ? null : Integer.valueOf(value);
     }
 }
