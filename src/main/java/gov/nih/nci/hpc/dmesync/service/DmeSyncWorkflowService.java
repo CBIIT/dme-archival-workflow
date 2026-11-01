@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.service;
 import java.util.List;
 import java.util.Optional;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
@@ -352,4 +353,15 @@ public interface DmeSyncWorkflowService {
     * @return the count
     */
    public long countByDocAndRunIdAndStatus(String doc, String runId, String status);
+   
+   /**
+    * Returns one aggregate TAR record per original folder, combining the upload
+    * statuses of the TAR and its contents files.
+    *
+    * Returned records are copies; persisted upload records are not modified.
+    */
+   List<StatusInfo> generateAggregateRecords(
+       List<StatusInfo> runIdRecords, DocConfig config);
+
+
 }
