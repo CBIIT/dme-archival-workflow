@@ -64,6 +64,15 @@ public interface DmeSyncWorkflowService {
    */
   
   public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath);
+  
+  /**
+   * findAllByDocAndOriginalFilePath
+   * @param doc
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  
+  public List<StatusInfo> findAllByDocAndOriginalFilePath(String doc,String originalFilePath);
 
   /**
    * findStatusInfoByRunIdAndDoc

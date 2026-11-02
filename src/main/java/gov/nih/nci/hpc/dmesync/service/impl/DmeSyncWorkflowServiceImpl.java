@@ -96,6 +96,11 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
     return statusInfoDao.findAllByDocAndLikeOriginalFilePath(doc,originalFilePath);
   }
+  
+  @Override
+  public List<StatusInfo> findAllByDocAndOriginalFilePath(String doc,String originalFilePath) {
+    return statusInfoDao.findAllByDocAndOriginalFilePath(doc,originalFilePath);
+  }
 
   @Override
   public List<StatusInfo> findStatusInfoByRunIdAndDoc(String runId, String doc) {
@@ -293,7 +298,7 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 
 		for (String folder : folderPaths) {
 
-			List<StatusInfo> folderRows = findAllByDocAndLikeOriginalFilePath(config.getDocName(), folder);
+			List<StatusInfo> folderRows = findAllByDocAndOriginalFilePath(config.getDocName(), folder);
 
 			Optional<StatusInfo> tarRecordOpt = folderRows.stream()
 					.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
