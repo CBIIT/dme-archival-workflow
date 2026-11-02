@@ -303,7 +303,9 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
 			StatusInfo includedFileRecord = folderRows.stream()
 					.filter(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)).findFirst()
 					.orElse(null); // Find the included contents file record
-			StatusInfo tarRecord = tarRecordOpt.get();
+			
+			StatusInfo tarRecord = new StatusInfo();
+ 			org.springframework.beans.BeanUtils.copyProperties(tarRecordOpt.get(), tarRecord);
 
 			// Only check for both included and excluded contents file if the property is true
 			StatusInfo excludedFileRecord = folderRows.stream().filter(
