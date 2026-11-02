@@ -597,7 +597,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 			logger.info("checking if all the folder and contents file got uploaded {}", file.getAbsolutePath());
 
 			List<StatusInfo> tarFolderRequests = dmeSyncWorkflowService.getService(access)
-					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), file.getAbsolutePath());
+					.findAllByDocAndOriginalFilePath(config.getDocName(), file.getAbsolutePath());
 
 			if (tarFolderRequests.isEmpty()) {
 				// No records for the path folder in database; running this folder for first time
