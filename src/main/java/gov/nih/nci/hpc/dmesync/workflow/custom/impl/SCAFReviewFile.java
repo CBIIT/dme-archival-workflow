@@ -1,6 +1,5 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -13,6 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -91,18 +92,8 @@ final class SCAFReviewFile {
 		if (!"YES".equalsIgnoreCase(StringUtils.trimToEmpty(mapping.approved))) {
 			throw new DmeSyncMappingException("SCAF review mapping is not approved for " + originalPath);
 		}
-		if (StringUtils.isAnyBlank(mapping.sampleId, mapping.collectionType, mapping.chemistry,
-				mapping.proposedDmePath)) {
-			throw new DmeSyncMappingException("Approved SCAF mapping is missing required hierarchy fields for "
-					+ originalPath);
-		}
-		if (!"FASTQ".equals(mapping.collectionType)
-				&& !"Primary_Analysis_Output".equals(mapping.collectionType)) {
-			throw new DmeSyncMappingException("Approved SCAF mapping has an unsupported collection type for "
-					+ originalPath);
-		}
-		if ("FASTQ".equalsIgnoreCase(mapping.collectionType) && StringUtils.isBlank(mapping.flowcell)) {
-			throw new DmeSyncMappingException("Approved FASTQ mapping is missing a flowcell for " + originalPath);
+		if (StringUtils.isBlank(mapping.proposedDmePath)) {
+			throw new DmeSyncMappingException("Approved SCAF mapping is missing ProposedDmePath for " + originalPath);
 		}
 		Path normalizedDestination = Paths.get(destinationBaseDir).normalize();
 		Path normalizedProposedPath = Paths.get(mapping.proposedDmePath).normalize();
@@ -118,7 +109,7 @@ final class SCAFReviewFile {
 						+ mapping.proposedDmePath);
 			}
 		}
-		return mapping;
+		return mapping.fromDestination(normalizedDestination);
 	}
 
 	private static ReviewIndex loadIndex(String fileName) throws DmeSyncMappingException {
@@ -213,6 +204,47 @@ final class SCAFReviewFile {
 			this.reviewStatus = reviewStatus;
 			this.reviewNotes = reviewNotes;
 			this.approved = approved;
+		}
+
+		private ReviewMapping fromDestination(Path base) throws DmeSyncMappingException {
+			Path destination = Paths.get(proposedDmePath);
+			Path relative = base.relativize(destination);
+			if (!destination.equals(destination.normalize()) || relative.getNameCount() != 5) {
+				throw new DmeSyncMappingException("Expected SCAF path <base>/<lab>/<project>/<sample>/<type>/<file>: "
+						+ proposedDmePath);
+			}
+			String sample = relative.getName(2).toString();
+			String type = relative.getName(3).toString();
+			String file = relative.getName(4).toString();
+			String expression;
+			if ("FASTQ".equals(type)) {
+				expression = Pattern.quote(sample) + "_FQ_(.+)_([^_]+)\\.tar(?:\\.gz)?";
+			} else if ("Primary_Analysis_Output".equals(type)) {
+				expression = Pattern.quote(sample) + "_PA_(.+)\\.tar(?:\\.gz)?";
+			} else {
+				throw new DmeSyncMappingException("Unsupported SCAF collection type in " + proposedDmePath);
+			}
+			Matcher matcher = Pattern.compile(expression).matcher(file);
+			if (!matcher.matches()) {
+				throw new DmeSyncMappingException("SCAF filename must match its sample and collection type in "
+						+ proposedDmePath);
+			}
+			boolean fastq = "FASTQ".equals(type);
+			return new ReviewMapping(runId, originalFilePath, sample, type,
+					matcher.group(fastq ? 2 : 1), fastq ? matcher.group(1) : "", proposedDmePath,
+					reviewStatus, reviewNotes, approved);
+		}
+
+		String samplePath() {
+			return Paths.get(proposedDmePath).getParent().getParent().toString();
+		}
+
+		String projectPath() {
+			return Paths.get(samplePath()).getParent().toString();
+		}
+
+		String labPath() {
+			return Paths.get(projectPath()).getParent().toString();
 		}
 	}
 

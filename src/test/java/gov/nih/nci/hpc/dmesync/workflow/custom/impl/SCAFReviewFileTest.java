@@ -39,7 +39,7 @@ class SCAFReviewFileTest {
 			writer.writeNext(new String[] { "RunId", "OriginalFilePath", "SampleId", "SampleCollectionType",
 					"Chemistry", "Flowcell", "ProposedDmePath", "ReviewStatus", "ReviewNotes", "Approved" });
 			writer.writeNext(new String[] { "Run_1", "/source/first", "SCAF1", "FASTQ", "GEX", "FC1",
-					"/DME/Project/SCAF1/FASTQ/SCAF1.tar", "READY", "", "YES" });
+					"/DME/test_lab/Project/SCAF1/FASTQ/SCAF1_FQ_FC1_GEX.tar", "READY", "", "YES" });
 		}
 
 		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(reviewFile.toString(), "/source/first",
@@ -50,10 +50,70 @@ class SCAFReviewFileTest {
 
 		try (CSVWriter writer = new CSVWriter(new FileWriter(reviewFile.toFile(), true))) {
 			writer.writeNext(new String[] { "Run_1", "/source/second", "SCAF2", "FASTQ", "GEX", "FC2",
-					"/DME/Project/SCAF1/FASTQ/SCAF1.tar", "DUPLICATE", "", "YES" });
+					"/DME/test_lab/Project/SCAF1/FASTQ/SCAF1_FQ_FC1_GEX.tar", "DUPLICATE", "", "YES" });
 		}
 
 		assertThrows(DmeSyncMappingException.class, () -> SCAFReviewFile.requireApproved(reviewFile.toString(),
 				"/source/first", "/DME"));
+	}
+
+	@Test
+	void editedDestinationOverridesStaleCsvFields() throws Exception {
+		Path reviewFile = tempDir.resolve("edited.csv");
+		writeMapping(reviewFile,
+				"/Archive/test_lab/CS0_Man/SCAFID_Product_1/Primary_Analysis_Output/SCAFID_Product_1_PA_GEX.tar",
+				"YES");
+
+		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(
+				reviewFile.toString(), "/source/first", "/Archive");
+		assertEquals("SCAFID_Product_1", mapping.sampleId);
+		assertEquals("Primary_Analysis_Output", mapping.collectionType);
+		assertEquals("GEX", mapping.chemistry);
+		assertEquals("", mapping.flowcell);
+		assertEquals("/Archive/test_lab", mapping.labPath());
+		assertEquals("/Archive/test_lab/CS0_Man", mapping.projectPath());
+		assertEquals("/Archive/test_lab/CS0_Man/SCAFID_Product_1", mapping.samplePath());
+	}
+
+	@Test
+	void fastqDestinationOverridesStaleSampleChemistryAndFlowcell() throws Exception {
+		Path reviewFile = tempDir.resolve("fastq.csv");
+		writeMapping(reviewFile, "/Archive/new_lab/Project/SCAF2/FASTQ/SCAF2_FQ_FC2_ATAC.tar", "YES");
+		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(
+				reviewFile.toString(), "/source/first", "/Archive");
+		assertEquals("SCAF2", mapping.sampleId);
+		assertEquals("FASTQ", mapping.collectionType);
+		assertEquals("ATAC", mapping.chemistry);
+		assertEquals("FC2", mapping.flowcell);
+	}
+
+	@Test
+	void rejectsMalformedOrUnapprovedDestination() throws Exception {
+		String[] paths = {
+				"/Archive/lab/Project/SCAF2/FASTQ/unrecognized.tar",
+				"/Archive/lab/Project/SCAF2/Unknown/SCAF2_PA_GEX.tar",
+				"/Archive/lab/Project/SCAF2/Primary_Analysis_Output/other_PA_GEX.tar",
+				"/Elsewhere/lab/Project/SCAF2/Primary_Analysis_Output/SCAF2_PA_GEX.tar",
+				"/Archive/lab/Project/SCAF2/extra/Primary_Analysis_Output/SCAF2_PA_GEX.tar"
+		};
+		for (int i = 0; i < paths.length; i++) {
+			Path reviewFile = tempDir.resolve("invalid-" + i + ".csv");
+			writeMapping(reviewFile, paths[i], "YES");
+			assertThrows(DmeSyncMappingException.class, () -> SCAFReviewFile.requireApproved(
+					reviewFile.toString(), "/source/first", "/Archive"));
+		}
+		Path unapproved = tempDir.resolve("unapproved.csv");
+		writeMapping(unapproved, "/Archive/lab/Project/SCAF2/FASTQ/SCAF2_FQ_FC2_GEX.tar", "");
+		assertThrows(DmeSyncMappingException.class, () -> SCAFReviewFile.requireApproved(
+				unapproved.toString(), "/source/first", "/Archive"));
+	}
+
+	private void writeMapping(Path file, String destination, String approved) throws Exception {
+		try (CSVWriter writer = new CSVWriter(new FileWriter(file.toFile()))) {
+			writer.writeNext(new String[] { "RunId", "OriginalFilePath", "SampleId", "SampleCollectionType",
+					"Chemistry", "Flowcell", "ProposedDmePath", "ReviewStatus", "ReviewNotes", "Approved" });
+			writer.writeNext(new String[] { "Run_1", "/source/first", "OLD_SAMPLE", "FASTQ", "OLD_CHEMISTRY",
+					"OLD_FLOWCELL", destination, "READY", "", approved });
+		}
 	}
 }

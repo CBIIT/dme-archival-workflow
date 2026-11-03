@@ -85,7 +85,17 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
 			SCAFReviewFile.ReviewMapping mapping = approvedMapping(object);
 			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
-			object.setSourceFileName(Paths.get(mapping.proposedDmePath).getFileName().toString());
+			String fileName = Paths.get(mapping.proposedDmePath).getFileName().toString();
+			if (!StringUtils.equals(object.getSourceFilePath(), object.getOriginalFilePath())) {
+				Path source = Paths.get(object.getSourceFilePath());
+				if (object.getOriginalFilePath().endsWith(".tar") && !source.toString().endsWith(".tar")) {
+					source = source.resolve(fileName.replaceFirst("\\.tar(?:\\.gz)?$", "")).resolve(fileName);
+				} else {
+					source = source.resolveSibling(fileName);
+				}
+				object.setSourceFilePath(source.toString());
+			}
+			object.setSourceFileName(fileName);
 			return mapping.proposedDmePath;
 		}
 		if (!dryRun || StringUtils.isBlank(reviewFile)) {
@@ -235,11 +245,13 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "PI_XXX" collection
 		String metadataFileKey = getProjectPathName(object);
-		String piCollectionName = getPiCollectionName(object, metadataFileKey);
-		String piCollectionPath = destinationBaseDir + "/" + piCollectionName + "_lab";
+		String piCollectionPath = reviewMapping == null
+				? destinationBaseDir + "/" + getPiCollectionName(object, metadataFileKey) + "_lab"
+				: reviewMapping.labPath();
 		HpcBulkMetadataEntry pathEntriesPI = new HpcBulkMetadataEntry();
 		pathEntriesPI.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "PI_Lab"));
-		piCollectionPath = piCollectionPath.replace(" ", "_");
+		if (reviewMapping == null)
+			piCollectionPath = piCollectionPath.replace(" ", "_");
 		pathEntriesPI.setPath(piCollectionPath);
 		pathEntriesPI.getPathMetadataEntries()
 				.add(createPathEntry("data_owner", getAttrValueWithExactKey(metadataFileKey, "data_owner")));
@@ -258,8 +270,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 		// Add path metadata entries for "Project" collection
 		// Example row: collectionType - Project, collectionName - CS027118
-		String projectCollectionName = getProjectCollectionName(object, metadataFileKey);
-		String projectCollectionPath = piCollectionPath + "/" + projectCollectionName;
+		String projectCollectionName = reviewMapping == null ? getProjectCollectionName(object, metadataFileKey)
+				: Paths.get(reviewMapping.projectPath()).getFileName().toString();
+		String projectCollectionPath = reviewMapping == null ? piCollectionPath + "/" + projectCollectionName
+				: reviewMapping.projectPath();
 		HpcBulkMetadataEntry pathEntriesProject = new HpcBulkMetadataEntry();
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Project"));
 		pathEntriesProject.getPathMetadataEntries().add(createPathEntry("project_id", projectCollectionName));
@@ -309,7 +323,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		
 		pathEntriesProject.getPathMetadataEntries()
 		.add(createPathEntry("project_start_date", getProjectReportDate(metadataFileKey,object )));
-		projectCollectionPath = projectCollectionPath.replace(" ", "_");
+		if (reviewMapping == null)
+			projectCollectionPath = projectCollectionPath.replace(" ", "_");
 		pathEntriesProject.setPath(projectCollectionPath);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
