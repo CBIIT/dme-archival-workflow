@@ -188,8 +188,11 @@ The following properties can be set in `application.properties` file:
      - Will include file/folders which starts with instrument folder directly under the base dir, and has project1 folder after any parent folder.
      ```
 * `dmesync.dryrun=[true|false]`
-  * If true, only records the files to be processed in the local DB without running the workflow.
+  * If true, runs metadata processing and reporting without uploading data.
   * Default: `false` 
+* `dmesync.scaf.review.file=<path>`
+  * For the `scaf` processor, set this to a CSV path and run with `dmesync.dryrun=true` to generate a review file containing each source path, derived sample ID, collection type, chemistry, flowcell, proposed DME path, review status, and notes. Runs outside the supported SCAF FASTQ and Cell Ranger folders are marked `EXCLUDED`; malformed mappings and repeated proposed DME paths are flagged.
+  * Review the CSV and set `Approved` to `YES` only for mappings to upload. Then run with `dmesync.dryrun=false` and the same review-file path. Only approved mappings are used; unapproved, missing, duplicate, or incomplete mappings fail closed and are not uploaded. The review file is replaced when a new dry-run run ID writes to it.
 * `dmesync.cleanup=[true|false]`
   * If true, the tar file created under the dmesync.work.base.dir will be removed upon successful upload.
   * Default: `false` 

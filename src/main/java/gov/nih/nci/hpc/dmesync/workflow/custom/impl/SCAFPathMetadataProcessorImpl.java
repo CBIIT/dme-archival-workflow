@@ -74,8 +74,41 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	@Value("${dmesync.source.base.dir}")
 	private String sourceDir;
 
+	@Value("${dmesync.dryrun:false}")
+	private boolean dryRun;
+
+	@Value("${dmesync.scaf.review.file:}")
+	private String reviewFile;
+
 	@Override
 	public String getArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			SCAFReviewFile.ReviewMapping mapping = approvedMapping(object);
+			threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
+			object.setSourceFileName(Paths.get(mapping.proposedDmePath).getFileName().toString());
+			return mapping.proposedDmePath;
+		}
+		if (!dryRun || StringUtils.isBlank(reviewFile)) {
+			return buildArchivePath(object);
+		}
+
+		try {
+			String archivePath = buildArchivePath(object);
+			recordReviewMapping(object, archivePath, null);
+			return archivePath;
+		} catch (Exception e) {
+			recordReviewMapping(object, null, e.getMessage());
+			if (e instanceof DmeSyncMappingException) {
+				throw (DmeSyncMappingException) e;
+			}
+			if (e instanceof IOException) {
+				throw (IOException) e;
+			}
+			throw new DmeSyncMappingException("Unable to derive SCAF archive mapping", e);
+		}
+	}
+
+	private String buildArchivePath(StatusInfo object) throws DmeSyncMappingException, IOException {
 
 		logger.info("[PathMetadataTask] SCAF getArchivePath called");
 		String path = getProjectPathName(object);
@@ -109,6 +142,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 						+ sampleCollectionType + "/" + getTarFileName(object, sampleCollectionType , path);
 
 			}
+
 			// replace spaces with underscore
 			archivePath = archivePath.replace(" ", "_");
 
@@ -124,6 +158,67 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 
 	}
 
+	private void recordReviewMapping(StatusInfo object, String proposedPath, String error) throws IOException {
+		String collectionType = null;
+		String sampleId = null;
+		String chemistry = null;
+		String flowcell = null;
+		String notes = error;
+		try {
+			collectionType = getSampleCollectionType(object);
+		} catch (Exception e) {
+			notes = appendNote(notes, e.getMessage());
+		}
+		try {
+			sampleId = getSCAFNumber(object);
+		} catch (Exception e) {
+			notes = appendNote(notes, e.getMessage());
+		}
+		if (StringUtils.equals(FASTQ, collectionType)) {
+			try {
+				chemistry = getChemistry(object);
+			} catch (Exception e) {
+				notes = appendNote(notes, e.getMessage());
+			}
+			try {
+				flowcell = getFlowcellId(object);
+			} catch (Exception e) {
+				notes = appendNote(notes, e.getMessage());
+			}
+		} else if (StringUtils.equals(PRIMARY_ANALYSIS_OUTPUT_NAME, collectionType)) {
+			try {
+				chemistry = getChemistryforPAO(object, getProjectPathName(object));
+			} catch (Exception e) {
+				notes = appendNote(notes, e.getMessage());
+			}
+		}
+
+		String reviewStatus;
+		if (StringUtils.isBlank(collectionType)) {
+			reviewStatus = "EXCLUDED";
+			notes = StringUtils.isBlank(notes) ? "Path is outside the supported SCAF run folders" : notes;
+		} else if (StringUtils.isAnyBlank(sampleId, chemistry)
+				|| (StringUtils.equals(FASTQ, collectionType) && StringUtils.isBlank(flowcell))
+				|| StringUtils.isBlank(proposedPath)
+				|| !StringUtils.startsWith(proposedPath, StringUtils.removeEnd(destinationBaseDir, "/") + "/")
+				|| StringUtils.isNotBlank(error)) {
+			reviewStatus = "INCONSISTENT";
+		} else {
+			reviewStatus = "READY";
+		}
+
+		SCAFReviewFile.append(reviewFile, object.getRunId(), object.getOriginalFilePath(), sampleId, collectionType,
+				chemistry, flowcell, proposedPath, reviewStatus, notes);
+	}
+
+	private String appendNote(String notes, String note) {
+		return StringUtils.isBlank(notes) ? note : notes + "; " + note;
+	}
+
+	private SCAFReviewFile.ReviewMapping approvedMapping(StatusInfo object) throws DmeSyncMappingException {
+		return SCAFReviewFile.requireApproved(reviewFile, object.getOriginalFilePath(), destinationBaseDir);
+	}
+
 	@Override
 	public HpcDataObjectRegistrationRequestDTO getMetaDataJson(StatusInfo object)
 			throws DmeSyncMappingException, DmeSyncWorkflowException, IOException {
@@ -131,7 +226,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		//Map<String, String> reportMetadata = resolveReportMetadata(object);
 		// Add to HpcBulkMetadataEntries for path attributes
 		HpcBulkMetadataEntries hpcBulkMetadataEntries = new HpcBulkMetadataEntries();
-		String sampleCollectionType = getSampleCollectionType(object);
+		SCAFReviewFile.ReviewMapping reviewMapping = !dryRun && StringUtils.isNotBlank(reviewFile)
+				? approvedMapping(object) : null;
+		String sampleCollectionType = reviewMapping == null ? getSampleCollectionType(object)
+				: reviewMapping.collectionType;
 		
 		String fileName = Paths.get(object.getSourceFileName()).toFile().getName();
 
@@ -305,9 +403,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "analyte_type")))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
 						.add(createPathEntry("analyte_type", getAttrValueWithKey(metadataFileKey, "analyte_type")));
-			if (StringUtils.isNotBlank(getAttrValueWithKey(metadataFileKey, "chemistry")))
+			String chemistry = reviewMapping == null ? getAttrValueWithKey(metadataFileKey, "chemistry")
+					: reviewMapping.chemistry;
+			if (StringUtils.isNotBlank(chemistry))
 				dataObjectRegistrationRequestDTO.getMetadataEntries()
-						.add(createPathEntry("chemistry", getAttrValueWithKey(metadataFileKey, "chemistry")));
+						.add(createPathEntry("chemistry", chemistry));
 		} else {
 			dataObjectRegistrationRequestDTO.getMetadataEntries().add(createPathEntry("object_name", fileName));
 
@@ -394,7 +494,10 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		return null;
 	}
 
-	private String getSampleCollectionType(StatusInfo object) {
+	private String getSampleCollectionType(StatusInfo object) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).collectionType;
+		}
 		String sampleCollectionType = null;
 		if (StringUtils.containsIgnoreCase(object.getOriginalFilePath(), "01_DemultiplexedFastqs")) {
 			sampleCollectionType = FASTQ;
@@ -409,6 +512,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getTarFileName(StatusInfo object, String sampleCollectionType , String metadataKey) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return Paths.get(approvedMapping(object).proposedDmePath).getFileName().toString();
+		}
 		String tarFileName = null;
 		String scafNumber = getSCAFNumberforFileName(object);
 
@@ -423,10 +529,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getSCAFNumberforFileName(StatusInfo object) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).sampleId;
+		}
 
-		// filename without the extension is the SCAF Number
-		String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
-		String sampleName = fileName.replaceAll("\\.tar$", "");
+		String sampleName = getScafNameFromPath(object);
 
 		// Remove known trailing chemistry suffixes from the filename stem.
 				// Examples:
@@ -434,7 +541,7 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 				//   SCAF12345_ATAC.tar -> SCAF12345
 				//   SCAF12345.tar      -> SCAF12345
 		sampleName = sampleName.replaceFirst("_(GEX|ATAC|FPC|VDJ|RNA|ADT|BCR|TCR)$", "");
-		logger.info("Sample Name", sampleName);
+		logger.info("Sample Name {}", sampleName);
 		if (sampleName != null && sampleName.startsWith("SCAF")) {
 			return sampleName;
 		} else {
@@ -448,10 +555,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getSCAFNumber(StatusInfo object) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).sampleId;
+		}
 
-	    String fileName = Paths.get(object.getOrginalFileName()).toFile().getName();
-
-	    String sampleName = fileName.replaceFirst("\\.tar(\\.gz)?$", "");
+	    String sampleName = getScafNameFromPath(object);
 
 	    
 	    sampleName = sampleName.replaceFirst("_(GEX|ATAC|FPC|VDJ|RNA|ADT|BCR|TCR)$", "");
@@ -476,7 +584,26 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	            "Invalid folder structure: The name of fastq file or cellranger output file (sample name) doesn't start with SCAF: "
 	                    + object.getSourceFilePath());
 	} 
+
+	private String getScafNameFromPath(StatusInfo object) {
+		Path path = Paths.get(object.getOriginalFilePath());
+		for (int i = path.getNameCount() - 1; i >= 0; i--) {
+			String component = path.getName(i).toString().replaceFirst("(?i)\\.tar(\\.gz)?$", "");
+			if (component.matches("(?i)^SCAF\\d+.*")) {
+				return component;
+			}
+		}
+		String originalName = object.getOrginalFileName();
+		if (StringUtils.isBlank(originalName)) {
+			originalName = path.getFileName().toString();
+		}
+		return Paths.get(originalName).getFileName().toString().replaceFirst("(?i)\\.tar(\\.gz)?$", "");
+	}
+
 	private String getFlowcellId(StatusInfo object) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).flowcell;
+		}
 		String flowcellId = null;
 		// Example: If originalFilePath is
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
@@ -490,6 +617,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getChemistry(StatusInfo object) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).chemistry;
+		}
 		String chemistry = null;
 		// Example: If originalFilePath is
 		// /mnt/scaf-ccr-a-data/CS029391_Staudt_Shaffer/01_DemultiplexedFastqs/Seq1_AAAKYHJM5_VDJ
@@ -503,6 +633,9 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 	}
 
 	private String getChemistryforPAO(StatusInfo object , String metadataFileKey ) throws DmeSyncMappingException {
+		if (!dryRun && StringUtils.isNotBlank(reviewFile)) {
+			return approvedMapping(object).chemistry;
+		}
 		Path path = Paths.get(object.getOriginalFilePath());
 		
 		String  chemistryFromspreadhseet = getAttrValueWithKey(metadataFileKey, "chemistry");
