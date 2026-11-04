@@ -28,7 +28,7 @@ class SCAFApprovedMetadataTest {
 		String original = "/mnt/scaf-data/CS123_Old_Project/02_PrimaryAnalysisOutput/"
 				+ "00_FullCellrangerOutputs/GEX/OLD_SAMPLE.tar";
 		String destination = "/Archive/test_lab/CS0_Man/SCAFID_Product_1/Primary_Analysis_Output/"
-				+ "SCAFID_Product_1_PA_GEX.tar";
+				+ "SCAFID_Product_2_PA_GEX.tar";
 		Path reviewFile = tempDir.resolve("review.csv");
 		try (CSVWriter writer = new CSVWriter(new FileWriter(reviewFile.toFile()))) {
 			writer.writeNext(new String[] { "RunId", "OriginalFilePath", "SampleId", "SampleCollectionType",
@@ -58,7 +58,7 @@ class SCAFApprovedMetadataTest {
 		object.setOrginalFileName("OLD_SAMPLE.tar");
 		object.setSourceFilePath("/work/project/GEX");
 		assertEquals(destination, processor.getArchivePath(object));
-		assertEquals("/work/project/GEX/SCAFID_Product_1_PA_GEX/SCAFID_Product_1_PA_GEX.tar",
+		assertEquals("/work/project/GEX/SCAFID_Product_2_PA_GEX/SCAFID_Product_2_PA_GEX.tar",
 				object.getSourceFilePath());
 		try {
 			HpcDataObjectRegistrationRequestDTO dto = processor.getMetaDataJson(object);
@@ -73,6 +73,8 @@ class SCAFApprovedMetadataTest {
 					"/Archive/test_lab/CS0_Man/SCAFID_Product_1/Primary_Analysis_Output"), "collection_type"));
 			assertEquals("GEX", dto.getMetadataEntries().stream()
 					.filter(e -> "chemistry".equals(e.getAttribute())).findFirst().orElseThrow().getValue());
+			assertEquals("SCAFID_Product_2_PA_GEX.tar", dto.getMetadataEntries().stream()
+					.filter(e -> "object_name".equals(e.getAttribute())).findFirst().orElseThrow().getValue());
 		} finally {
 			AbstractPathMetadataProcessor.threadLocalMap.remove();
 		}

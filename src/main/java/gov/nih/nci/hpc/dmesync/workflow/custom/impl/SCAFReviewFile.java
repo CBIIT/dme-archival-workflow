@@ -218,15 +218,16 @@ final class SCAFReviewFile {
 			String file = relative.getName(4).toString();
 			String expression;
 			if ("FASTQ".equals(type)) {
-				expression = Pattern.quote(sample) + "_FQ_(.+)_([^_]+)\\.tar(?:\\.gz)?";
+				expression = ".+_FQ_(.+)_([^_]+)\\.tar(?:\\.gz)?";
 			} else if ("Primary_Analysis_Output".equals(type)) {
-				expression = Pattern.quote(sample) + "_PA_(.+)\\.tar(?:\\.gz)?";
+				expression = ".+_PA_(.+)\\.tar(?:\\.gz)?";
 			} else {
 				throw new DmeSyncMappingException("Unsupported SCAF collection type in " + proposedDmePath);
 			}
 			Matcher matcher = Pattern.compile(expression).matcher(file);
 			if (!matcher.matches()) {
-				throw new DmeSyncMappingException("SCAF filename must match its sample and collection type in "
+				throw new DmeSyncMappingException("SCAF filename must use <prefix>_PA_<chemistry>.tar or "
+						+ "<prefix>_FQ_<flowcell>_<chemistry>.tar for its collection type in "
 						+ proposedDmePath);
 			}
 			boolean fastq = "FASTQ".equals(type);

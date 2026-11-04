@@ -88,11 +88,38 @@ class SCAFReviewFileTest {
 	}
 
 	@Test
+	void sampleFolderCanDifferFromFilenamePrefix() throws Exception {
+		Path reviewFile = tempDir.resolve("grouped-sample.csv");
+		String destination = "/CCR_SCAF_Archive/Adam_Sowalsky_lab/CS033964156_Baj/"
+				+ "SCAF4232_Product_1_2/Primary_Analysis_Output/SCAF4232_Product_2_PA_GEX.tar";
+		writeMapping(reviewFile, destination, "YES");
+		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(
+				reviewFile.toString(), "/source/first", "/CCR_SCAF_Archive");
+		assertEquals("SCAF4232_Product_1_2", mapping.sampleId);
+		assertEquals("GEX", mapping.chemistry);
+		assertEquals("Primary_Analysis_Output", mapping.collectionType);
+		assertEquals(destination, mapping.proposedDmePath);
+		assertEquals("/CCR_SCAF_Archive/Adam_Sowalsky_lab/CS033964156_Baj/SCAF4232_Product_1_2",
+				mapping.samplePath());
+	}
+
+	@Test
+	void fastqSampleFolderCanDifferFromFilenamePrefix() throws Exception {
+		Path reviewFile = tempDir.resolve("grouped-fastq.csv");
+		writeMapping(reviewFile, "/Archive/lab/Project/CombinedSample/FASTQ/SCAF2_FQ_FC2_ATAC.tar.gz", "YES");
+		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(
+				reviewFile.toString(), "/source/first", "/Archive");
+		assertEquals("CombinedSample", mapping.sampleId);
+		assertEquals("FC2", mapping.flowcell);
+		assertEquals("ATAC", mapping.chemistry);
+	}
+
+	@Test
 	void rejectsMalformedOrUnapprovedDestination() throws Exception {
 		String[] paths = {
 				"/Archive/lab/Project/SCAF2/FASTQ/unrecognized.tar",
 				"/Archive/lab/Project/SCAF2/Unknown/SCAF2_PA_GEX.tar",
-				"/Archive/lab/Project/SCAF2/Primary_Analysis_Output/other_PA_GEX.tar",
+				"/Archive/lab/Project/SCAF2/Primary_Analysis_Output/other_FQ_FC1_GEX.tar",
 				"/Elsewhere/lab/Project/SCAF2/Primary_Analysis_Output/SCAF2_PA_GEX.tar",
 				"/Archive/lab/Project/SCAF2/extra/Primary_Analysis_Output/SCAF2_PA_GEX.tar"
 		};
