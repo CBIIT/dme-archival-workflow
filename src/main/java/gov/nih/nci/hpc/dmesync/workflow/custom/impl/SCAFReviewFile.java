@@ -23,8 +23,8 @@ import com.opencsv.CSVWriter;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 
 final class SCAFReviewFile {
-	private static final String[] HEADERS = { "RunId", "OriginalFilePath", "SampleId", "SampleCollectionType",
-			"Chemistry", "Flowcell", "ProposedDmePath", "ReviewStatus", "ReviewNotes", "Approved" };
+	private static final String[] HEADERS = { "RunId", "OriginalFilePath", "ProposedDmePath", "SampleId",
+			"SampleCollectionType", "Chemistry", "Flowcell", "ReviewStatus", "ReviewNotes", "Approved" };
 	private static final Object WRITE_LOCK = new Object();
 	private static String activeFile;
 	private static String activeRunId;
@@ -69,8 +69,8 @@ final class SCAFReviewFile {
 			}
 
 			try (CSVWriter writer = new CSVWriter(new FileWriter(reviewPath.toFile(), true))) {
-				writer.writeNext(new String[] { runId, originalPath, sampleId, collectionType, chemistry, flowcell,
-						proposedPath, finalStatus, finalNotes, "" });
+				writer.writeNext(new String[] { runId, originalPath, proposedPath, sampleId, collectionType, chemistry,
+						flowcell, finalStatus, finalNotes, "" });
 			}
 			cachedIndex = null;
 			return finalStatus;

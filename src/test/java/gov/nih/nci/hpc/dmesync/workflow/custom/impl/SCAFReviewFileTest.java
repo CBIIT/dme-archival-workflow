@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.opencsv.CSVWriter;
+import com.opencsv.CSVReader;
+import java.io.FileReader;
 
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 
@@ -30,6 +32,18 @@ class SCAFReviewFileTest {
 		String review = java.nio.file.Files.readString(reviewFile);
 		assertEquals(3, review.lines().count());
 		org.junit.jupiter.api.Assertions.assertTrue(review.contains("DUPLICATE"));
+		try (CSVReader reader = new CSVReader(new FileReader(reviewFile.toFile()))) {
+			String[] headers = reader.readNext();
+			assertEquals("OriginalFilePath", headers[1]);
+			assertEquals("ProposedDmePath", headers[2]);
+			String[] row = reader.readNext();
+			assertEquals("/source/first", row[1]);
+			assertEquals("/DME/Project/SCAF1/FASTQ/SCAF1.tar", row[2]);
+			assertEquals("SCAF1", row[3]);
+			assertEquals("FASTQ", row[4]);
+			assertEquals("GEX", row[5]);
+			assertEquals("FC1", row[6]);
+		}
 	}
 
 	@Test
