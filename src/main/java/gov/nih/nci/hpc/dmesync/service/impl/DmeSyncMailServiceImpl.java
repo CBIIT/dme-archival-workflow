@@ -75,6 +75,12 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   
   @Value("${dmesync.tar.excluded.contents.file:false}")
   private boolean createTarExcludedContentsFile;
+
+  @Value("${dmesync.dryrun:false}")
+  private boolean dryRun;
+
+  @Value("${dmesync.scaf.review.file:}")
+  private String scafReviewFile;
   
   final Logger logger = LoggerFactory.getLogger(getClass().getName());
   
@@ -238,7 +244,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 	  helper.setSubject("DME Auto Archival " + subject + "for  " + doc.toUpperCase() + " - Run_ID: " + runId
 				+ " - Base Path:  " + syncBaseDir);
 
-      helper.setText(updatedBody,true);
+      helper.setText(updatedBody + attachScafReviewFile(helper),true);
       
 	  String status= (failedCount > 0) ? WorkflowConstants.RunStatus.FAILED.toString() : WorkflowConstants.RunStatus.SUCCEEDED.toString();
       
@@ -251,6 +257,7 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
        } catch (IllegalArgumentException ex) {
           logger.warn("Unable to update workflow run log for runId {} and doc {}: {}", runId, doc, ex.getMessage());
       }
+
       
     } catch (MessagingException e) {
       throw new MailParseException(e);
@@ -260,6 +267,23 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   
   
   
+  String attachScafReviewFile(MimeMessageHelper helper) throws MessagingException {
+    if (!dryRun || !"scaf".equalsIgnoreCase(doc)
+        || org.apache.commons.lang3.StringUtils.isBlank(scafReviewFile)) {
+      return "";
+    }
+
+    FileSystemResource review = new FileSystemResource(scafReviewFile);
+    if (!review.isReadable()) {
+      logger.warn("SCAF review CSV is missing or unreadable: {}", scafReviewFile);
+      return "<p><b>The SCAF review CSV could not be attached because it is missing or unreadable. "
+          + "Check dmesync.scaf.review.file on the workflow server before approving uploads.</b></p>";
+    }
+    helper.addAttachment(review.getFilename(), review, "text/csv");
+    return "<p>The SCAF review CSV is also attached. Review ProposedDmePath and set Approved to YES "
+        + "only for mappings to upload, then save/export the reviewed file as CSV.</p>";
+  }
+
   public String buildHtmlTable(List<DmeCSBMailBodyDto> folders) {
       StringBuilder htmlBuilder = new StringBuilder();
 
