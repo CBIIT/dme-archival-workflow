@@ -466,13 +466,19 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
     }
 
 	private String getFlowcell(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
-		SourceConfig sourceConfig = config.getSourceConfig();
 		String flowcellId = "";
 		if(!isONT(config)) {
 			flowcellId = getAttrValueWithExactKey(getSample(object, config), "FCID");
 		}
 		else {
-			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceConfig.sourceBaseDir, File.separator));
+			Path parent = Paths.get(object.getOriginalFilePath()).getParent();
+			if (parent != null && parent.getFileName() != null && !isMultiplexed(parent.getFileName().toString())) {
+				parent = parent.getParent();
+			}
+			if (parent == null || parent.getFileName() == null) {
+				throw new DmeSyncMappingException("Cannot determine flowcell from path: " + object.getOriginalFilePath());
+			}
+			flowcellId = parent.getFileName().toString();
 		}
 		return flowcellId;
 	}
