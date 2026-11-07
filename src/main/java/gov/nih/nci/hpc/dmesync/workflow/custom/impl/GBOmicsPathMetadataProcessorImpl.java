@@ -476,9 +476,11 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 				parent = parent.getParent();
 			}
 			if (parent == null || parent.getFileName() == null) {
-				throw new DmeSyncMappingException("Cannot determine flowcell from path: " + object.getOriginalFilePath());
+				throw new DmeSyncMappingException(
+						"Cannot determine flowcell from path: " + object.getOriginalFilePath());
+			} else {
+				flowcellId = parent.getFileName().toString();
 			}
-			flowcellId = parent.getFileName().toString();
 		}
 		return flowcellId;
 	}
