@@ -466,13 +466,32 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
     }
 
 	private String getFlowcell(StatusInfo object, DocConfig config) throws DmeSyncMappingException {
-		SourceConfig sourceConfig = config.getSourceConfig();
 		String flowcellId = "";
 		if(!isONT(config)) {
 			flowcellId = getAttrValueWithExactKey(getSample(object, config), "FCID");
 		}
 		else {
-			flowcellId = getCollectionNameFromParent(object.getOriginalFilePath(), StringUtils.substringAfterLast(sourceConfig.sourceBaseDir, File.separator));
+			Path parent = Paths.get(object.getOriginalFilePath()).getParent();
+
+			if (parent == null || parent.getFileName() == null) {
+				throw new DmeSyncMappingException(
+						messageService.get("FLOWCELL_PATH_ERROR_MSG", object.getOriginalFilePath()));
+			}
+			// The below check is to handle the case where the flowcell folder is not the
+			// immediate parent of the file, but one level up for barcode folders which are
+			// under fastq_pass|fastq_fail|bam_pass|bam_fail
+			if (parent.getFileName().toString().matches("fastq_pass|fastq_fail|bam_pass|bam_fail")) {
+				Path barcodeParent = parent.getParent();
+				if (barcodeParent == null || barcodeParent.getFileName() == null) {
+					throw new DmeSyncMappingException(
+							messageService.get("FLOWCELL_PATH_ERROR_MSG", object.getOriginalFilePath()));
+				}
+				flowcellId = barcodeParent.getFileName().toString();
+
+			} else {
+				flowcellId = parent.getFileName().toString();
+			}
+			
 		}
 		return flowcellId;
 	}
