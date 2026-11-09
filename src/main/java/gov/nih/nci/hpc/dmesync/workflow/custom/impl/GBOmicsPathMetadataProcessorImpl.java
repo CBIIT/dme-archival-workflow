@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -472,14 +473,27 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		}
 		else {
 			Path parent = Paths.get(object.getOriginalFilePath()).getParent();
-			if (parent != null && parent.getFileName() != null && !isMultiplexed(parent.getFileName().toString())) {
-				parent = parent.getParent();
-			}
+			
+			String flowcellErrorMsg = messageService.get("FLOWCELL_PATH_ERROR_MSG",
+					object.getOriginalFilePath(),
+			        Locale.getDefault()
+			    );
+
 			if (parent == null || parent.getFileName() == null) {
-				throw new DmeSyncMappingException(
-						"Cannot determine flowcell from path: " + object.getOriginalFilePath());
+				throw new DmeSyncMappingException(flowcellErrorMsg);
 			} else {
-				flowcellId = parent.getFileName().toString();
+				// The below check is to handle the case where the flowcell folder is not the
+				// immediate parent of the file, but one level up for barcode folders.
+				if (!isMultiplexed(parent.getFileName().toString())) {
+					Path barcodeParent = parent.getParent();
+					if (barcodeParent == null || barcodeParent.getFileName() == null) {
+						throw new DmeSyncMappingException(flowcellErrorMsg);
+					} else {
+						flowcellId = barcodeParent.getFileName().toString();
+					}
+				} else {
+					flowcellId = parent.getFileName().toString();
+				}
 			}
 		}
 		return flowcellId;
