@@ -472,27 +472,26 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 		}
 		else {
 			Path parent = Paths.get(object.getOriginalFilePath()).getParent();
-			
-			String flowcellErrorMsg = messageService.get("FLOWCELL_PATH_ERROR_MSG",
-					object.getOriginalFilePath()
-			    );
 
 			if (parent == null || parent.getFileName() == null) {
-				throw new DmeSyncMappingException(flowcellErrorMsg);
-			} else {
-				// The below check is to handle the case where the flowcell folder is not the
-				// immediate parent of the file, but one level up for barcode folders.
-				if (!isMultiplexed(parent.getFileName().toString())) {
-					Path barcodeParent = parent.getParent();
-					if (barcodeParent == null || barcodeParent.getFileName() == null) {
-						throw new DmeSyncMappingException(flowcellErrorMsg);
-					} else {
-						flowcellId = barcodeParent.getFileName().toString();
-					}
-				} else {
-					flowcellId = parent.getFileName().toString();
-				}
+				throw new DmeSyncMappingException(
+						messageService.get("FLOWCELL_PATH_ERROR_MSG", object.getOriginalFilePath()));
 			}
+			// The below check is to handle the case where the flowcell folder is not the
+			// immediate parent of the file, but one level up for barcode folders which are
+			// under fastq_pass|fastq_fail|bam_pass|bam_fail
+			if (parent.getFileName().toString().matches("fastq_pass|fastq_fail|bam_pass|bam_fail")) {
+				Path barcodeParent = parent.getParent();
+				if (barcodeParent == null || barcodeParent.getFileName() == null) {
+					throw new DmeSyncMappingException(
+							messageService.get("FLOWCELL_PATH_ERROR_MSG", object.getOriginalFilePath()));
+				}
+				flowcellId = barcodeParent.getFileName().toString();
+
+			} else {
+				flowcellId = parent.getFileName().toString();
+			}
+			
 		}
 		return flowcellId;
 	}

@@ -1,6 +1,6 @@
 package gov.nih.nci.hpc.dmesync.workflow.custom.impl;
 
-import java.lang.reflect.Field;
+
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,14 +9,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mockito;
+
 
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.StatusInfo;
 import gov.nih.nci.hpc.dmesync.workflow.MessageService;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -62,7 +61,7 @@ class GBOmicsPathMetadataProcessorImplTest {
   	  MessageService messageService = mock(MessageService.class);
 
   	  // If MessageService has: String get(String key, Object... args)
-  	  when(messageService.get(anyString())).thenReturn("VALIDATION_001");
+  	  when(messageService.get(anyString(), any(Object[].class))).thenReturn("FLOWCELL_PATH_ERROR_MSG");
 
   	  setField(target, "messageService", messageService);
   	}
@@ -94,7 +93,7 @@ class GBOmicsPathMetadataProcessorImplTest {
 
 		assertEquals("/GB_OMICS_Archive/Lab_Lab1/DATA/Year_2024/Flowcell_FLO123/Sample_Tumor_barcode01/"
 				+ dataFolder + "_barcode01", processor.getArchivePath(status, ontConfig()));
-		assertNotEquals(Boolean.TRUE, status.isEndWorkflow());
+		assertNull(status.isEndWorkflow());
 	}
 
 	@Test
@@ -105,7 +104,7 @@ class GBOmicsPathMetadataProcessorImplTest {
 
 		assertEquals("/GB_OMICS_Archive/Lab_Lab1/DATA/Year_2024/Flowcell_FLO123/fastq_pass_barcode01",
 				processor.getArchivePath(status, ontConfig()));
-		assertNotEquals(Boolean.TRUE, status.isEndWorkflow());
+		assertNull( status.isEndWorkflow());
 	}
 
 	@ParameterizedTest
