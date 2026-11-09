@@ -475,8 +475,7 @@ public class GBOmicsPathMetadataProcessorImpl extends AbstractPathMetadataProces
 			Path parent = Paths.get(object.getOriginalFilePath()).getParent();
 			
 			String flowcellErrorMsg = messageService.get("FLOWCELL_PATH_ERROR_MSG",
-					object.getOriginalFilePath(),
-			        Locale.getDefault()
+					object.getOriginalFilePath()
 			    );
 
 			if (parent == null || parent.getFileName() == null) {
