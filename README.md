@@ -191,6 +191,7 @@ The following properties can be set in `application.properties` file:
   * If true, runs metadata processing and reporting without uploading data.
   * Default: `false` 
 * `dmesync.scaf.review.file=<path>`
+  * Project-level analysis files also support `<destination-base>/<lab>/<project>/Analysis/<filename>` (for example, `/CCR/X_lab/CS035_test/Analysis/04_RawMatricesH5.tar`). These mappings create Lab, Project, and Analysis metadata only; no sample, chemistry, flowcell, or sample-prefixed filename is required. Successful dry-run Analysis mappings are marked `READY`.
   * For SCAF dry runs, the configured review CSV is attached to the result email alongside the existing Excel report. If the CSV is missing or unreadable, the email includes a warning and the server logs the problem. Actual upload emails and other processors are unchanged.
   * For the `scaf` processor, set this to a CSV path and run with `dmesync.dryrun=true` to generate a review file containing each source path, derived sample ID, collection type, chemistry, flowcell, proposed DME path, review status, and notes. Runs outside the supported SCAF FASTQ and Cell Ranger folders are marked `EXCLUDED`; malformed mappings and repeated proposed DME paths are flagged.
   * Review the CSV and set `Approved` to `YES` only for mappings to upload. Then run with `dmesync.dryrun=false` and the same review-file path. Only approved mappings are used; unapproved, missing, duplicate, or incomplete mappings fail closed and are not uploaded. The review file is replaced when a new dry-run run ID writes to it.

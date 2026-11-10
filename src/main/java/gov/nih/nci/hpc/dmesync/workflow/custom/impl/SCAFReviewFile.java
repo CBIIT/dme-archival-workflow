@@ -209,8 +209,14 @@ final class SCAFReviewFile {
 		private ReviewMapping fromDestination(Path base) throws DmeSyncMappingException {
 			Path destination = Paths.get(proposedDmePath);
 			Path relative = base.relativize(destination);
+			if (destination.equals(destination.normalize()) && relative.getNameCount() == 4
+					&& "Analysis".equals(relative.getName(2).toString())) {
+				return new ReviewMapping(runId, originalFilePath, "", null, "", "", proposedDmePath,
+						reviewStatus, reviewNotes, approved);
+			}
 			if (!destination.equals(destination.normalize()) || relative.getNameCount() != 5) {
-				throw new DmeSyncMappingException("Expected SCAF path <base>/<lab>/<project>/<sample>/<type>/<file>: "
+				throw new DmeSyncMappingException("Expected SCAF path <base>/<lab>/<project>/<sample>/<type>/<file> "
+						+ "or <base>/<lab>/<project>/Analysis/<file>: "
 						+ proposedDmePath);
 			}
 			String sample = relative.getName(2).toString();
@@ -241,7 +247,9 @@ final class SCAFReviewFile {
 		}
 
 		String projectPath() {
-			return Paths.get(samplePath()).getParent().toString();
+			return collectionType == null
+					? Paths.get(proposedDmePath).getParent().getParent().toString()
+					: Paths.get(samplePath()).getParent().toString();
 		}
 
 		String labPath() {

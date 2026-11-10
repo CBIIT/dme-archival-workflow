@@ -125,7 +125,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		String sampleCollectionType = getSampleCollectionType(object);
 		threadLocalMap.set(loadMetadataFile(metadataFile, "Project"));
 		// set the sourceFileName for fastq and cellranger tars to create a wrapped folder for tar.
-		if (object.getOriginalFilePath().endsWith(".tar") && !object.getSourceFilePath().endsWith(".tar")) {
+		if (sampleCollectionType != null && object.getOriginalFilePath().endsWith(".tar")
+				&& !object.getSourceFilePath().endsWith(".tar")) {
 			String tarFileName= getTarFileName(object, sampleCollectionType , path);
 			String tarFile = object.getSourceFilePath() + File.separatorChar + tarFileName.replace(".tar", "") + File.separatorChar + tarFileName;
 			tarFile = Paths.get(tarFile).normalize().toString();
@@ -180,7 +181,8 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 			notes = appendNote(notes, e.getMessage());
 		}
 		try {
-			sampleId = getSCAFNumber(object);
+			if (collectionType != null)
+				sampleId = getSCAFNumber(object);
 		} catch (Exception e) {
 			notes = appendNote(notes, e.getMessage());
 		}
@@ -204,7 +206,11 @@ public class SCAFPathMetadataProcessorImpl extends AbstractPathMetadataProcessor
 		}
 
 		String reviewStatus;
-		if (StringUtils.isBlank(collectionType)) {
+		if (StringUtils.isBlank(collectionType) && StringUtils.isBlank(error)
+				&& StringUtils.isNotBlank(proposedPath)
+				&& "Analysis".equals(Paths.get(proposedPath).getParent().getFileName().toString())) {
+			reviewStatus = "READY";
+		} else if (StringUtils.isBlank(collectionType)) {
 			reviewStatus = "EXCLUDED";
 			notes = StringUtils.isBlank(notes) ? "Path is outside the supported SCAF run folders" : notes;
 		} else if (StringUtils.isAnyBlank(sampleId, chemistry)

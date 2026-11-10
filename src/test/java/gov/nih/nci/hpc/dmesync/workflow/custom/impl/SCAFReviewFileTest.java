@@ -129,13 +129,31 @@ class SCAFReviewFileTest {
 	}
 
 	@Test
+	void projectAnalysisHasNoSampleChemistryOrFlowcell() throws Exception {
+		Path reviewFile = tempDir.resolve("analysis.csv");
+		String destination = "/CCR/X_lab/CS035_test/Analysis/04_RawMatricesH5.tar";
+		writeMapping(reviewFile, destination, "YES");
+		SCAFReviewFile.ReviewMapping mapping = SCAFReviewFile.requireApproved(
+				reviewFile.toString(), "/source/first", "/CCR");
+		assertEquals(destination, mapping.proposedDmePath);
+		assertEquals("/CCR/X_lab", mapping.labPath());
+		assertEquals("/CCR/X_lab/CS035_test", mapping.projectPath());
+		org.junit.jupiter.api.Assertions.assertNull(mapping.collectionType);
+		assertEquals("", mapping.sampleId);
+		assertEquals("", mapping.chemistry);
+		assertEquals("", mapping.flowcell);
+	}
+
+	@Test
 	void rejectsMalformedOrUnapprovedDestination() throws Exception {
 		String[] paths = {
 				"/Archive/lab/Project/SCAF2/FASTQ/unrecognized.tar",
 				"/Archive/lab/Project/SCAF2/Unknown/SCAF2_PA_GEX.tar",
 				"/Archive/lab/Project/SCAF2/Primary_Analysis_Output/other_FQ_FC1_GEX.tar",
 				"/Elsewhere/lab/Project/SCAF2/Primary_Analysis_Output/SCAF2_PA_GEX.tar",
-				"/Archive/lab/Project/SCAF2/extra/Primary_Analysis_Output/SCAF2_PA_GEX.tar"
+				"/Archive/lab/Project/SCAF2/extra/Primary_Analysis_Output/SCAF2_PA_GEX.tar",
+				"/Archive/lab/Project/Unknown/04_RawMatricesH5.tar",
+				"/Archive/lab/Project/Analysis/extra/04_RawMatricesH5.tar"
 		};
 		for (int i = 0; i < paths.length; i++) {
 			Path reviewFile = tempDir.resolve("invalid-" + i + ".csv");
