@@ -16,15 +16,26 @@ on:
           - prod
       build_run_number:
         description: "Build workflow run number that produced dme-archival-workflow-artifacts"
-        required: true
+        required: false
         type: string
-      fsdmel_wflow05p_ncifcrf_gov:
-        description: "Deploy to fsdmel-wflow05p.ncifcrf.gov"
+        default: "latest"
+      fsdmel_wflow02p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow02p.ncifcrf.gov"
+        required: false
+        type: boolean
+        default: false
+      fsdmel_wflow03p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow03p.ncifcrf.gov"
         required: false
         type: boolean
         default: false
       fsdmel_wflow04p_ncifcrf_gov:
         description: "Deploy to fsdmel-wflow04p.ncifcrf.gov"
+        required: false
+        type: boolean
+        default: false
+      fsdmel_wflow05p_ncifcrf_gov:
+        description: "Deploy to fsdmel-wflow05p.ncifcrf.gov"
         required: false
         type: boolean
         default: false
@@ -34,7 +45,7 @@ on:
         type: boolean
         default: false
 
-run-name: "Deploy DME Archival Workflow from build #${{ inputs.build_run_number }} to ${{ inputs.environment }}"
+run-name: "Deploy DME Archival Workflow from build #${{ inputs.build_run_number || 'latest' }} to ${{ inputs.environment }}"
 
 jobs:
   prepare:
@@ -46,7 +57,24 @@ jobs:
       labels: [prod-org-runner]
     outputs:
       matrix: ${{ steps.selected_servers.outputs.matrix }}
+      use_specific_run: ${{ steps.check_build.outputs.use_specific_run }}
     steps:
+      - name: Check build run number input
+        id: check_build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          input="${{ inputs.build_run_number }}"
+
+          if [ -z "$input" ] || [ "$input" = "latest" ]; then
+            echo "No specific build_run_number provided; the download step will use the most recent successful build-dme-archival-workflow.yml run automatically."
+            echo "use_specific_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Using explicitly provided build_run_number: ${input}"
+            echo "use_specific_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build selected server matrix
         id: selected_servers
         shell: bash
@@ -63,12 +91,18 @@ jobs:
             separator=','
           }
 
-          if [ "${{ inputs.fsdmel_wflow05p_ncifcrf_gov }}" = "true" ]; then
-            add_server "fsdmel-wflow05p.ncifcrf.gov" "fsdmel-wflow05p.ncifcrf.gov"
+          if [ "${{ inputs.fsdmel_wflow02p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow02p.ncifcrf.gov" "fsdmel-wflow02p.ncifcrf.gov"
           fi
-
+          if [ "${{ inputs.fsdmel_wflow03p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow03p.ncifcrf.gov" "fsdmel-wflow03p.ncifcrf.gov"
+          fi
           if [ "${{ inputs.fsdmel_wflow04p_ncifcrf_gov }}" = "true" ]; then
             add_server "fsdmel-wflow04p.ncifcrf.gov" "fsdmel-wflow04p.ncifcrf.gov"
+          fi
+
+          if [ "${{ inputs.fsdmel_wflow05p_ncifcrf_gov }}" = "true" ]; then
+            add_server "fsdmel-wflow05p.ncifcrf.gov" "fsdmel-wflow05p.ncifcrf.gov"
           fi
 
           if [ "${{ inputs.ncias_p2140_v_nci_nih_gov }}" = "true" ]; then
@@ -104,13 +138,23 @@ jobs:
       SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
       RUNNER_SSH_USER: githubuser
     steps:
-      - name: Download build artifact
+      - name: Download build artifact ((latest successful build)
+        if: needs.prepare.outputs.use_specific_run == 'false'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build-dme-archival-workflow.yml
+          workflow_conclusion: success
+          name: dme-archival-workflow-artifacts
+          path: artifacts
+
+      - name: Download build artifact ((specific run)
+        if: needs.prepare.outputs.use_specific_run == 'true'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build-dme-archival-workflow.yml
           run_number: ${{ inputs.build_run_number }}
           name: dme-archival-workflow-artifacts
-          path: artifacts
+          path: artifacts    
 
       - name: List downloaded artifacts
         shell: bash
