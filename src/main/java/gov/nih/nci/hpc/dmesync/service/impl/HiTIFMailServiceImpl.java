@@ -105,6 +105,7 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
   public void sendResult(String runId, DocConfig config) {
 	DocConfig.NotificationConfig mailConfig = config.getNotificationConfig();
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
+	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
     MimeMessage message = sender.createMimeMessage();
     String userEmails = null;
     String allEmails = mailConfig.recipients;
@@ -114,6 +115,11 @@ public class HiTIFMailServiceImpl implements DmeSyncMailService {
     try {
 
       List<StatusInfo> statusInfo = dmeSyncWorkflowService.getService(access).findStatusInfoByRunIdAndDoc(runId, config.getDocName());
+      if(preRule.tarContentsFile) {
+    	  // Use shared workflow logic to combine TAR and contents-file statuses.
+    	     statusInfo = dmeSyncWorkflowService.getService(access)
+    		         .generateAggregateRecords(statusInfo, config);
+      }
       if (CollectionUtils.isNotEmpty(statusInfo)) {
         List<MetadataInfo> metadataInfo = dmeSyncWorkflowService.getService(access).findAllMetadataInfoByRunIdAndDoc(runId, config.getDocName());
         Path path = Paths.get(logFile);
