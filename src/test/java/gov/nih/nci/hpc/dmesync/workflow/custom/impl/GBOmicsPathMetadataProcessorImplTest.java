@@ -148,7 +148,7 @@ class GBOmicsPathMetadataProcessorImplTest {
 
 	private DocConfig ontConfig() {
 		DocConfig.SourceConfig source = new DocConfig.SourceConfig("/data/GB_OMICS_ONT", null, "/GB_OMICS_Archive", 1);
-		DocConfig.SourceRule rule = new DocConfig.SourceRule(null, null, null, "metadata.xlsx", null, false, false, null, null, false, null, false, false, false, 0);
+		DocConfig.SourceRule rule = new DocConfig.SourceRule(null, null,false, null, null, "metadata.xlsx", null, false, false, null, null, false, null, false, false, false, 0);
 		DocConfig.UploadConfig upload = new DocConfig.UploadConfig(false, false, false, false, false, false, false, false, false, false, false, false, null, 0);
 		return new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, source, rule, null, null, upload, null);
 	}

@@ -58,7 +58,7 @@ class DmeSyncListenerContainerManagerTest {
   private static DocConfig docConfig(Long id, String docName, Integer threads) {
     DocConfig.SourceConfig src = new DocConfig.SourceConfig("/src", "/work", "/dst", 1);
     DocConfig.SourceRule rule = new DocConfig.SourceRule(
-        null, null, null, null, null,
+        null, null,false, null, null, null, null,
         false, false, null, null, false, null,
         false, false, false, 1);
     DocConfig.PreprocessingConfig pre = new DocConfig.PreprocessingConfig(false, null, false, false, false, 1);

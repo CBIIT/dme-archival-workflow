@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.transaction.Transactional;
+
 @Service
 public class DocConfigServiceImpl implements DocConfigService {
     private final DocConfigDao configDao;
@@ -48,5 +50,15 @@ public class DocConfigServiceImpl implements DocConfigService {
     @Override
     public Optional<DocConfig> getDocConfigById(Long id) {
         return Optional.ofNullable(docsById.get(id));
+    }
+    
+    @Override
+    @Transactional
+    public synchronized boolean updateSourceIncludePattern(Long docId, String includePattern) {
+        boolean updated = configDao.updateIncludePattern(docId, includePattern);
+        if (updated) {
+            refresh();
+        }
+        return updated;
     }
 }

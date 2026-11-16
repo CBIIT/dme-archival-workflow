@@ -34,7 +34,7 @@ class LRBGEHAOPathMetadataProcessorImplTest {
   @BeforeEach
   public void init() {
     DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/DME", 1);
-    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "dummy.xlsx", "", false, false, null, null, false, null, false, false, false, 0);
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, false, null, null, "dummy.xlsx", "", false, false, null, null, false, null, false, false, false, 0);
     config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
     processor = new LRBGEHAOPathMetadataProcessorImpl();
   }

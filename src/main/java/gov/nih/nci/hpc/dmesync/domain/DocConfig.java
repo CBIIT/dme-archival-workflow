@@ -85,6 +85,8 @@ public class DocConfig {
     public static class SourceRule {
         public final String sourceBaseDirFolders;
         public final String includePattern;
+        public final boolean includePatternAutoUpdate;
+        public final String includePatternAutoUpdateStrategy;
         public final String excludePattern;
         public final String metadataFile;
         public final String piMetadataFile;
@@ -98,12 +100,15 @@ public class DocConfig {
         public final boolean retryPriorRunFailures;
         public final boolean aws;
         public final int version;
-        public SourceRule(String sourceBaseDirFolders, String includePattern, String excludePattern, String metadataFile, String piMetadataFile,
+        public SourceRule(String sourceBaseDirFolders, String includePattern, boolean includePatternAutoUpdate, String includePatternAutoUpdateStrategy,
+        		          String excludePattern, String metadataFile, String piMetadataFile,
                           boolean noscanRerun, boolean fileExistUnderBaseDir, Integer fileExistUnderBaseDirDepth, Integer lastModifiedDays,
                           boolean lastModifiedUnderBaseDir, Integer lastModifiedUnderBaseDirDepth, 
                           boolean selectiveScan, boolean retryPriorRunFailures, boolean aws, int version) {
             this.sourceBaseDirFolders = sourceBaseDirFolders;
             this.includePattern = includePattern;
+            this.includePatternAutoUpdate = includePatternAutoUpdate;
+            this.includePatternAutoUpdateStrategy = includePatternAutoUpdateStrategy;
             this.excludePattern = excludePattern;
             this.metadataFile = metadataFile;
             this.piMetadataFile = piMetadataFile;

@@ -39,7 +39,7 @@ public class LICICISPathMetadataProcessorImplTest {
         liciCisPathMetadataProcessorImpl = new LICICISPathMetadataProcessorImpl();
 
         DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, DESTINATION_BASE_DIR, 1);
-        DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
+        DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, false , null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
         config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
         
         // Inject a Mockito mock for DmeMetadataBuilder via reflection

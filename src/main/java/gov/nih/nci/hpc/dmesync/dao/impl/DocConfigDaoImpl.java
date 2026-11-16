@@ -62,6 +62,8 @@ public class DocConfigDaoImpl implements DocConfigDao {
             (rs, rowNum) -> new DocConfig.SourceRule(
                 rs.getString("SOURCE_BASE_DIR_FOLDERS"),
                 rs.getString("INCLUDE_PATTERN"),
+                "1".equals(rs.getString("INCLUDE_PATTERN_AUTO_UPDATE")),
+                rs.getString("INCLUDE_PATTERN_AUTO_UPDATE_STRATEGY"),
                 rs.getString("EXCLUDE_PATTERN"),
                 rs.getString("METADATA_FILE"),
                 rs.getString("PI_METADATA_FILE"),
@@ -162,6 +164,26 @@ public class DocConfigDaoImpl implements DocConfigDao {
             upload,
             notificationConfig
         ));
+    }
+    
+    @Override
+    public boolean updateIncludePattern(Long docId, String includePattern) {
+        String sql = """
+            UPDATE DOC_SOURCE_RULE
+               SET INCLUDE_PATTERN = ?,
+                   UPDATED_AT = SYSTIMESTAMP
+             WHERE ID = (
+                 SELECT ID
+                   FROM (
+                       SELECT ID
+                         FROM DOC_SOURCE_RULE
+                        WHERE DOC_ID = ?
+                        ORDER BY VERSION DESC
+                   )
+                  WHERE ROWNUM = 1
+             )
+            """;
+        return jdbcTemplate.update(sql, includePattern, docId) == 1;
     }
 
     private DocConfig mapDocConfig(ResultSet rs) throws SQLException {

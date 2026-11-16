@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -55,6 +56,7 @@ import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternStrategy;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -126,7 +128,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
-	
+	config = refreshMonthlyIncludePatternIfEnabled(config, LocalDate.now());
 	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
 	// This is to handle the scenario where the next scheduled run starts before the previous run completes.
 	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
@@ -1408,5 +1410,56 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    logger.error("[Scheduler][PriorRunRetry] Failed to include prior-run failures into current run", e);
 	  }
 	}
+	
+	/* This method only applies for the docs who has the includePatternAutoUpdate flag enabled
+	* If the flag is enabled:
+	   - resolve the configured strategy
+	   - compute the expected include pattern for the current date
+	   - compare with the DB-backed `INCLUDE_PATTERN`
+	   - update only if the value changed
+	   - refresh config cache immediately after successful update
+		 * 
+	 */
+	private DocConfig refreshMonthlyIncludePatternIfEnabled(DocConfig config, LocalDate currentDate) {
+	    Optional<DocConfig> currentConfigOptional = configService.getDocConfigByName(config.getDocName());
+	    if (currentConfigOptional.isEmpty()) {
+	      logger.warn("[Scheduler][IncludePatternRefresh] Config lookup returned no result for doc '{}'", config.getDocName());
+	      return config;
+	    }
+
+	    DocConfig currentConfig = currentConfigOptional.get();
+	    DocConfig.SourceRule sourceRule = currentConfig.getSourceRule();
+	    if (sourceRule == null) {
+	      logger.warn("[Scheduler][IncludePatternRefresh] Missing source rule for doc '{}'", currentConfig.getDocName());
+	      return currentConfig;
+	    }
+	    if (!sourceRule.includePatternAutoUpdate) {
+	      return currentConfig;
+	    }
+        // This method only applies for the docs who has the includePatternAutoUpdate flag enabled
+	    Optional<IncludePatternStrategy> strategyOptional =
+	        IncludePatternStrategy.find(sourceRule.includePatternAutoUpdateStrategy);
+	    if (strategyOptional.isEmpty()) {
+	      logger.warn("[Scheduler][IncludePatternRefresh] No strategy configured for doc '{}' strategy '{}'",
+	          currentConfig.getDocName(), sourceRule.includePatternAutoUpdateStrategy);
+	      return currentConfig;
+	    }
+        
+	    
+	    String includePattern = strategyOptional.get().generate(currentDate);
+	    if (StringUtils.equals(sourceRule.includePattern, includePattern)) {
+	      logger.info("[Scheduler][IncludePatternRefresh] Include pattern already current for doc '{}': {}", currentConfig.getDocName(), includePattern);
+	      return currentConfig;
+	    }
+
+	    boolean updated = configService.updateSourceIncludePattern(currentConfig.getId(), includePattern);
+	    if (!updated) {
+	      logger.warn("[Scheduler][IncludePatternRefresh] Failed to update include pattern for doc '{}'", currentConfig.getDocName());
+	      return currentConfig;
+	    }
+
+	    logger.info("[Scheduler][IncludePatternRefresh] Updated include pattern for doc '{}' to {}", currentConfig.getDocName(), includePattern);
+	    return configService.getDocConfigByName(currentConfig.getDocName()).orElse(currentConfig);
+	  }
 }
 	
