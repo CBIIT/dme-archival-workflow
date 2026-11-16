@@ -30,9 +30,10 @@ public interface DocConfigDao {
      *
      * @param docId DOC id to update
      * @param includePattern include pattern value to persist
+     * @param version version of the source-rule row to update
      * @return true when a row was updated
      */
-    boolean updateIncludePattern(Long docId, String includePattern);
+    boolean updateIncludePattern(Long docId, String includePattern , int version);
 
 	
     

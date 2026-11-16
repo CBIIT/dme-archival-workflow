@@ -167,7 +167,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
     }
     
     @Override
-    public boolean updateIncludePattern(Long docId, String includePattern) {
+    public boolean updateIncludePattern(Long docId, String includePattern , int version) {
         String sql = """
             UPDATE DOC_SOURCE_RULE
                SET INCLUDE_PATTERN = ?,
@@ -182,8 +182,9 @@ public class DocConfigDaoImpl implements DocConfigDao {
                    )
                   WHERE ROWNUM = 1
              )
+             AND VERSION = ?
             """;
-        return jdbcTemplate.update(sql, includePattern, docId) == 1;
+        return jdbcTemplate.update(sql, includePattern, docId , version) == 1;
     }
 
     private DocConfig mapDocConfig(ResultSet rs) throws SQLException {

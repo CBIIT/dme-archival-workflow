@@ -54,8 +54,8 @@ public class DocConfigServiceImpl implements DocConfigService {
     
     @Override
     @Transactional
-    public synchronized boolean updateSourceIncludePattern(Long docId, String includePattern) {
-        boolean updated = configDao.updateIncludePattern(docId, includePattern);
+    public synchronized boolean updateSourceIncludePattern(Long docId, String includePattern , int version) {
+        boolean updated = configDao.updateIncludePattern(docId, includePattern , version);
         if (updated) {
             refresh();
         }

@@ -1452,7 +1452,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	      return currentConfig;
 	    }
 
-	    boolean updated = configService.updateSourceIncludePattern(currentConfig.getId(), includePattern);
+	    boolean updated = configService.updateSourceIncludePattern(currentConfig.getId(), includePattern , sourceRule.version);
 	    if (!updated) {
 	      logger.warn("[Scheduler][IncludePatternRefresh] Failed to update include pattern for doc '{}'", currentConfig.getDocName());
 	      return currentConfig;
