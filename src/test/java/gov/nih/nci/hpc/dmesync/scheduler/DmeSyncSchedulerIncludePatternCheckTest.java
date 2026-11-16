@@ -17,9 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
-import gov.nih.nci.hpc.dmesync.service.IncludePatternGenerator;
-import gov.nih.nci.hpc.dmesync.service.IncludePatternGeneratorRegistry;
-import gov.nih.nci.hpc.dmesync.service.impl.RollingThreeShortMonthIncludePatternGenerator;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternStrategy;
 
 class DmeSyncSchedulerIncludePatternCheckTest {
 
@@ -27,36 +25,16 @@ class DmeSyncSchedulerIncludePatternCheckTest {
   void refreshMonthlyIncludePatternIfEnabledUpdatesWhenPatternChanged() {
     DmeSyncScheduler scheduler = new DmeSyncScheduler();
     DocConfigService configService = mock(DocConfigService.class);
-    IncludePatternGeneratorRegistry registry = mock(IncludePatternGeneratorRegistry.class);
-    IncludePatternGenerator generator = mock(IncludePatternGenerator.class);
-
     ReflectionTestUtils.setField(scheduler, "configService", configService);
-    ReflectionTestUtils.setField(scheduler, "includePatternGeneratorRegistry", registry);
 
-    DocConfig.SourceRule currentSourceRule = new DocConfig.SourceRule(
-        null, "old/**", true, RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME,
-        null, null, null, false, false, null, null, false, null, false, false, false, 1);
-    DocConfig currentConfig = new DocConfig(
-        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
-        null, currentSourceRule, null, null, null, null);
-
-    DocConfig.SourceRule refreshedSourceRule = new DocConfig.SourceRule(
-        null, "jul/**,aug/**,sep/**", true, RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME,
-        null, null, null, false, false, null, null, false, null, false, false, false, 1);
-    DocConfig refreshedConfig = new DocConfig(
-        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
-        null, refreshedSourceRule, null, null, null, null);
+    DocConfig currentConfig = docConfig("old/**", true, IncludePatternStrategy.ROLLING_3_SHORT_MONTHS_LOWERCASE);
+    DocConfig refreshedConfig = docConfig("jul/**,aug/**,sep/**", true, IncludePatternStrategy.ROLLING_3_SHORT_MONTHS_LOWERCASE);
 
     when(configService.getDocConfigByName("csb")).thenReturn(Optional.of(currentConfig), Optional.of(refreshedConfig));
-    when(registry.find(RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME)).thenReturn(Optional.of(generator));
-    when(generator.generate(LocalDate.of(2026, 9, 1))).thenReturn("jul/**,aug/**,sep/**");
     when(configService.updateSourceIncludePattern(42L, "jul/**,aug/**,sep/**")).thenReturn(true);
 
     DocConfig result = (DocConfig) ReflectionTestUtils.invokeMethod(
-        scheduler,
-        "refreshMonthlyIncludePatternIfEnabled",
-        currentConfig,
-        LocalDate.of(2026, 9, 1));
+        scheduler, "refreshMonthlyIncludePatternIfEnabled", currentConfig, LocalDate.of(2026, 9, 1));
 
     verify(configService).updateSourceIncludePattern(42L, "jul/**,aug/**,sep/**");
     assertEquals("jul/**,aug/**,sep/**", result.getSourceRule().getIncludePattern());
@@ -66,28 +44,13 @@ class DmeSyncSchedulerIncludePatternCheckTest {
   void refreshMonthlyIncludePatternIfEnabledSkipsWhenPatternAlreadyCurrent() {
     DmeSyncScheduler scheduler = new DmeSyncScheduler();
     DocConfigService configService = mock(DocConfigService.class);
-    IncludePatternGeneratorRegistry registry = mock(IncludePatternGeneratorRegistry.class);
-    IncludePatternGenerator generator = mock(IncludePatternGenerator.class);
-
     ReflectionTestUtils.setField(scheduler, "configService", configService);
-    ReflectionTestUtils.setField(scheduler, "includePatternGeneratorRegistry", registry);
 
-    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(
-        null, "jul/**,aug/**,sep/**", true, RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME,
-        null, null, null, false, false, null, null, false, null, false, false, false, 1);
-    DocConfig config = new DocConfig(
-        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
-        null, sourceRule, null, null, null, null);
-
+    DocConfig config = docConfig("jul/**,aug/**,sep/**", true, IncludePatternStrategy.ROLLING_3_SHORT_MONTHS_LOWERCASE);
     when(configService.getDocConfigByName("csb")).thenReturn(Optional.of(config));
-    when(registry.find(RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME)).thenReturn(Optional.of(generator));
-    when(generator.generate(LocalDate.of(2026, 9, 1))).thenReturn("jul/**,aug/**,sep/**");
 
     DocConfig result = (DocConfig) ReflectionTestUtils.invokeMethod(
-        scheduler,
-        "refreshMonthlyIncludePatternIfEnabled",
-        config,
-        LocalDate.of(2026, 9, 1));
+        scheduler, "refreshMonthlyIncludePatternIfEnabled", config, LocalDate.of(2026, 9, 1));
 
     verify(configService, never()).updateSourceIncludePattern(anyLong(), eq("jul/**,aug/**,sep/**"));
     assertEquals("jul/**,aug/**,sep/**", result.getSourceRule().getIncludePattern());
@@ -97,28 +60,24 @@ class DmeSyncSchedulerIncludePatternCheckTest {
   void refreshMonthlyIncludePatternIfEnabledSkipsWhenFlagDisabled() {
     DmeSyncScheduler scheduler = new DmeSyncScheduler();
     DocConfigService configService = mock(DocConfigService.class);
-    IncludePatternGeneratorRegistry registry = mock(IncludePatternGeneratorRegistry.class);
-
     ReflectionTestUtils.setField(scheduler, "configService", configService);
-    ReflectionTestUtils.setField(scheduler, "includePatternGeneratorRegistry", registry);
 
-    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(
-        null, "unchanged/**", false, null,
-        null, null, null, false, false, null, null, false, null, false, false, false, 1);
-    DocConfig config = new DocConfig(
-        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
-        null, sourceRule, null, null, null, null);
-
+    DocConfig config = docConfig("unchanged/**", false, null);
     when(configService.getDocConfigByName("csb")).thenReturn(Optional.of(config));
 
     DocConfig result = (DocConfig) ReflectionTestUtils.invokeMethod(
-        scheduler,
-        "refreshMonthlyIncludePatternIfEnabled",
-        config,
-        LocalDate.of(2026, 9, 1));
+        scheduler, "refreshMonthlyIncludePatternIfEnabled", config, LocalDate.of(2026, 9, 1));
 
-    verify(registry, never()).find(eq(RollingThreeShortMonthIncludePatternGenerator.STRATEGY_NAME));
     verify(configService, never()).updateSourceIncludePattern(anyLong(), eq("jul/**,aug/**,sep/**"));
     assertEquals("unchanged/**", result.getSourceRule().getIncludePattern());
+  }
+
+  private static DocConfig docConfig(String includePattern, boolean autoUpdate, IncludePatternStrategy strategy) {
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(
+        null, includePattern, autoUpdate, strategy == null ? null : strategy.getStrategyName(),
+        null, null, null, false, false, null, null, false, null, false, false, false, 1);
+    return new DocConfig(
+        42L, "csb", null, null, null, null, null, true, null, 1, Instant.now(), Instant.now(),
+        null, sourceRule, null, null, null, null);
   }
 }

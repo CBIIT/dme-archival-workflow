@@ -29,7 +29,7 @@ The latest `DOC_SOURCE_RULE` row for a DOC should carry:
 
 ### 2.2 Strategy Model
 
-Pattern generation should be implemented through a small strategy abstraction, with one strategy per pattern format. Strategy names must be stable database values.
+Pattern generation is implemented in a single class, the `IncludePatternStrategy` enum, with one constant per pattern format. Each constant owns its stable database name and its generation logic; `IncludePatternStrategy.find(name)` resolves the configured value. Strategy names must be stable database values.
 
 Initial strategies:
 

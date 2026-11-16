@@ -55,8 +55,7 @@ import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
-import gov.nih.nci.hpc.dmesync.service.IncludePatternGenerator;
-import gov.nih.nci.hpc.dmesync.service.IncludePatternGeneratorRegistry;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternStrategy;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -83,7 +82,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Autowired private DmeMetadataBuilder dmeMetadataBuilder;
   @Autowired private DmeSyncWorkflowRunLogService dmeSyncWorkflowRunLogService;
   @Autowired private DocConfigService configService;
-  @Autowired private IncludePatternGeneratorRegistry includePatternGeneratorRegistry;
 
   @Value("${dmesync.db.access:local}")
   private String access;
@@ -138,15 +136,15 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
       return currentConfig;
     }
 
-    Optional<IncludePatternGenerator> generatorOptional =
-        includePatternGeneratorRegistry.find(sourceRule.getIncludePatternAutoUpdateStrategy());
-    if (generatorOptional.isEmpty()) {
-      logger.warn("[Scheduler][IncludePatternRefresh] No generator configured for doc '{}' strategy '{}'",
+    Optional<IncludePatternStrategy> strategyOptional =
+        IncludePatternStrategy.find(sourceRule.getIncludePatternAutoUpdateStrategy());
+    if (strategyOptional.isEmpty()) {
+      logger.warn("[Scheduler][IncludePatternRefresh] No strategy configured for doc '{}' strategy '{}'",
           currentConfig.getDocName(), sourceRule.getIncludePatternAutoUpdateStrategy());
       return currentConfig;
     }
 
-    String includePattern = generatorOptional.get().generate(currentDate);
+    String includePattern = strategyOptional.get().generate(currentDate);
     if (StringUtils.equals(sourceRule.getIncludePattern(), includePattern)) {
       logger.info("[Scheduler][IncludePatternRefresh] Include pattern already current for doc '{}': {}", currentConfig.getDocName(), includePattern);
       return currentConfig;
