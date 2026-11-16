@@ -123,12 +123,12 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	// RunId shall be an instance variable.
 	String runId;
 	// Example: select tasks based on config
+	config = refreshMonthlyIncludePatternIfEnabled(config, LocalDate.now());
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
-	config = refreshMonthlyIncludePatternIfEnabled(config, LocalDate.now());
 	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
 	// This is to handle the scenario where the next scheduled run starts before the previous run completes.
 	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());

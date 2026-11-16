@@ -170,3 +170,10 @@ CREATE TABLE DOC_CONFIG_AUDIT (
     ACTION_AT         TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
 );
 
+--------------------------------------------------------------------------------
+-- Alter Table Statements: 
+--------------------------------------------------------------------------------
+ALTER TABLE DOC_SOURCE_RULE ADD (
+    INCLUDE_PATTERN_AUTO_UPDATE           CHAR(1) DEFAULT '0',
+    INCLUDE_PATTERN_AUTO_UPDATE_STRATEGY  VARCHAR2(128)
+);
