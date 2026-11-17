@@ -1,8 +1,12 @@
 package gov.nih.nci.hpc.dmesync.service.impl;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +17,7 @@ import gov.nih.nci.hpc.dmesync.dao.PermissionBookmarkInfoDao;
 import gov.nih.nci.hpc.dmesync.dao.StatusInfoDao;
 import gov.nih.nci.hpc.dmesync.dao.TaskInfoDao;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
@@ -90,6 +95,11 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   @Override
   public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath) {
     return statusInfoDao.findAllByDocAndLikeOriginalFilePath(doc,originalFilePath);
+  }
+  
+  @Override
+  public List<StatusInfo> findAllByDocAndOriginalFilePath(String doc,String originalFilePath) {
+    return statusInfoDao.findAllByDocAndOriginalFilePath(doc,originalFilePath);
   }
 
   @Override
@@ -276,4 +286,107 @@ public class DmeSyncWorkflowServiceImpl implements DmeSyncWorkflowService {
   public long countByDocAndRunIdAndStatus(String doc, String runId, String status) {
 	  return statusInfoDao.countByDocAndRunIdAndStatus(doc, runId, status);
   }
+  
+  @Override
+  public List<StatusInfo> generateAggregateRecords(List<StatusInfo> runIdRecords, DocConfig config) {
+	  
+	  	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+		List<StatusInfo> aggregateFolderRecords = new ArrayList<>();
+
+		Set<String> folderPaths = runIdRecords.stream().map(StatusInfo::getOriginalFilePath)
+				.collect(Collectors.toSet());
+
+		for (String folder : folderPaths) {
+
+			List<StatusInfo> folderRows = findAllByDocAndOriginalFilePath(config.getDocName(), folder);
+
+			Optional<StatusInfo> tarRecordOpt = folderRows.stream()
+					.filter(p -> !p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
+							&& !p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+					.findFirst(); // Find the TAR file record
+
+			StatusInfo includedFileRecord = folderRows.stream()
+					.filter(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)).findFirst()
+					.orElse(null); // Find the included contents file record
+			
+			StatusInfo tarRecord = new StatusInfo();
+ 			org.springframework.beans.BeanUtils.copyProperties(tarRecordOpt.get(), tarRecord);
+
+			// Only check for both included and excluded contents file if the property is true
+			StatusInfo excludedFileRecord = folderRows.stream().filter(
+					p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))
+					.findFirst().orElse(null); // Find the excluded contents file record
+			
+			// Check for the TAR record
+			if (tarRecordOpt.isPresent()) {
+
+				// Handle contents files
+				if (preRule.tarExcludedContentsFile && excludedFileRecord!=null ) {
+
+
+					if (includedFileRecord != null 
+							&&  WorkflowConstants.isCompletedStatus(tarRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
+						tarRecord.setStatus(WorkflowConstants.COMPLETED);
+						// tarRecord.setError(""); // No error
+					} else {
+						if (WorkflowConstants.isCompletedStatus(tarRecord.getStatus())) {
+							if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"FAILED.Excluded contents file not uploaded, only TAR file and Included contents file got uploaded.");
+								tarRecord.setError(excludedFileRecord.getError());
+							} else if (WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"FAILED.Included contents file not uploaded, only TAR file and Excluded contents file got uploaded.");
+								tarRecord.setError(includedFileRecord!=null? includedFileRecord.getError(): "Contents file has not been created, check if folder is empty.");
+
+							} else {
+								tarRecord.setStatus(
+										"FAILED.Both included and excluded contents files not uploaded, only TAR file uploaded.");
+								tarRecord.setError(includedFileRecord!=null? includedFileRecord.getError(): "Contents file has not been created, check if folder is empty.");
+
+							}
+						} else {
+							
+							if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())
+									&& WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus("FAILED.Tar file not uploaded, only contents files got uploaded.");
+							} else if (WorkflowConstants.isCompletedStatus(excludedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"FAILED.Tar file and Included contents file not uploaded, only Excluded contents file got uploaded.");
+							} else if (includedFileRecord != null
+									&& WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
+								tarRecord.setStatus(
+										"FAILED.Tar file and Excluded  contents file not uploaded, only Included contents file got uploaded.");
+							} else {
+								tarRecord.setStatus("FAILED.Tar file and both contents file not uploaded.");
+							}
+						}
+					}
+				} else {
+					// If excluded contents file is not set, just handle included contents file
+					if (includedFileRecord != null &&  WorkflowConstants.isCompletedStatus(tarRecord.getStatus())
+							&&  WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
+						tarRecord.setStatus(WorkflowConstants.COMPLETED);
+						// tarRecord.setError(""); // No error
+					} else {
+						if (WorkflowConstants.isCompletedStatus(tarRecord.getStatus())) {
+							tarRecord.setStatus("FAILED.Contents file not uploaded, only TAR file uploaded.");
+							tarRecord.setError(includedFileRecord!=null ? includedFileRecord.getError(): "Contents file has not been created, check if folder is empty.");
+						} else if (includedFileRecord != null && WorkflowConstants.isCompletedStatus(includedFileRecord.getStatus())) {
+							tarRecord.setStatus("FAILED.TAR file not uploaded, only contents file uploaded.");
+						} else {
+							tarRecord.setStatus("FAILED.TAR file and contents file not uploaded.");
+						}
+					}
+				}
+			}
+
+			aggregateFolderRecords.add(tarRecord);
+			// Save the updated StatusInfo record back to the database
+			// StatusInfoRepository.save(StatusInfo);
+		}
+		return aggregateFolderRecords;
+    }
 }

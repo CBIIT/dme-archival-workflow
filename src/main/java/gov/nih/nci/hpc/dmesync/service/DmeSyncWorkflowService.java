@@ -3,6 +3,7 @@ package gov.nih.nci.hpc.dmesync.service;
 import java.util.List;
 import java.util.Optional;
 import gov.nih.nci.hpc.dmesync.domain.CollectionNameMapping;
+import gov.nih.nci.hpc.dmesync.domain.DocConfig;
 import gov.nih.nci.hpc.dmesync.domain.MetadataInfo;
 import gov.nih.nci.hpc.dmesync.domain.MetadataMapping;
 import gov.nih.nci.hpc.dmesync.domain.PermissionBookmarkInfo;
@@ -63,6 +64,15 @@ public interface DmeSyncWorkflowService {
    */
   
   public List<StatusInfo> findAllByDocAndLikeOriginalFilePath(String doc,String originalFilePath);
+  
+  /**
+   * findAllByDocAndOriginalFilePath
+   * @param doc
+   * @param originalFilePath the original file path
+   * @return the list of StatusInfo objects
+   */
+  
+  public List<StatusInfo> findAllByDocAndOriginalFilePath(String doc,String originalFilePath);
 
   /**
    * findStatusInfoByRunIdAndDoc
@@ -352,4 +362,15 @@ public interface DmeSyncWorkflowService {
     * @return the count
     */
    public long countByDocAndRunIdAndStatus(String doc, String runId, String status);
+   
+   /**
+    * Returns one aggregate TAR record per original folder, combining the upload
+    * statuses of the TAR and its contents files.
+    *
+    * Returned records are copies; persisted upload records are not modified.
+    */
+   List<StatusInfo> generateAggregateRecords(
+       List<StatusInfo> runIdRecords, DocConfig config);
+
+
 }
