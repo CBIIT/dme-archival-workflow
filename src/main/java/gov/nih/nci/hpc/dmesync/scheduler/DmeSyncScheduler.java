@@ -131,6 +131,10 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail(
 		      "HPCDME Auto Archival Error: Failed to refresh monthly include pattern",
 		      e.getMessage() + "\n\n" + cause, config);
+		  runId = "Run_" + timestampFormat.format(new Date());
+		  WorkflowRunInfo failed = insertWorkflowRunInfo(config, runId);
+		  failed.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+		  dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(failed);
 		  return;
 	}
 	// Example: select tasks based on config
