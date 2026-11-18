@@ -17,8 +17,8 @@ import javax.transaction.Transactional;
 public class DocConfigServiceImpl implements DocConfigService {
     private final DocConfigDao configDao;
     private volatile List<DocConfig> enabledDocs = List.of();
-    private final Map<String, DocConfig> docsByName = new ConcurrentHashMap<>();
-    private final Map<Long, DocConfig> docsById = new ConcurrentHashMap<>();
+    private volatile Map<String, DocConfig> docsByName = new ConcurrentHashMap<>();
+    private volatile Map<Long, DocConfig> docsById = new ConcurrentHashMap<>();
 
     public DocConfigServiceImpl(DocConfigDao configDao) {
         this.configDao = configDao;
@@ -31,10 +31,14 @@ public class DocConfigServiceImpl implements DocConfigService {
         List<DocConfig> docs = configDao.findEnabledDocs();
         // TODO: Add validation logic here
         this.enabledDocs = List.copyOf(docs);
-        this.docsByName.clear();
-        this.docsById.clear();
-        docs.forEach(doc -> this.docsByName.put(doc.getDocName(), doc));
-        docs.forEach(doc -> this.docsById.put(doc.getId(), doc));
+        Map<String, DocConfig> byName = new ConcurrentHashMap<>();
+        Map<Long, DocConfig> byId = new ConcurrentHashMap<>();
+        docs.forEach(doc -> byName.put(doc.getDocName(), doc));
+        docs.forEach(doc -> byId.put(doc.getId(), doc));
+        // Publishing the fully built snapshot at once so readers never see a partial refresh.
+        this.enabledDocs = List.copyOf(docs);
+        this.docsByName = byName;
+        this.docsById = byId;
     }
 
     @Override

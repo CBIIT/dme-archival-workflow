@@ -171,6 +171,7 @@ public class DocConfigDaoImpl implements DocConfigDao {
         String sql = """
             UPDATE DOC_SOURCE_RULE
                SET INCLUDE_PATTERN = ?,
+                   VERSION = VERSION + 1,
                    UPDATED_AT = SYSTIMESTAMP
              WHERE ID = (
                  SELECT ID
