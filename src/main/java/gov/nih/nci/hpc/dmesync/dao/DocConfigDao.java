@@ -24,4 +24,17 @@ public interface DocConfigDao {
      *         or {@link Optional#empty()} if no match is found
      */
     Optional<DocConfig> findByName(String docName);
+    
+    /**
+     * Updates the include pattern on the latest DOC source-rule row for the given DOC.
+     *
+     * @param docId DOC id to update
+     * @param includePattern include pattern value to persist
+     * @param version version of the source-rule row to update
+     * @return true when a row was updated
+     */
+    boolean updateIncludePattern(Long docId, String includePattern , int version);
+
+	
+    
 }

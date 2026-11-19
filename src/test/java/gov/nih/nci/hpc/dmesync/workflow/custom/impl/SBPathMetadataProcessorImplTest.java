@@ -47,7 +47,7 @@ public class SBPathMetadataProcessorImplTest {
 
     //Create the statusInfo object with the test Path
     DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig("/data/CCRSB2/data", "/work", "/CCR_SB_Archive", 1);
-    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, false , null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
     config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
     sbPathMetadataProcessorImpl = Mockito.spy(new SBPathMetadataProcessorImpl());
     // Use a mock for the service factory and service

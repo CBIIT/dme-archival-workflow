@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -55,6 +56,7 @@ import gov.nih.nci.hpc.dmesync.jms.DmeSyncProducer;
 import gov.nih.nci.hpc.dmesync.jms.DocQueueNameResolver;
 import gov.nih.nci.hpc.dmesync.service.DmeSyncWorkflowRunLogService;
 import gov.nih.nci.hpc.dmesync.service.DocConfigService;
+import gov.nih.nci.hpc.dmesync.service.IncludePatternStrategy;
 
 /**
  * DME Sync Scheduler to scan for files to be Archived
@@ -118,8 +120,31 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Override
   public void execute(DocConfig config) {
 	  
+	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
+		// This is to handle the scenario where the next scheduled run starts before the previous run completes.
+	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
+
+	if (prevRunInfo != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(prevRunInfo.getStatus())
+				|| WorkflowConstants.RunStatus.STARTED.toString().equals(prevRunInfo.getStatus())))
+		return;
 	// RunId shall be an instance variable.
 	String runId;
+	// Update the include pattern if the auto update is enabled and the pattern has changed for the current month.
+	try {
+		config = refreshMonthlyIncludePatternIfEnabled(config, LocalDate.now());
+	} catch (Exception e) {
+		logger.error("[Scheduler] Failed to refresh monthly include pattern for doc: {}", config.getId(), e);
+		  runId = "Run_" + timestampFormat.format(new Date());
+		  // Record a FAILED run row before returning.or else doc polling job is runnning every minute and sending out emails for the same error.
+          WorkflowRunInfo failed = insertWorkflowRunInfo(config, runId);
+          failed.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+          dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(failed);
+          String cause = e.getCause() != null ? e.getCause().getMessage() : "";
+		  dmeSyncMailServiceFactory.getService(config.getDocName()).sendMail(
+		      "HPCDME Auto Archival Error: Failed to refresh monthly include pattern",
+		      e.getMessage() + "\n\n" + cause, config);
+		  return;
+	}
 	// Example: select tasks based on config
 	DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	DocConfig.SourceRule sourceRule = config.getSourceRule();
@@ -127,13 +152,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
 	
-	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
-	// This is to handle the scenario where the next scheduled run starts before the previous run completes.
-	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
-
-	if (prevRunInfo != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(prevRunInfo.getStatus())
-			|| WorkflowConstants.RunStatus.STARTED.toString().equals(prevRunInfo.getStatus())))
-		return;
 	
 	dmeMetadataBuilder.evictMetadataMap();
 
@@ -1408,5 +1426,63 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	    logger.error("[Scheduler][PriorRunRetry] Failed to include prior-run failures into current run", e);
 	  }
 	}
+	
+	/* This method only applies for the docs who has the includePatternAutoUpdate flag enabled
+	* If the flag is enabled:
+	   - resolve the configured strategy
+	   - compute the expected include pattern for the current date
+	   - compare with the DB-backed `INCLUDE_PATTERN`
+	   - update only if the value changed
+	   - refresh config cache immediately after successful update
+		 * 
+	 */
+	private DocConfig refreshMonthlyIncludePatternIfEnabled(DocConfig config, LocalDate currentDate) {
+	    Optional<DocConfig> currentConfigOptional = configService.getDocConfigById(config.getId());
+	    if (currentConfigOptional.isEmpty()) {
+	      logger.error("[Scheduler][IncludePatternRefresh] Config lookup returned no result for doc '{}'", config.getId());
+	      throw new IllegalStateException("Config lookup returned no result for doc '" + config.getId() + "'");
+	     
+	    }
+
+	    DocConfig currentConfig = currentConfigOptional.get();
+	    DocConfig.SourceRule sourceRule = currentConfig.getSourceRule();
+	    if (sourceRule == null) {
+	      logger.error("[Scheduler][IncludePatternRefresh] Missing source rule for doc '{}'", currentConfig.getDocName());
+	      throw new IllegalStateException("Missing source rule for doc '" + currentConfig.getDocName() + "'");
+	    }
+	    // If the flag is not enabled, the doc doesn't need the pattern changes.
+	    if (!sourceRule.includePatternAutoUpdate) {
+	      return currentConfig;
+	    }
+        // This method only applies for the docs who has the includePatternAutoUpdate flag enabled
+	    Optional<IncludePatternStrategy> strategyOptional =
+	        IncludePatternStrategy.find(sourceRule.includePatternAutoUpdateStrategy);
+	    if (strategyOptional.isEmpty()) {
+	      logger.error("[Scheduler][IncludePatternRefresh] No strategy configured for doc '{}' strategy '{}'",
+	          currentConfig.getDocName(), sourceRule.includePatternAutoUpdateStrategy);
+	      throw new IllegalStateException("No valid strategy configured for doc '" + currentConfig.getDocName()
+	      + "' strategy '" + sourceRule.includePatternAutoUpdateStrategy + "'");
+	     }
+	    
+        
+	    // If the calculated pattern and database pattern is same, so updated are needed.
+	    String includePattern = strategyOptional.get().generate(currentDate);
+	    if (StringUtils.equals(sourceRule.includePattern, includePattern)) {
+	      logger.info("[Scheduler][IncludePatternRefresh] Include pattern already current for doc '{}': {}", currentConfig.getDocName(), includePattern);
+	      return currentConfig;
+	    }
+
+	    boolean updated = configService.updateSourceIncludePattern(currentConfig.getId(), includePattern , sourceRule.version);
+	    if (!updated) {
+	      logger.error("[Scheduler][IncludePatternRefresh] Failed to update include pattern for doc '{}'", currentConfig.getDocName());
+	      throw new IllegalStateException("Failed to update include pattern for doc '" + currentConfig.getDocName() + "'");
+
+	    }
+
+	    logger.info("[Scheduler][IncludePatternRefresh] Updated include pattern for doc '{}' to {}", currentConfig.getDocName(), includePattern);
+	    return configService.getDocConfigByName(currentConfig.getDocName()).orElse(currentConfig);
+	  }
+
+	
 }
 	

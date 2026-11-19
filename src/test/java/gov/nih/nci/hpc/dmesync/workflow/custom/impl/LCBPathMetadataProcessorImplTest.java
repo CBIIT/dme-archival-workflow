@@ -39,7 +39,7 @@ public class LCBPathMetadataProcessorImplTest {
   public void init() {
 	lcbPathMetadataProcessorImpl = new LCBPathMetadataProcessorImpl();
 	DocConfig.SourceConfig sourceConfig = new DocConfig.SourceConfig(null, null, "/CCR_LCB_SubramaniamLab_Archive", 1);
-    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
+    DocConfig.SourceRule sourceRule = new DocConfig.SourceRule(null, null, false , null, null, "", null, false, false, null, null, false, null, false, false, false, 0);
     config = new DocConfig(null, null, null, null, null, null, null, false, null, 0, null, null, sourceConfig, sourceRule, null, null, null, null);
     
     //Simulate the 2 CollectionNameMetadata rows that you will be retrieving from the DB.

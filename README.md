@@ -139,6 +139,8 @@ The following properties can be configured in the tables:
 #### Table: DOC_SOURCE_RULE (Stores source selection and scanning rules for a DOC workflow)
 * `SOURCE_BASE_DIR_FOLDERS` - Source base directory folders to include or process.
 * `INCLUDE_PATTERN` - File or folder include pattern. Comma-separated multiple patterns can be specified.
+* `INCLUDE_PATTERN_AUTO_UPDATE` - Set to 1 to have the framework recompute INCLUDE_PATTERN during DOC execution; 0 (default) disables it.
+* `INCLUDE_PATTERN_AUTO_UPDATE_STRATEGY` - Named strategy used to build the pattern, such as rolling-3-short-months-lowercase or previous-month-yymm-dual-prefix; NULL when auto-update is off.
 * `EXCLUDE_PATTERN` - File or folder exclude pattern. If both include and exclude pattern is applicable for a file/folder, the file/folder will be excluded as the exclusion takes precedence.
 * `METADATA_FILE` - Metadata file name or path. If specified, application will load the custom metadata excel file supplied by the user.
 * `PI_METADATA_FILE` - PI metadata file name or path. If specified, application will load the custom data owner PI metadata excel file supplied by the user.
