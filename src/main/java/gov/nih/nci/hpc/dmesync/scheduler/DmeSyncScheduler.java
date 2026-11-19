@@ -132,9 +132,15 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		      "HPCDME Auto Archival Error: Failed to refresh monthly include pattern",
 		      e.getMessage() + "\n\n" + cause, config);
 		  runId = "Run_" + timestampFormat.format(new Date());
-		  WorkflowRunInfo failed = insertWorkflowRunInfo(config, runId);
-		  failed.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
-		  dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(failed);
+		  // Record a FAILED run row before returning.or else doc polling job is runnning every minute and sending out emails for the same error.
+		  WorkflowRunInfo previousRun = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
+          if (previousRun != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(previousRun.getStatus())
+                  || WorkflowConstants.RunStatus.STARTED.toString().equals(previousRun.getStatus()))) {
+              return;
+          }
+          WorkflowRunInfo failed = insertWorkflowRunInfo(config, runId);
+          failed.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
+          dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(failed);
 		  return;
 	}
 	// Example: select tasks based on config
