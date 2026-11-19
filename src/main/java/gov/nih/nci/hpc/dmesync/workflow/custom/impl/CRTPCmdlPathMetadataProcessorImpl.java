@@ -72,7 +72,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 
 		// The Patient data archival condition is two weeks after the date of final report generation. 
 		
-		Optional<Path> reportFile = findPatientFile(Path.of(patientsReportsPath), patientId);
+		/*Optional<Path> reportFile = findPatientFile(Path.of(patientsReportsPath), patientId);
 		if (reportFile.isPresent()) {
 			Path file = reportFile.get();
 			Instant lastModified = Files.getLastModifiedTime(file).toInstant();
@@ -94,10 +94,10 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		} else {
 			logger.info("Patient report file not found for {} ", patientId);
 			throw new DmeSyncMappingException("Patient report file not found for  " + patientId);
-		}
+		}*/
 
 		// load the user metadata from the externally placed excel
-		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "project");
+		metadataMap = dmeMetadataBuilder.getMetadataMap(sourceRule.metadataFile, "path");
 
 		// load the doc metadata model from the DME
 		metaDataEntries = dmeMetadataBuilder.getDMEMetadataModel(sourceConfig.destinationBaseDir, config);
@@ -179,14 +179,14 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 		// Add path metadata entries for "DataOwner_Lab" collection
 		String piCollectionName = getPICollectionName(object);
 		String projectCollectionName = getProjectCollectionName(object, metadataFileKey);
-		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName.replace(" ", "_");
-		HpcBulkMetadataEntry pathEntriesPI = buildPathEntries(piCollectionPath, "DataOwner_Lab", metadataFileKey,
+		String piCollectionPath = sourceConfig.destinationBaseDir + "/PI_" + piCollectionName;
+		HpcBulkMetadataEntry pathEntriesPI = buildPathEntries(piCollectionPath.replace(" ", "_"), "DataOwner_Lab", metadataFileKey,
 				metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesPI);
 
 		// Add path metadata entries for "Project" collection
-		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName.replace(" ", "_");
-		HpcBulkMetadataEntry pathEntriesProject = buildPathEntries(projectCollectionPath, "Project", metadataFileKey,
+		String projectCollectionPath = piCollectionPath + "/Project_" + projectCollectionName;
+		HpcBulkMetadataEntry pathEntriesProject = buildPathEntries(projectCollectionPath.replace(" ", "_"), "Project", metadataFileKey,
 				metaDataEntries);
 		hpcBulkMetadataEntries.getPathsMetadataEntries().add(pathEntriesProject);
 
@@ -224,7 +224,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 				pathEntriesCollection.getPathMetadataEntries()
 						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Results"));
 			} else if (StringUtils.equalsIgnoreCase("Pre-Validation Analysis", collectionName)) {
-				collectionPath = projectCollectionPath + "/Pre_Validation Analysis";
+				collectionPath = patientCollectionPath + "/Pre_Validation Analysis";
 				pathEntriesCollection.getPathMetadataEntries()
 						.add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, "Analysis"));
 			}
@@ -287,6 +287,7 @@ public class CRTPCmdlPathMetadataProcessorImpl extends AbstractPathMetadataProce
 	 */
 	private String getCollectionName(StatusInfo object) throws DmeSyncMappingException {
 		String collectionName = getCollectionNameFromParent(object.getOriginalFilePath(), "CMDL_Aldy");
+		logger.info("CollectionName = {}", collectionName);
 		return collectionName;
 	}
 
