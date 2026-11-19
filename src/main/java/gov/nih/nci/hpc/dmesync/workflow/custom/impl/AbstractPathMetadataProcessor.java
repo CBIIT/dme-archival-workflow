@@ -462,7 +462,7 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 			List<HpcMetadataValidationRule> metaDataEntries) {
 		HpcBulkMetadataEntry pathEntries = new HpcBulkMetadataEntry();
 		pathEntries.getPathMetadataEntries().add(createPathEntry(COLLECTION_TYPE_ATTRIBUTE, collectionName));
-		pathEntries.setPath(collectionPath);
+		pathEntries.setPath(collectionPath.replace(" ", "_"));
 		addMetadataEntriesFromValidationRules(pathEntries, metadataFilePathKey, metaDataEntries, collectionName);
 		return pathEntries;
 	}
@@ -481,7 +481,8 @@ public abstract class AbstractPathMetadataProcessor implements DmeSyncPathMetada
 		  patterns.put("MM-dd-yyyy", "\\d{2}-\\d{2}-\\d{4}");
 		  patterns.put("yyyy-MM-dd", "\\d{4}-\\d{2}-\\d{2}");
 		  patterns.put("MM/dd/yy", "\\d{2}/\\d{2}/\\d{2}");
-
+		  patterns.put("M/d/yy", "\\d{1,2}/\\d{1,2}/\\d{2}");
+		  
 		  for (Map.Entry<String, String> entry : patterns.entrySet()) {
 		      if (trimmedValue.matches(entry.getValue())) {
 		          return entry.getKey();
