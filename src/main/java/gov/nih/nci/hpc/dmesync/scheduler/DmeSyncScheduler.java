@@ -120,6 +120,13 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
   @Override
   public void execute(DocConfig config) {
 	  
+	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
+		// This is to handle the scenario where the next scheduled run starts before the previous run completes.
+	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
+
+	if (prevRunInfo != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(prevRunInfo.getStatus())
+				|| WorkflowConstants.RunStatus.STARTED.toString().equals(prevRunInfo.getStatus())))
+		return;
 	// RunId shall be an instance variable.
 	String runId;
 	// Update the include pattern if the auto update is enabled and the pattern has changed for the current month.
@@ -129,11 +136,6 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 		logger.error("[Scheduler] Failed to refresh monthly include pattern for doc: {}", config.getId(), e);
 		  runId = "Run_" + timestampFormat.format(new Date());
 		  // Record a FAILED run row before returning.or else doc polling job is runnning every minute and sending out emails for the same error.
-		  WorkflowRunInfo previousRun = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
-          if (previousRun != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(previousRun.getStatus())
-                  || WorkflowConstants.RunStatus.STARTED.toString().equals(previousRun.getStatus()))) {
-              return;
-          }
           WorkflowRunInfo failed = insertWorkflowRunInfo(config, runId);
           failed.setStatus(WorkflowConstants.RunStatus.FAILED.toString());
           dmeSyncWorkflowRunLogService.saveWorkflowRunInfo(failed);
@@ -149,13 +151,7 @@ public class DmeSyncScheduler implements DocWorkflowExecutor {
 	DocConfig.PreprocessingConfig pre = config.getPreprocessingConfig();
 	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	DocConfig.UploadConfig upload = config.getUploadConfig();
-	// Check if previous run is still in progress, if so skip this run to avoid duplicate processing. 
-	// This is to handle the scenario where the next scheduled run starts before the previous run completes.
-	WorkflowRunInfo prevRunInfo = dmeSyncWorkflowRunLogService.findFirstByDocIdOrderByRunStartTimestampDesc(config.getId());
-
-	if (prevRunInfo != null && (WorkflowConstants.RunStatus.RUNNING.toString().equals(prevRunInfo.getStatus())
-			|| WorkflowConstants.RunStatus.STARTED.toString().equals(prevRunInfo.getStatus())))
-		return;
+	
 	
 	dmeMetadataBuilder.evictMetadataMap();
 
