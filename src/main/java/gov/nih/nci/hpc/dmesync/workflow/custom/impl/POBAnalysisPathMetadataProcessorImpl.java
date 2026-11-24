@@ -17,6 +17,7 @@ import gov.nih.nci.hpc.dmesync.domain.DocConfig.SourceRule;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncMappingException;
 import gov.nih.nci.hpc.dmesync.exception.DmeSyncWorkflowException;
 import gov.nih.nci.hpc.dmesync.util.DmeMetadataBuilder;
+import gov.nih.nci.hpc.dmesync.util.WorkflowConstants;
 import gov.nih.nci.hpc.dmesync.workflow.DmeSyncPathMetadataProcessor;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntries;
 import gov.nih.nci.hpc.domain.metadata.HpcBulkMetadataEntry;
@@ -245,13 +246,13 @@ public class POBAnalysisPathMetadataProcessorImpl extends AbstractPathMetadataPr
 	}
 
 	private String getFileType(String fileName) {
-		if (fileName.endsWith("_tarContentsFile.txt")) {
+		if (fileName.endsWith(WorkflowConstants.tarContentsFileEndswith) || fileName.endsWith(WorkflowConstants.tarExcludedContentsFileEndswith)) {
 			return "tarContentsFile";
 		}
 		if (fileName.endsWith(".tar")) {
 			return "tar";
 		}
-		return "normal";
+		return "file";
 	}
 
 }
