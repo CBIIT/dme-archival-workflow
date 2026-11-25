@@ -6,7 +6,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -281,12 +284,34 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
   private List<StatusInfo> generateAggregrateRecords(List<StatusInfo> runIdRecords, DocConfig config) {
 	  
 	  	DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
+		List<StatusInfo> result = new ArrayList<>();
 		List<StatusInfo> aggregateFolderRecords = new ArrayList<>();
 
 		Set<String> folderPaths = runIdRecords.stream().map(StatusInfo::getOriginalFilePath)
 				.collect(Collectors.toSet());
-
+		
+		Map<String, List<StatusInfo>> rowsByFolder = new HashMap<>();
+		Set<String> tarFolders = new HashSet<>();
 		for (String folder : folderPaths) {
+			List<StatusInfo> rows = dmeSyncWorkflowService.getService(access)
+					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), folder);
+			rowsByFolder.put(folder, rows);
+			// Only folders with a contents file were TAR'd; file uploads are not aggregated
+			if (rows.stream().anyMatch(p -> p.getSourceFileName().endsWith("tar" )
+					   || p.getSourceFileName().endsWith("tar.gz"))) {
+				tarFolders.add(folder);
+			}
+		}
+
+		// Keep file-upload records untouched
+		for (StatusInfo record : runIdRecords) {
+			if (!tarFolders.contains(record.getOriginalFilePath())) {
+				aggregateFolderRecords.add(record);
+			}
+		}
+
+
+		for (String folder : tarFolders) {
 
 			List<StatusInfo> folderRows = dmeSyncWorkflowService.getService(access)
 					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), folder);
