@@ -78,7 +78,9 @@ public class DmeSyncTarContentsFileTaskImpl extends AbstractDmeSyncTask implemen
 	  DocConfig.SourceConfig sourceConfig = config.getSourceConfig();
 	  DocConfig.PreprocessingRule preRule = config.getPreprocessingRule();
 	
-      if (object.getSourceFileName()!=null && object.getSourceFileName().endsWith("tar")) {
+	  // This Task is only for creating the tar contents file for the original files which are not tar files but only workflow creates the tar when selective scan is enabled.
+		if (!object.getOriginalFilePath().endsWith("tar")
+				&& (object.getSourceFileName() != null && object.getSourceFileName().endsWith("tar"))) {
 
     	  try {
 			// Construct work dir path

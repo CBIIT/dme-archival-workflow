@@ -297,8 +297,8 @@ public class DmeSyncMailServiceImpl implements DmeSyncMailService {
 					.findAllByDocAndLikeOriginalFilePath(config.getDocName(), folder);
 			rowsByFolder.put(folder, rows);
 			// Only folders with a contents file were TAR'd; file uploads are not aggregated
-			if (rows.stream().anyMatch(p -> p.getSourceFilePath().endsWith(WorkflowConstants.tarContentsFileEndswith)
-					|| p.getSourceFilePath().endsWith(WorkflowConstants.tarExcludedContentsFileEndswith))) {
+			if (rows.stream().anyMatch(p -> p.getSourceFileName().endsWith("tar" )
+					   || p.getSourceFileName().endsWith("tar.gz"))) {
 				tarFolders.add(folder);
 			}
 		}

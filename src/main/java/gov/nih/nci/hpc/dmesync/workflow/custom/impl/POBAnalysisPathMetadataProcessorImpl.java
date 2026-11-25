@@ -183,8 +183,9 @@ public class POBAnalysisPathMetadataProcessorImpl extends AbstractPathMetadataPr
 	// There are two types of data sources , each goes to the different archive .
 	// however the hierarchy is same
 	private String getPOBAnalysisType(Path fullPath) {
-	    String pobAnalysisType = "CCRCCDI".equalsIgnoreCase(getAdjacentPathElement(fullPath, "data", true))
-	            ? CCRCCDI_ANALYSIS : "ShernData".equalsIgnoreCase(getAdjacentPathElement(fullPath, "data", true)) ? SHERNDATA_ANALYSIS: null;
+		
+		 String pobAnalysisType = getAdjacentPathElement(fullPath, "CCRCCDI", true) != null
+	 	            ? CCRCCDI_ANALYSIS : getAdjacentPathElement(fullPath, "ShernData", true) != null ? SHERNDATA_ANALYSIS : null;
 	    logger.info("Pob Analysis type: {}", pobAnalysisType);
 	    return pobAnalysisType;
 	}
